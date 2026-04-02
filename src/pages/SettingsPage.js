@@ -12,56 +12,34 @@ const PRESET_COLORS = [
   { name: '먹물 흑백', primary: '#666666', bg: '#f8f8f8', accent: '#333333' },
 ]
 
-// 테마 색상을 CSS 변수 전체에 적용하는 함수
+// hex → r, g, b 배열
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16)
+  const g = parseInt(hex.slice(3,5),16)
+  const b = parseInt(hex.slice(5,7),16)
+  return [r, g, b]
+}
+
+// 테마 색상을 CSS 변수 전부에 적용
 function applyTheme(primary, bg, accent) {
   const root = document.documentElement
+  const [pr, pg, pb] = hexToRgb(primary)
+  const [ar, ag, ab] = hexToRgb(accent)
+  const [br, bgb, bb] = hexToRgb(bg)
+
   root.style.setProperty('--color-primary', primary)
   root.style.setProperty('--color-bg', bg)
   root.style.setProperty('--color-accent', accent)
+  root.style.setProperty('--color-border', `rgba(${pr}, ${pg}, ${pb}, 0.3)`)
+  root.style.setProperty('--color-shadow', `rgba(${ar}, ${ag}, ${ab}, 0.08)`)
+  root.style.setProperty('--color-surface', `rgba(${Math.min(255,br+10)}, ${Math.min(255,bgb+8)}, ${Math.min(255,bb+5)}, 0.92)`)
+  root.style.setProperty('--color-nav-active-bg', `rgba(${pr}, ${pg}, ${pb}, 0.12)`)
+  root.style.setProperty('--color-btn-shadow', `rgba(${pr}, ${pg}, ${pb}, 0.35)`)
+  root.style.setProperty('--color-text', `rgb(${Math.max(0,ar-30)}, ${Math.max(0,ag-20)}, ${Math.max(0,ab-10)})`)
+  root.style.setProperty('--color-text-light', `rgb(${Math.min(255,ar+30)}, ${Math.min(255,ag+20)}, ${Math.min(255,ab+20)})`)
 
-  // primary 기반 파생 색상
-  root.style.setProperty('--color-border', hexToRgba(primary, 0.3))
-  root.style.setProperty('--color-shadow', hexToRgba(accent, 0.08))
-
-  // surface는 bg 기반 반투명
-  const rgb = hexToRgbValues(bg)
-  root.style.setProperty('--color-surface', `rgba(${rgb}, 0.92)`)
-  root.style.setProperty('--color-text', darken(accent, 0.3))
-  root.style.setProperty('--color-text-light', lighten(accent, 0.2))
-}
-
-function hexToRgba(hex, alpha) {
-  const r = parseInt(hex.slice(1,3),16)
-  const g = parseInt(hex.slice(3,5),16)
-  const b = parseInt(hex.slice(5,7),16)
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
-
-function hexToRgbValues(hex) {
-  const r = parseInt(hex.slice(1,3),16)
-  const g = parseInt(hex.slice(3,5),16)
-  const b = parseInt(hex.slice(5,7),16)
-  return `${r}, ${g}, ${b}`
-}
-
-function darken(hex, amount) {
-  let r = parseInt(hex.slice(1,3),16)
-  let g = parseInt(hex.slice(3,5),16)
-  let b = parseInt(hex.slice(5,7),16)
-  r = Math.max(0, Math.floor(r * (1 - amount)))
-  g = Math.max(0, Math.floor(g * (1 - amount)))
-  b = Math.max(0, Math.floor(b * (1 - amount)))
-  return `rgb(${r},${g},${b})`
-}
-
-function lighten(hex, amount) {
-  let r = parseInt(hex.slice(1,3),16)
-  let g = parseInt(hex.slice(3,5),16)
-  let b = parseInt(hex.slice(5,7),16)
-  r = Math.min(255, Math.floor(r + (255-r) * amount))
-  g = Math.min(255, Math.floor(g + (255-g) * amount))
-  b = Math.min(255, Math.floor(b + (255-b) * amount))
-  return `rgb(${r},${g},${b})`
+  // 배경색 적용
+  document.body.style.backgroundColor = bg
 }
 
 export default function SettingsPage() {
@@ -119,7 +97,7 @@ export default function SettingsPage() {
     setUploading(true)
     const { url, error } = await uploadFile('backgrounds', `${user.id}/bg-${Date.now()}`, file)
     if (url) setForm(f => ({...f, background_image_url: url}))
-    else alert('업로드 실패: ' + error?.message)
+    else alert('업로드 실패: ' + (error?.message || '스토리지 권한을 확인해주세요'))
     setUploading(false)
   }
 
@@ -129,7 +107,7 @@ export default function SettingsPage() {
     setAvatarUploading(true)
     const { url, error } = await uploadFile('avatars', `${user.id}/avatar-${Date.now()}`, file)
     if (url) { await updateProfile(user.id, { avatar_url: url }); refreshProfile() }
-    else alert('업로드 실패: ' + error?.message)
+    else alert('업로드 실패: ' + (error?.message || '스토리지 권한을 확인해주세요'))
     setAvatarUploading(false)
   }
 
@@ -257,13 +235,20 @@ export default function SettingsPage() {
                   <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,background_image_url:''}))}>제거</button>
                 </div>
               )}
+              <div className="text-xs text-light" style={{marginTop:6}}>
+                💡 파일 업로드가 안 되면 이미지 URL을 직접 입력해보세요
+              </div>
             </div>
 
             {/* 미리보기 */}
             <div style={{padding:14,borderRadius:8,background:form.theme_bg_color,border:`2px solid ${form.theme_color}30`}}>
               <div style={{color:form.theme_accent,fontSize:'0.85rem',fontWeight:700,marginBottom:6}}>✦ 미리보기</div>
-              <div style={{color:form.theme_color,fontSize:'0.78rem',marginBottom:8}}>사이드바, 버튼, 그림자까지 모두 적용돼요</div>
-              <div style={{display:'inline-block',padding:'5px 12px',borderRadius:6,background:form.theme_color,color:'white',fontSize:'0.76rem',boxShadow:`0 1px 8px ${form.theme_color}55`}}>버튼 예시</div>
+              <div style={{color:form.theme_color,fontSize:'0.78rem',marginBottom:8}}>버튼, 그림자, 네비게이션 배경까지 모두 바뀌어요</div>
+              <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                <div style={{display:'inline-block',padding:'5px 12px',borderRadius:6,background:form.theme_color,color:'white',fontSize:'0.76rem',boxShadow:`0 1px 8px ${form.theme_color}55`}}>버튼</div>
+                <div style={{display:'inline-block',padding:'5px 12px',borderRadius:6,background:`rgba(${hexToRgb(form.theme_color).join(',')},0.12)`,color:form.theme_accent,fontSize:'0.76rem'}}>활성 메뉴</div>
+                <div style={{display:'inline-block',padding:'2px 8px',borderRadius:100,background:`rgba(${hexToRgb(form.theme_color).join(',')},0.15)`,color:form.theme_accent,fontSize:'0.66rem',fontWeight:600}}>배지</div>
+              </div>
             </div>
           </>
         )}
@@ -273,7 +258,7 @@ export default function SettingsPage() {
           <>
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>공개 설정</h2>
 
-            <div className="card" style={{marginBottom:14,background:'rgba(200,169,110,0.06)'}}>
+            <div className="card" style={{marginBottom:14,background:'var(--color-nav-active-bg)'}}>
               <div className="flex justify-between items-center">
                 <div>
                   <div style={{fontWeight:600,marginBottom:3,fontSize:'0.9rem'}}>공개 페이지 활성화</div>

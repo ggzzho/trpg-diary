@@ -1,6 +1,6 @@
 // src/components/Layout.js
-import React, { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signOut } from '../lib/supabase'
 
@@ -18,7 +18,13 @@ const NAV_ITEMS = [
 export function Layout({ children }) {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // 페이지 이동 시 모바일 메뉴 닫기
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
 
   const handleSignOut = async () => {
     await signOut()
@@ -29,14 +35,23 @@ export function Layout({ children }) {
 
   return (
     <div className="app-layout">
-      {/* 모바일 오버레이 */}
-      {mobileOpen && (
-        <div
-          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.3)', zIndex:99 }}
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
 
+      {/* 모바일 오버레이 */}
+      <div
+        className={`sidebar-overlay ${mobileOpen ? 'open' : ''}`}
+        onClick={() => setMobileOpen(false)}
+      />
+
+      {/* 모바일 햄버거 버튼 */}
+      <button
+        className="mobile-menu-btn"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label="메뉴 열기"
+      >
+        {mobileOpen ? '✕' : '☰'}
+      </button>
+
+      {/* 사이드바 */}
       <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
           <h1>✦ TRPG Diary</h1>
@@ -49,19 +64,17 @@ export function Layout({ children }) {
               key={item.to}
               to={item.to}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => setMobileOpen(false)}
             >
               <span className="nav-icon">{item.icon}</span>
               {item.label}
             </NavLink>
           ))}
 
-          <div style={{ borderTop: '1px solid var(--color-border)', margin: '16px 0' }} />
+          <div style={{ borderTop: '1px solid var(--color-border)', margin: '12px 0' }} />
 
           <NavLink
             to="/settings"
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            onClick={() => setMobileOpen(false)}
           >
             <span className="nav-icon">⚙️</span>
             환경설정
@@ -88,33 +101,20 @@ export function Layout({ children }) {
                 : initial
               }
             </div>
-            <div>
+            <div style={{ overflow: 'hidden' }}>
               <div className="user-name">{profile?.display_name || profile?.username}</div>
-              <div className="text-xs text-light">{user?.email}</div>
+              <div className="text-xs text-light" style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {user?.email}
+              </div>
             </div>
           </div>
-          <button className="btn btn-ghost btn-sm w-full" onClick={handleSignOut}>
+          <button className="btn btn-ghost btn-sm w-full" style={{ justifyContent:'center' }} onClick={handleSignOut}>
             로그아웃
           </button>
         </div>
       </aside>
 
-      {/* 모바일 햄버거 */}
-      <button
-        style={{
-          display: 'none',
-          position: 'fixed', top: 16, left: 16,
-          zIndex: 200, background: 'var(--color-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 8, padding: '8px 12px',
-          cursor: 'pointer', fontSize: '1.2rem'
-        }}
-        className="mobile-menu-btn"
-        onClick={() => setMobileOpen(!mobileOpen)}
-      >
-        ☰
-      </button>
-
+      {/* 메인 콘텐츠 */}
       <main className="main-content fade-in">
         {children}
       </main>
@@ -139,7 +139,7 @@ export function Modal({ isOpen, onClose, title, children, footer }) {
 // ── StarRating ─────────────────────────────────────────────────
 export function StarRating({ value, onChange, readOnly }) {
   return (
-    <div className="stars" style={{ fontSize: '1.3rem', cursor: readOnly ? 'default' : 'pointer' }}>
+    <div className="stars" style={{ fontSize: '1.2rem', cursor: readOnly ? 'default' : 'pointer' }}>
       {[1,2,3,4,5].map(n => (
         <span
           key={n}
@@ -168,7 +168,7 @@ export function LoadingSpinner() {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
       <div style={{
-        width: 40, height: 40, borderRadius: '50%',
+        width: 36, height: 36, borderRadius: '50%',
         border: '3px solid var(--color-border)',
         borderTopColor: 'var(--color-primary)',
         animation: 'spin 0.8s linear infinite'
@@ -184,12 +184,12 @@ export function ConfirmDialog({ isOpen, onClose, onConfirm, message }) {
     <Modal isOpen={isOpen} onClose={onClose} title="삭제 확인"
       footer={
         <>
-          <button className="btn btn-outline" onClick={onClose}>취소</button>
-          <button className="btn btn-danger" onClick={() => { onConfirm(); onClose(); }}>삭제</button>
+          <button className="btn btn-outline btn-sm" onClick={onClose}>취소</button>
+          <button className="btn btn-danger btn-sm" onClick={() => { onConfirm(); onClose(); }}>삭제</button>
         </>
       }
     >
-      <p style={{ color: 'var(--color-text-light)' }}>{message || '정말 삭제하시겠어요?'}</p>
+      <p style={{ color: 'var(--color-text-light)', fontSize: '0.88rem' }}>{message || '정말 삭제하시겠어요?'}</p>
     </Modal>
   )
 }
