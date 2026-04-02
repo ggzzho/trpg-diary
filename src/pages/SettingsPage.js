@@ -1,7 +1,7 @@
 // src/pages/SettingsPage.js
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { applyTheme } from '../context/ThemeContext'
+import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { updateProfile, uploadFile } from '../lib/supabase'
 
 const PRESET_COLORS = [
@@ -15,9 +15,8 @@ const PRESET_COLORS = [
 
 function hexToRgb(hex) {
   if (!hex || hex.length < 7) return [200, 169, 110]
-  try {
-    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]
-  } catch { return [200, 169, 110] }
+  try { return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)] }
+  catch { return [200, 169, 110] }
 }
 
 export default function SettingsPage() {
@@ -29,6 +28,7 @@ export default function SettingsPage() {
     theme_bg_color: profile?.theme_bg_color || '#faf6f0',
     theme_accent: profile?.theme_accent || '#8b6f47',
     background_image_url: profile?.background_image_url || '',
+    bg_opacity: profile?.bg_opacity !== undefined ? profile.bg_opacity : 1,
     is_public: profile?.is_public ?? true,
   })
   const [saving, setSaving] = useState(false)
@@ -50,6 +50,17 @@ export default function SettingsPage() {
     applyTheme(updated.theme_color, updated.theme_bg_color, updated.theme_accent)
   }
 
+  const handleOpacityChange = (value) => {
+    const opacity = parseFloat(value)
+    setForm(f => ({...f, bg_opacity: opacity}))
+    applyBackground(form.background_image_url, opacity)
+  }
+
+  const handleBgUrlChange = (value) => {
+    setForm(f => ({...f, background_image_url: value}))
+    applyBackground(value, form.bg_opacity)
+  }
+
   const save = async () => {
     setSaving(true)
     const { error } = await updateProfile(user.id, form)
@@ -58,13 +69,7 @@ export default function SettingsPage() {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
       applyTheme(form.theme_color, form.theme_bg_color, form.theme_accent)
-      if (form.background_image_url) {
-        document.body.style.backgroundImage = `url(${form.background_image_url})`
-        document.body.style.backgroundSize = 'cover'
-        document.body.style.backgroundAttachment = 'fixed'
-      } else {
-        document.body.style.backgroundImage = ''
-      }
+      applyBackground(form.background_image_url, form.bg_opacity)
     }
     setSaving(false)
   }
@@ -74,8 +79,10 @@ export default function SettingsPage() {
     if (!file) return
     setUploading(true)
     const { url, error } = await uploadFile('backgrounds', `${user.id}/bg-${Date.now()}`, file)
-    if (url) setForm(f => ({...f, background_image_url: url}))
-    else alert('업로드 실패: ' + (error?.message || '스토리지 권한을 확인해주세요'))
+    if (url) {
+      setForm(f => ({...f, background_image_url: url}))
+      applyBackground(url, form.bg_opacity)
+    } else alert('업로드 실패: ' + (error?.message || '스토리지 권한을 확인해주세요'))
     setUploading(false)
   }
 
@@ -151,6 +158,7 @@ export default function SettingsPage() {
         {tab === 'theme' && (
           <>
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>테마 & 디자인</h2>
+
             <div className="form-group">
               <label className="form-label">프리셋 테마</label>
               <div className="grid-3" style={{gap:8}}>
@@ -193,10 +201,14 @@ export default function SettingsPage() {
               ))}
             </div>
 
+            {/* 배경 이미지 */}
             <div className="form-group">
               <label className="form-label">배경 이미지</label>
               <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
-                <input className="form-input" placeholder="https://... 이미지 URL" value={form.background_image_url} onChange={set('background_image_url')} style={{flex:1}} />
+                <input className="form-input" placeholder="https://... 이미지 URL"
+                  value={form.background_image_url}
+                  onChange={e => handleBgUrlChange(e.target.value)}
+                  style={{flex:1}} />
                 <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>
                   {uploading ? '업로드 중...' : '📁 파일 업로드'}
                   <input type="file" accept="image/*" style={{display:'none'}} onChange={handleBgUpload} disabled={uploading} />
@@ -204,19 +216,48 @@ export default function SettingsPage() {
               </div>
               {form.background_image_url && (
                 <div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}>
-                  <img src={form.background_image_url} alt="bg preview" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} />
-                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,background_image_url:''}))}>제거</button>
+                  <img src={form.background_image_url} alt="bg preview"
+                    style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} />
+                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
+                    onClick={() => { setForm(f=>({...f,background_image_url:''})); applyBackground('', 1) }}>
+                    제거
+                  </button>
                 </div>
               )}
-              <div className="text-xs text-light" style={{marginTop:6}}>
-                💡 파일 업로드가 안 되면 이미지 URL을 직접 입력해보세요
-              </div>
             </div>
+
+            {/* 배경 불투명도 슬라이더 */}
+            {form.background_image_url && (
+              <div className="form-group">
+                <label className="form-label">
+                  배경 이미지 불투명도
+                  <span style={{marginLeft:8,color:'var(--color-accent)',fontWeight:700}}>
+                    {Math.round(form.bg_opacity * 100)}%
+                  </span>
+                </label>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <span className="text-xs text-light">흐리게</span>
+                  <input
+                    type="range"
+                    min="0.1" max="1" step="0.05"
+                    value={form.bg_opacity}
+                    onChange={e => handleOpacityChange(e.target.value)}
+                    style={{
+                      flex:1, height:4, cursor:'pointer',
+                      accentColor:'var(--color-primary)'
+                    }}
+                  />
+                  <span className="text-xs text-light">선명하게</span>
+                </div>
+                <div className="text-xs text-light" style={{marginTop:4}}>
+                  💡 낮을수록 배경이 흐려져 글자가 잘 보여요
+                </div>
+              </div>
+            )}
 
             {/* 미리보기 */}
             <div style={{padding:14,borderRadius:8,background:form.theme_bg_color,border:`2px solid ${form.theme_color}30`}}>
               <div style={{color:form.theme_accent,fontSize:'0.85rem',fontWeight:700,marginBottom:6}}>✦ 미리보기</div>
-              <div style={{color:form.theme_color,fontSize:'0.78rem',marginBottom:8}}>버튼, 그림자, 네비게이션 배경까지 모두 바뀌어요</div>
               <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
                 <div style={{padding:'5px 12px',borderRadius:6,background:form.theme_color,color:'white',fontSize:'0.76rem',boxShadow:`0 1px 8px ${form.theme_color}55`}}>버튼</div>
                 <div style={{padding:'5px 12px',borderRadius:6,background:`rgba(${hexToRgb(form.theme_color).join(',')},0.12)`,color:form.theme_accent,fontSize:'0.76rem'}}>활성 메뉴</div>
