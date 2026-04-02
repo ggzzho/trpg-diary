@@ -7,6 +7,12 @@ import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
 
 const BLANK = { title:'', system_name:'', publisher:'', edition:'', cover_image_url:'', purchase_date:'', format:'physical', condition:'good', memo:'' }
 
+// 빈 문자열 날짜를 null로 변환
+const cleanPayload = (form) => ({
+  ...form,
+  purchase_date: form.purchase_date || null,
+})
+
 export function RulebookPage() {
   const { user } = useAuth()
   const [items, setItems] = useState([])
@@ -26,8 +32,8 @@ export function RulebookPage() {
   const openEdit = item => { setEditing(item); setForm({...item}); setModal(true) }
   const save = async () => {
     if (!form.title) return
-    if (editing) await rulebooksApi.update(editing.id, form)
-    else await rulebooksApi.create({...form, user_id: user.id})
+    if (editing) await rulebooksApi.update(editing.id, cleanPayload(form))
+    else await rulebooksApi.create({...cleanPayload(form), user_id: user.id})
     setModal(false); load()
   }
   const remove = async id => { await rulebooksApi.remove(id); load() }
@@ -118,7 +124,7 @@ export function RulebookPage() {
         <div className="grid-2">
           <div className="form-group">
             <label className="form-label">구매일</label>
-            <input className="form-input" type="date" value={form.purchase_date} onChange={set('purchase_date')} />
+            <input className="form-input" type="date" value={form.purchase_date||''} onChange={set('purchase_date')} />
           </div>
           <div className="form-group">
             <label className="form-label">상태</label>

@@ -7,6 +7,15 @@ import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/
 const COLORS = ['#c8a96e','#8b9dc3','#9bc4a0','#c48b8b','#b8a0c8','#c4b08b','#8bbfc4']
 const BLANK = { name:'', nickname:'', contact:'', first_met_date:'', systems:[], memo:'', relation:'both', play_count:0, avatar_color:'#c8a96e' }
 
+const cleanPayload = (form) => ({
+  ...form,
+  first_met_date: form.first_met_date || null,
+  play_count: form.play_count === '' ? 0 : parseInt(form.play_count) || 0,
+  systems: typeof form.systems === 'string'
+    ? form.systems.split(',').map(s=>s.trim()).filter(Boolean)
+    : (form.systems || []),
+})
+
 export function PairsPage() {
   const { user } = useAuth()
   const [items, setItems] = useState([])
@@ -25,7 +34,7 @@ export function PairsPage() {
   const openEdit = item => { setEditing(item); setForm({...item, systems: item.systems||[]}); setModal(true) }
   const save = async () => {
     if (!form.name) return
-    const payload = {...form, systems: typeof form.systems === 'string' ? form.systems.split(',').map(s=>s.trim()).filter(Boolean) : form.systems}
+    const payload = cleanPayload(form)
     if (editing) await pairsApi.update(editing.id, payload)
     else await pairsApi.create({...payload, user_id: user.id})
     setModal(false); load()
@@ -69,7 +78,7 @@ export function PairsPage() {
                   </div>
                 </div>
                 <div className="text-sm text-light" style={{display:'flex',flexDirection:'column',gap:4}}>
-                  <span className={`badge badge-primary`} style={{display:'inline-flex',width:'fit-content'}}>{item.relation}</span>
+                  <span className="badge badge-primary" style={{display:'inline-flex',width:'fit-content'}}>{item.relation}</span>
                   {item.play_count > 0 && <span>🎲 {item.play_count}회 함께 플레이</span>}
                   {item.first_met_date && <span>📅 {item.first_met_date} 첫 만남</span>}
                   {item.systems?.length > 0 && <span>📌 {item.systems.join(', ')}</span>}
@@ -82,7 +91,12 @@ export function PairsPage() {
       }
 
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'페어 수정':'페어 추가'}
-        footer={<><button className="btn btn-outline" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary" onClick={save}>저장</button></>}
+        footer={
+          <>
+            <button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button>
+            <button className="btn btn-primary btn-sm" onClick={save}>저장</button>
+          </>
+        }
       >
         <div className="grid-2">
           <div className="form-group">
@@ -123,7 +137,7 @@ export function PairsPage() {
         <div className="grid-2">
           <div className="form-group">
             <label className="form-label">처음 만난 날</label>
-            <input className="form-input" type="date" value={form.first_met_date} onChange={set('first_met_date')} />
+            <input className="form-input" type="date" value={form.first_met_date||''} onChange={set('first_met_date')} />
           </div>
           <div className="form-group">
             <label className="form-label">연락처</label>
@@ -135,6 +149,7 @@ export function PairsPage() {
           <textarea className="form-textarea" value={form.memo} onChange={set('memo')} style={{minHeight:70}} />
         </div>
       </Modal>
+
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 페어를 삭제하시겠어요?" />
     </div>
   )

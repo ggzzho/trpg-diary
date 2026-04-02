@@ -9,6 +9,11 @@ const BLANK = { title:'', system_name:'', author:'', publisher:'', cover_image_u
 const STATUS_MAP = { unplayed:{label:'미플',badge:'badge-gray'}, played:{label:'PL 완료',badge:'badge-green'}, gm_done:{label:'GM 완료',badge:'badge-primary'}, want:{label:'위시리스트',badge:'badge-blue'} }
 const DIFF_MAP = { beginner:'입문', intermediate:'중급', advanced:'고급', expert:'전문가' }
 
+const cleanPayload = (form) => ({
+  ...form,
+  purchase_date: form.purchase_date || null,
+})
+
 export function ScenarioPage() {
   const { user } = useAuth()
   const [items, setItems] = useState([])
@@ -29,8 +34,8 @@ export function ScenarioPage() {
   const openEdit = item => { setEditing(item); setForm({...item}); setModal(true) }
   const save = async () => {
     if (!form.title) return
-    if (editing) await scenariosApi.update(editing.id, form)
-    else await scenariosApi.create({...form, user_id: user.id})
+    if (editing) await scenariosApi.update(editing.id, cleanPayload(form))
+    else await scenariosApi.create({...cleanPayload(form), user_id: user.id})
     setModal(false); load()
   }
   const remove = async id => { await scenariosApi.remove(id); load() }
@@ -138,11 +143,17 @@ export function ScenarioPage() {
             </select>
           </div>
         </div>
-        <div className="form-group">
-          <label className="form-label">상태</label>
-          <select className="form-select" value={form.status} onChange={set('status')}>
-            <option value="unplayed">미플</option><option value="played">PL 완료</option><option value="gm_done">GM 완료</option><option value="want">위시리스트</option>
-          </select>
+        <div className="grid-2">
+          <div className="form-group">
+            <label className="form-label">상태</label>
+            <select className="form-select" value={form.status} onChange={set('status')}>
+              <option value="unplayed">미플</option><option value="played">PL 완료</option><option value="gm_done">GM 완료</option><option value="want">위시리스트</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">구매일</label>
+            <input className="form-input" type="date" value={form.purchase_date||''} onChange={set('purchase_date')} />
+          </div>
         </div>
         <div className="form-group">
           <label className="form-label">표지 이미지 URL</label>
