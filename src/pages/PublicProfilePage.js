@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { applyTheme } from '../context/ThemeContext'
 import { GuestbookPage } from './GuestbookPage'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -27,15 +28,18 @@ export default function PublicProfilePage() {
       if (error || !p) { setNotFound(true); setLoading(false); return }
       setProfile(p)
 
-      // 테마 적용
-      const root = document.documentElement
-      root.style.setProperty('--color-primary', p.theme_color || '#c8a96e')
-      root.style.setProperty('--color-bg', p.theme_bg_color || '#faf6f0')
-      root.style.setProperty('--color-accent', p.theme_accent || '#8b6f47')
+      // 테마 적용 (모든 CSS 변수 반영)
+      applyTheme(
+        p.theme_color || '#c8a96e',
+        p.theme_bg_color || '#faf6f0',
+        p.theme_accent || '#8b6f47'
+      )
       if (p.background_image_url) {
         document.body.style.backgroundImage = `url(${p.background_image_url})`
         document.body.style.backgroundSize = 'cover'
         document.body.style.backgroundAttachment = 'fixed'
+      } else {
+        document.body.style.backgroundImage = ''
       }
 
       const today = new Date().toISOString().split('T')[0]

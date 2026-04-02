@@ -1,6 +1,7 @@
 // src/pages/SettingsPage.js
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { applyTheme } from '../context/ThemeContext'
 import { updateProfile, uploadFile } from '../lib/supabase'
 
 const PRESET_COLORS = [
@@ -12,34 +13,11 @@ const PRESET_COLORS = [
   { name: '먹물 흑백', primary: '#666666', bg: '#f8f8f8', accent: '#333333' },
 ]
 
-// hex → r, g, b 배열
 function hexToRgb(hex) {
-  const r = parseInt(hex.slice(1,3),16)
-  const g = parseInt(hex.slice(3,5),16)
-  const b = parseInt(hex.slice(5,7),16)
-  return [r, g, b]
-}
-
-// 테마 색상을 CSS 변수 전부에 적용
-function applyTheme(primary, bg, accent) {
-  const root = document.documentElement
-  const [pr, pg, pb] = hexToRgb(primary)
-  const [ar, ag, ab] = hexToRgb(accent)
-  const [br, bgb, bb] = hexToRgb(bg)
-
-  root.style.setProperty('--color-primary', primary)
-  root.style.setProperty('--color-bg', bg)
-  root.style.setProperty('--color-accent', accent)
-  root.style.setProperty('--color-border', `rgba(${pr}, ${pg}, ${pb}, 0.3)`)
-  root.style.setProperty('--color-shadow', `rgba(${ar}, ${ag}, ${ab}, 0.08)`)
-  root.style.setProperty('--color-surface', `rgba(${Math.min(255,br+10)}, ${Math.min(255,bgb+8)}, ${Math.min(255,bb+5)}, 0.92)`)
-  root.style.setProperty('--color-nav-active-bg', `rgba(${pr}, ${pg}, ${pb}, 0.12)`)
-  root.style.setProperty('--color-btn-shadow', `rgba(${pr}, ${pg}, ${pb}, 0.35)`)
-  root.style.setProperty('--color-text', `rgb(${Math.max(0,ar-30)}, ${Math.max(0,ag-20)}, ${Math.max(0,ab-10)})`)
-  root.style.setProperty('--color-text-light', `rgb(${Math.min(255,ar+30)}, ${Math.min(255,ag+20)}, ${Math.min(255,ab+20)})`)
-
-  // 배경색 적용
-  document.body.style.backgroundColor = bg
+  if (!hex || hex.length < 7) return [200, 169, 110]
+  try {
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]
+  } catch { return [200, 169, 110] }
 }
 
 export default function SettingsPage() {
@@ -138,7 +116,6 @@ export default function SettingsPage() {
         {tab === 'profile' && (
           <>
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>프로필 설정</h2>
-
             <div className="form-group flex items-center gap-16">
               <div className="user-avatar" style={{width:56,height:56,fontSize:'1.3rem'}}>
                 {profile?.avatar_url ? <img src={profile.avatar_url} alt="avatar" /> : (profile?.display_name||'?')[0]}
@@ -151,7 +128,6 @@ export default function SettingsPage() {
                 <div className="text-xs text-light" style={{marginTop:5}}>JPG, PNG (최대 2MB)</div>
               </div>
             </div>
-
             <div className="form-group">
               <label className="form-label">사용자명 (URL)</label>
               <div style={{display:'flex',alignItems:'center',gap:6}}>
@@ -160,12 +136,10 @@ export default function SettingsPage() {
               </div>
               <div className="text-xs text-light" style={{marginTop:3}}>사용자명은 변경할 수 없어요</div>
             </div>
-
             <div className="form-group">
               <label className="form-label">표시 이름</label>
               <input className="form-input" placeholder="모험가 홍길동" value={form.display_name} onChange={set('display_name')} />
             </div>
-
             <div className="form-group">
               <label className="form-label">소개</label>
               <textarea className="form-textarea" placeholder="TRPG 몇 년차 플레이어예요..." value={form.bio} onChange={set('bio')} style={{minHeight:72}} />
@@ -177,7 +151,6 @@ export default function SettingsPage() {
         {tab === 'theme' && (
           <>
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>테마 & 디자인</h2>
-
             <div className="form-group">
               <label className="form-label">프리셋 테마</label>
               <div className="grid-3" style={{gap:8}}>
@@ -202,9 +175,9 @@ export default function SettingsPage() {
 
             <div className="grid-3" style={{marginBottom:16}}>
               {[
-                { label:'메인 컬러', key:'theme_color' },
-                { label:'배경 컬러', key:'theme_bg_color' },
-                { label:'강조 컬러', key:'theme_accent' },
+                {label:'메인 컬러', key:'theme_color'},
+                {label:'배경 컬러', key:'theme_bg_color'},
+                {label:'강조 컬러', key:'theme_accent'},
               ].map(({label, key}) => (
                 <div key={key} className="form-group">
                   <label className="form-label">{label}</label>
@@ -245,9 +218,9 @@ export default function SettingsPage() {
               <div style={{color:form.theme_accent,fontSize:'0.85rem',fontWeight:700,marginBottom:6}}>✦ 미리보기</div>
               <div style={{color:form.theme_color,fontSize:'0.78rem',marginBottom:8}}>버튼, 그림자, 네비게이션 배경까지 모두 바뀌어요</div>
               <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-                <div style={{display:'inline-block',padding:'5px 12px',borderRadius:6,background:form.theme_color,color:'white',fontSize:'0.76rem',boxShadow:`0 1px 8px ${form.theme_color}55`}}>버튼</div>
-                <div style={{display:'inline-block',padding:'5px 12px',borderRadius:6,background:`rgba(${hexToRgb(form.theme_color).join(',')},0.12)`,color:form.theme_accent,fontSize:'0.76rem'}}>활성 메뉴</div>
-                <div style={{display:'inline-block',padding:'2px 8px',borderRadius:100,background:`rgba(${hexToRgb(form.theme_color).join(',')},0.15)`,color:form.theme_accent,fontSize:'0.66rem',fontWeight:600}}>배지</div>
+                <div style={{padding:'5px 12px',borderRadius:6,background:form.theme_color,color:'white',fontSize:'0.76rem',boxShadow:`0 1px 8px ${form.theme_color}55`}}>버튼</div>
+                <div style={{padding:'5px 12px',borderRadius:6,background:`rgba(${hexToRgb(form.theme_color).join(',')},0.12)`,color:form.theme_accent,fontSize:'0.76rem'}}>활성 메뉴</div>
+                <div style={{padding:'2px 8px',borderRadius:100,background:`rgba(${hexToRgb(form.theme_color).join(',')},0.15)`,color:form.theme_accent,fontSize:'0.66rem',fontWeight:600}}>배지</div>
               </div>
             </div>
           </>
@@ -257,7 +230,6 @@ export default function SettingsPage() {
         {tab === 'privacy' && (
           <>
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>공개 설정</h2>
-
             <div className="card" style={{marginBottom:14,background:'var(--color-nav-active-bg)'}}>
               <div className="flex justify-between items-center">
                 <div>
@@ -269,28 +241,16 @@ export default function SettingsPage() {
                     </div>
                   )}
                 </div>
-                <div
-                  onClick={()=>setForm(f=>({...f,is_public:!f.is_public}))}
-                  style={{
-                    width:40,height:22,borderRadius:11,
-                    background:form.is_public?'var(--color-primary)':'#ccc',
-                    position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0
-                  }}
-                >
-                  <div style={{
-                    position:'absolute',top:2,left:form.is_public?20:2,width:18,height:18,
-                    borderRadius:'50%',background:'white',transition:'left 0.2s',
-                    boxShadow:'0 1px 4px rgba(0,0,0,0.2)'
-                  }} />
+                <div onClick={()=>setForm(f=>({...f,is_public:!f.is_public}))}
+                  style={{width:40,height:22,borderRadius:11,background:form.is_public?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
+                  <div style={{position:'absolute',top:2,left:form.is_public?20:2,width:18,height:18,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}} />
                 </div>
               </div>
             </div>
-
             {form.is_public && (
               <div style={{padding:14,borderRadius:8,background:'rgba(104,159,56,0.08)',border:'1px solid rgba(104,159,56,0.2)'}}>
                 <div className="text-sm" style={{color:'#558b2f'}}>
-                  ✅ 공개 상태예요. 아래 링크를 공유하면 내 다이어리를 볼 수 있어요.
-                  <br/><br/>
+                  ✅ 공개 상태예요.<br/><br/>
                   <strong>{window.location.origin}/u/{profile?.username}</strong>
                 </div>
                 <button className="btn btn-outline btn-sm" style={{marginTop:10}}
