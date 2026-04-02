@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { rulebooksApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
+import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
 
 const BLANK = { title:'', system_name:'', publisher:'', edition:'', cover_image_url:'', purchase_date:'', format:'physical', condition:'good', memo:'' }
 
@@ -15,8 +16,9 @@ export function RulebookPage() {
   const [form, setForm] = useState(BLANK)
   const [confirm, setConfirm] = useState(null)
   const [search, setSearch] = useState('')
+  const [ruleManager, setRuleManager] = useState(false)
 
-  const load = async () => { const { data } = await rulebooksApi.getAll(user.id); setItems(data||[]); setLoading(false) }
+  const load = async () => { const {data} = await rulebooksApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
 
   const set = k => e => setForm(f => ({...f, [k]: e.target.value}))
@@ -46,16 +48,16 @@ export function RulebookPage() {
         <button className="btn btn-primary" onClick={openNew}>+ 룰북 추가</button>
       </div>
 
-      <div style={{marginBottom:20}}>
-        <input className="form-input" placeholder="🔍 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:300}} />
+      <div style={{marginBottom:16}}>
+        <input className="form-input" placeholder="🔍 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}} />
       </div>
 
       {loading ? <LoadingSpinner /> : filtered.length === 0
         ? <EmptyState icon="📚" title="룰북이 없어요" description="보유한 룰북을 추가해보세요!" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>} />
         : <div className="grid-auto">
             {filtered.map(item => (
-              <div key={item.id} className="card" style={{position:'relative'}}>
-                <div className="flex justify-between" style={{marginBottom:12}}>
+              <div key={item.id} className="card">
+                <div className="flex justify-between" style={{marginBottom:10}}>
                   <span className="badge badge-primary">{FORMAT_LABEL[item.format]||item.format}</span>
                   <div className="flex gap-8">
                     <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
@@ -63,24 +65,29 @@ export function RulebookPage() {
                   </div>
                 </div>
                 {item.cover_image_url && (
-                  <img src={item.cover_image_url} alt={item.title}
-                    style={{width:'100%',height:120,objectFit:'cover',borderRadius:8,marginBottom:12}} />
+                  <img src={item.cover_image_url} alt={item.title} style={{width:'100%',height:110,objectFit:'cover',borderRadius:6,marginBottom:10}} />
                 )}
-                <h3 style={{fontWeight:600,marginBottom:6,fontFamily:'var(--font-serif)'}}>{item.title}</h3>
-                <div className="text-sm text-light" style={{display:'flex',flexDirection:'column',gap:4}}>
+                <h3 style={{fontWeight:700,marginBottom:5,fontSize:'0.9rem'}}>{item.title}</h3>
+                <div className="text-sm text-light" style={{display:'flex',flexDirection:'column',gap:3}}>
                   {item.system_name && <span>🎲 {item.system_name}</span>}
                   {item.publisher && <span>🏢 {item.publisher}</span>}
                   {item.edition && <span>📌 {item.edition}</span>}
                   {item.purchase_date && <span>🛒 {item.purchase_date}</span>}
                 </div>
-                {item.memo && <p className="text-sm" style={{marginTop:10,color:'var(--color-text-light)',borderTop:'1px solid var(--color-border)',paddingTop:10}}>{item.memo}</p>}
+                {item.memo && <p className="text-sm" style={{marginTop:8,color:'var(--color-text-light)',borderTop:'1px solid var(--color-border)',paddingTop:8}}>{item.memo}</p>}
               </div>
             ))}
           </div>
       }
 
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'룰북 수정':'룰북 추가'}
-        footer={<><button className="btn btn-outline" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary" onClick={save}>저장</button></>}
+        footer={
+          <>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button>
+            <button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button>
+            <button className="btn btn-primary btn-sm" onClick={save}>저장</button>
+          </>
+        }
       >
         <div className="form-group">
           <label className="form-label">제목 *</label>
@@ -88,8 +95,8 @@ export function RulebookPage() {
         </div>
         <div className="grid-2">
           <div className="form-group">
-            <label className="form-label">시스템</label>
-            <input className="form-input" placeholder="CoC 7th" value={form.system_name} onChange={set('system_name')} />
+            <label className="form-label">룰</label>
+            <RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))} />
           </div>
           <div className="form-group">
             <label className="form-label">출판사</label>
@@ -126,10 +133,11 @@ export function RulebookPage() {
         </div>
         <div className="form-group">
           <label className="form-label">메모</label>
-          <textarea className="form-textarea" value={form.memo} onChange={set('memo')} style={{minHeight:70}} />
+          <textarea className="form-textarea" value={form.memo} onChange={set('memo')} style={{minHeight:64}} />
         </div>
       </Modal>
 
+      <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)} />
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 룰북을 삭제하시겠어요?" />
     </div>
   )
