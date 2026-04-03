@@ -156,7 +156,7 @@ export default function SettingsPage() {
                 </div>
               )}
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                <input className="form-input" placeholder="https://... 이미지 URL" value={form.header_image_url||''} onChange={set('header_image_url')} style={{flex:1}} />
+                <input className="form-input" placeholder="(imgur 이미지 주소 등록 추천)" value={form.header_image_url||''} onChange={set('header_image_url')} style={{flex:1}} />
                 <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>
                   {headerUploading?'업로드 중...':'📁 업로드'}
                   <input type="file" accept="image/*" style={{display:'none'}} onChange={handleHeaderUpload} disabled={headerUploading} />
@@ -276,7 +276,7 @@ export default function SettingsPage() {
             <div className="form-group">
               <label className="form-label">배경 이미지</label>
               <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
-                <input className="form-input" placeholder="https://..." value={form.background_image_url} onChange={e=>handleBgUrlChange(e.target.value)} style={{flex:1}} />
+                <input className="form-input" placeholder="(imgur 이미지 주소 등록 추천)" value={form.background_image_url} onChange={e=>handleBgUrlChange(e.target.value)} style={{flex:1}} />
                 <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>
                   {uploading?'업로드 중...':'📁 파일 업로드'}
                   <input type="file" accept="image/*" style={{display:'none'}} onChange={handleBgUpload} disabled={uploading} />
