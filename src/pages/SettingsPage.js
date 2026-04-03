@@ -194,7 +194,7 @@ export default function SettingsPage() {
             </div>
 
             {/* BGM */}
-            <div className="form-group" style={{marginTop:8}}>
+            <div className="form-group" style={{marginTop:24}}>
               <label className="form-label">🎵 공개 페이지 BGM (YouTube URL)</label>
               <input className="form-input" placeholder="https://www.youtube.com/watch?v=..." value={form.bgm_url||''} onChange={set('bgm_url')}/>
               <div className="text-xs text-light" style={{marginTop:4}}>공개 페이지 방문자가 BGM 켜기/끄기 버튼으로 음악을 틀 수 있어요</div>

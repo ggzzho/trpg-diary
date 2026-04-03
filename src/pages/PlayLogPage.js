@@ -25,20 +25,14 @@ function TagChip({ type, label }) {
   return <span style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:100,fontSize:'0.63rem',fontWeight:700,background:c.bg,color:c.color,border:`1px solid ${c.border}`,whiteSpace:'nowrap'}}>{label}</span>
 }
 
-// 상세 모달 내용 컴포넌트 (내부/공개 페이지 공통 사용)
-export function LogDetailContent({ detail, onClose, onEdit }) {
+export function LogDetailContent({ detail }) {
   const [spoilerPw, setSpoilerPw] = useState('')
   const [spoilerUnlocked, setSpoilerUnlocked] = useState(false)
   const [spoilerErr, setSpoilerErr] = useState(false)
-
   const checkSpoiler = () => {
-    if (spoilerPw === detail.spoiler_password) {
-      setSpoilerUnlocked(true); setSpoilerErr(false)
-    } else {
-      setSpoilerErr(true)
-    }
+    if (spoilerPw === detail.spoiler_password) { setSpoilerUnlocked(true); setSpoilerErr(false) }
+    else { setSpoilerErr(true) }
   }
-
   return (
     <div>
       {detail.session_image_url&&<img src={detail.session_image_url} alt="세션카드" style={{width:'100%',borderRadius:8,marginBottom:12,maxHeight:200,objectFit:'cover'}}/>}
@@ -50,10 +44,7 @@ export function LogDetailContent({ detail, onClose, onEdit }) {
       <div className="grid-2" style={{marginBottom:12}}>
         <div><div className="form-label">엔딩 날짜</div><div className="text-sm">{detail.played_date&&format(new Date(detail.played_date),'yyyy년 M월 d일')}</div></div>
         {(detail.together_with||detail.character_name)&&(
-          <div>
-            <div className="form-label">GM / PL</div>
-            <div className="text-sm">{[detail.together_with,detail.character_name].filter(Boolean).join(' / ')}</div>
-          </div>
+          <div><div className="form-label">GM / PL</div><div className="text-sm">{[detail.together_with,detail.character_name].filter(Boolean).join(' / ')}</div></div>
         )}
         {detail.npc&&<div><div className="form-label">등장인물</div><div className="text-sm">{detail.npc}</div></div>}
       </div>
@@ -61,19 +52,15 @@ export function LogDetailContent({ detail, onClose, onEdit }) {
       {detail.memo&&<div style={{marginBottom:12}}><div className="form-label">메모</div><p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.memo}</p></div>}
       {detail.scenario_link&&<div style={{marginBottom:6}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>🔗 시나리오 링크</a></div>}
       {detail.session_log_url&&<div style={{marginBottom:12}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>📝 세션 로그 백업</a></div>}
-
-      {/* 스포일러 */}
       {detail.spoiler_content&&(
         <div style={{marginTop:12,borderTop:'1px solid var(--color-border)',paddingTop:12}}>
           <div style={{fontWeight:700,fontSize:'0.82rem',color:'#e57373',marginBottom:8}}>⚠️ 스포일러 내용</div>
           {spoilerUnlocked
-            ?<div style={{padding:12,borderRadius:8,background:'rgba(229,115,115,0.08)',border:'1px solid rgba(229,115,115,0.2)'}}>
-              <p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.spoiler_content}</p>
-            </div>
+            ?<div style={{padding:12,borderRadius:8,background:'rgba(229,115,115,0.08)',border:'1px solid rgba(229,115,115,0.2)'}}><p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.spoiler_content}</p></div>
             :<div>
               <p className="text-xs text-light" style={{marginBottom:8}}>스포일러 비밀번호를 입력하면 열람할 수 있어요.</p>
               <div style={{display:'flex',gap:8}}>
-                <input className="form-input" type="password" placeholder="비밀번호" value={spoilerPw} onChange={e=>{setSpoilerPw(e.target.value);setSpoilerErr(false)}} onKeyDown={e=>e.key==='Enter'&&checkSpoiler()} style={{flex:1}}/>
+                <input className="form-input" type="password" placeholder="비밀번호" value={spoilerPw} onChange={e=>{setSpoilerPw(e.target.value);setSpoilerErr(false)}} onKeyDown={e=>e.key==='Enter'&&checkSpoiler()} style={{flex:1}} autoComplete="off"/>
                 <button className="btn btn-outline btn-sm" onClick={checkSpoiler}>확인</button>
               </div>
               {spoilerErr&&<p className="text-xs" style={{color:'#e57373',marginTop:4}}>비밀번호가 틀렸어요.</p>}
@@ -143,7 +130,6 @@ export function PlayLogPage() {
         <div><h1 className="page-title">📖 다녀온 기록</h1><p className="page-subtitle">플레이한 세션들의 소중한 기억을 남겨요</p></div>
         <button className="btn btn-primary" onClick={openNew}>+ 기록 추가</button>
       </div>
-
       <div style={{marginBottom:20}}>
         <input className="form-input" placeholder="🔍 제목, 룰, 시리즈로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:320,marginBottom:ruleList.length>0?10:0}}/>
         {ruleList.length>0&&(
@@ -153,7 +139,6 @@ export function PlayLogPage() {
           </div>
         )}
       </div>
-
       {loading?<LoadingSpinner/>:filtered.length===0
         ?<EmptyState icon="📖" title="기록이 없어요" action={<button className="btn btn-primary" onClick={openNew}>기록 추가</button>}/>
         :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(238px, 1fr))',gap:13}}>
@@ -179,7 +164,6 @@ export function PlayLogPage() {
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,color:'var(--color-text)',marginBottom:8}}>{item.title}</div>
                 <div style={{display:'flex',flexDirection:'column',gap:2}}>
                   {item.played_date&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>Date.</span>{format(new Date(item.played_date),'yyyy.MM.dd')}</div>}
-                  {/* GM이랑 PL 같은 줄에 나란히 */}
                   {(item.together_with||item.character_name)&&(
                     <div style={{fontSize:'0.63rem',color:'var(--color-text-light)',display:'flex',gap:16}}>
                       {item.together_with&&<span><span style={{fontWeight:600,marginRight:4}}>GM.</span>{item.together_with}</span>}
@@ -199,8 +183,6 @@ export function PlayLogPage() {
           ))}
         </div>
       }
-
-      {/* 상세 보기 */}
       <Modal isOpen={!!detail} onClose={()=>setDetail(null)} title={detail?.title}
         footer={<div className="flex justify-between w-full"><button className="btn btn-outline btn-sm" onClick={()=>{openEdit(detail);setDetail(null)}}>수정</button><button className="btn btn-outline btn-sm" onClick={()=>setDetail(null)}>닫기</button></div>}
       >
@@ -233,48 +215,58 @@ export function PlayLogPage() {
         )}
       </Modal>
 
+      {/* 등록/수정 모달 - autocomplete="off" 폼 전체에 적용 */}
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'기록 수정':'기록 추가'}
         footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
-        <div className="form-group"><label className="form-label">제목 (시나리오명) *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
-        <div className="form-group"><label className="form-label">엔딩 날짜 *</label><input className="form-input" type="date" value={form.played_date||''} onChange={set('played_date')}/></div>
-        <div className="form-group">
-          <label className="form-label">시리즈 / 캠페인 태그</label>
-          <input className="form-input" placeholder="예: 황혼의 왕관..." value={form.series_tag||''} onChange={set('series_tag')}/>
-          {seriesList.length>0&&<div style={{marginTop:6,display:'flex',gap:5,flexWrap:'wrap'}}><span className="text-xs text-light" style={{alignSelf:'center'}}>기존:</span>{seriesList.map(s=><button key={s} type="button" className="btn btn-outline btn-sm" style={{fontSize:'0.7rem',padding:'2px 8px'}} onClick={()=>setForm(f=>({...f,series_tag:s}))}>{s}</button>)}</div>}
-        </div>
-        <div className="grid-2">
-          <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
-          <div className="form-group"><label className="form-label">역할</label><select className="form-select" value={form.role} onChange={set('role')}><option value="PL">PL</option><option value="GM">GM</option></select></div>
-        </div>
-        <div className="grid-2">
-          <div className="form-group"><label className="form-label">PL</label><input className="form-input" placeholder="플레이어" value={form.character_name||''} onChange={set('character_name')}/></div>
-          <div className="form-group"><label className="form-label">GM</label><input className="form-input" placeholder="닉네임" value={form.together_with||''} onChange={set('together_with')}/></div>
-        </div>
-        <div className="form-group"><label className="form-label">등장인물</label><input className="form-input" placeholder="주요 등장인물, NPC 등..." value={form.npc||''} onChange={set('npc')}/></div>
-        <div className="form-group"><label className="form-label">평점</label><StarRating value={form.rating} onChange={v=>setForm(f=>({...f,rating:v}))}/></div>
-        <div className="form-group">
-          <label className="form-label">세션카드 이미지</label>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-            <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.session_image_url||''} onChange={set('session_image_url')} style={{flex:1}}/>
-            <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>{imgUploading?'업로드 중...':'📁 업로드'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleImageUpload} disabled={imgUploading}/></label>
+        {/* autocomplete=off를 감싸는 div로 브라우저 자동완성 차단 */}
+        <div autoComplete="off">
+          <div className="form-group"><label className="form-label">제목 (시나리오명) *</label><input className="form-input" autoComplete="off" value={form.title} onChange={set('title')}/></div>
+          <div className="form-group"><label className="form-label">엔딩 날짜 *</label><input className="form-input" type="date" autoComplete="off" value={form.played_date||''} onChange={set('played_date')}/></div>
+          <div className="form-group">
+            <label className="form-label">시리즈 / 캠페인 태그</label>
+            <input className="form-input" autoComplete="off" placeholder="예: 황혼의 왕관..." value={form.series_tag||''} onChange={set('series_tag')}/>
+            {seriesList.length>0&&<div style={{marginTop:6,display:'flex',gap:5,flexWrap:'wrap'}}><span className="text-xs text-light" style={{alignSelf:'center'}}>기존:</span>{seriesList.map(s=><button key={s} type="button" className="btn btn-outline btn-sm" style={{fontSize:'0.7rem',padding:'2px 8px'}} onClick={()=>setForm(f=>({...f,series_tag:s}))}>{s}</button>)}</div>}
           </div>
-          {form.session_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.session_image_url} alt="preview" style={{width:60,height:34,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,session_image_url:''}))}>제거</button></div>}
-        </div>
-        <div className="form-group"><label className="form-label">시나리오 링크 URL</label><input className="form-input" placeholder="https://..." value={form.scenario_link||''} onChange={set('scenario_link')}/></div>
-        <div className="form-group"><label className="form-label">세션 로그 백업 URL</label><input className="form-input" placeholder="https://..." value={form.session_log_url||''} onChange={set('session_log_url')}/></div>
-        <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')}/></div>
+          <div className="grid-2">
+            <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
+            <div className="form-group"><label className="form-label">역할</label><select className="form-select" value={form.role} onChange={set('role')}><option value="PL">PL</option><option value="GM">GM</option></select></div>
+          </div>
+          <div className="grid-2">
+            <div className="form-group"><label className="form-label">PL</label><input className="form-input" autoComplete="off" placeholder="플레이어" value={form.character_name||''} onChange={set('character_name')}/></div>
+            <div className="form-group"><label className="form-label">GM</label><input className="form-input" autoComplete="off" placeholder="닉네임" value={form.together_with||''} onChange={set('together_with')}/></div>
+          </div>
+          <div className="form-group"><label className="form-label">등장인물</label><input className="form-input" autoComplete="off" placeholder="주요 등장인물, NPC 등..." value={form.npc||''} onChange={set('npc')}/></div>
+          <div className="form-group"><label className="form-label">평점</label><StarRating value={form.rating} onChange={v=>setForm(f=>({...f,rating:v}))}/></div>
+          <div className="form-group">
+            <label className="form-label">세션카드 이미지</label>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              <input className="form-input" autoComplete="off" placeholder="https://... (imgur 주소 등록 추천)" value={form.session_image_url||''} onChange={set('session_image_url')} style={{flex:1}}/>
+              <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>{imgUploading?'업로드 중...':'📁 업로드'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleImageUpload} disabled={imgUploading}/></label>
+            </div>
+            {form.session_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.session_image_url} alt="preview" style={{width:60,height:34,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,session_image_url:''}))}>제거</button></div>}
+          </div>
+          <div className="form-group"><label className="form-label">시나리오 링크 URL</label><input className="form-input" autoComplete="off" placeholder="https://..." value={form.scenario_link||''} onChange={set('scenario_link')}/></div>
+          <div className="form-group"><label className="form-label">세션 로그 백업 URL</label><input className="form-input" autoComplete="off" placeholder="https://..." value={form.session_log_url||''} onChange={set('session_log_url')}/></div>
+          <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" autoComplete="off" value={form.memo||''} onChange={set('memo')}/></div>
 
-        {/* 스포일러 */}
-        <div style={{marginTop:8,padding:14,borderRadius:8,border:'1px solid rgba(229,115,115,0.3)',background:'rgba(229,115,115,0.04)'}}>
-          <div style={{fontWeight:700,fontSize:'0.82rem',color:'#c62828',marginBottom:10}}>⚠️ 스포일러 내용 (선택)</div>
-          <div className="form-group"><label className="form-label">스포일러 내용</label><textarea className="form-textarea" placeholder="비밀번호를 알아야만 열람할 수 있어요." value={form.spoiler_content||''} onChange={set('spoiler_content')} style={{minHeight:80}}/></div>
-          {form.spoiler_content&&(
-            <div className="form-group"><label className="form-label">스포일러 비밀번호</label><input className="form-input" type="password" placeholder="열람용 비밀번호 설정" value={form.spoiler_password||''} onChange={set('spoiler_password')}/></div>
-          )}
+          {/* 스포일러 섹션 - autocomplete 완전 차단 */}
+          <div style={{marginTop:8,padding:14,borderRadius:8,border:'1px solid rgba(229,115,115,0.3)',background:'rgba(229,115,115,0.04)'}}>
+            <div style={{fontWeight:700,fontSize:'0.82rem',color:'#c62828',marginBottom:10}}>⚠️ 스포일러 내용 (선택)</div>
+            <div className="form-group">
+              <label className="form-label">스포일러 내용</label>
+              <textarea className="form-textarea" autoComplete="off" name="spoiler_content_field" placeholder="비밀번호를 알아야만 열람할 수 있어요." value={form.spoiler_content||''} onChange={set('spoiler_content')} style={{minHeight:80}}/>
+            </div>
+            {form.spoiler_content&&(
+              <div className="form-group">
+                <label className="form-label">스포일러 비밀번호</label>
+                {/* new-password로 자동완성 완전 차단 */}
+                <input className="form-input" type="password" autoComplete="new-password" name="spoiler_pw_field" placeholder="열람용 비밀번호 설정" value={form.spoiler_password||''} onChange={set('spoiler_password')}/>
+              </div>
+            )}
+          </div>
         </div>
       </Modal>
-
       <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)}/>
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 기록을 삭제하시겠어요?"/>
     </div>
