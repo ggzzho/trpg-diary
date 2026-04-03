@@ -111,12 +111,13 @@ export default function PublicProfilePage() {
 
         {/* 프로필 내용 */}
         <div style={{padding:'0 24px 24px', textAlign:'center'}}>
-          {/* 아바타 - 헤더 위에 걸치게 */}
-          <div style={{display:'flex', justifyContent:'center', marginTop:-44, marginBottom:12}}>
+          {/* 아바타 - 헤더 경계에 반쯤 걸치게 */}
+          <div style={{display:'flex', justifyContent:'center', marginTop:-52, marginBottom:12}}>
             <div className="user-avatar" style={{
               width:88, height:88, fontSize:'2.2rem',
-              border:'4px solid var(--color-bg)',
-              boxShadow:'0 2px 16px var(--color-shadow)',
+              border:'4px solid white',
+              outline:'2px solid var(--color-border)',
+              boxShadow:'0 4px 20px rgba(0,0,0,0.15)',
               background:'var(--color-surface)'
             }}>
               {profile.avatar_url ? <img src={profile.avatar_url} alt="avatar" /> : (profile.display_name||'?')[0]}
