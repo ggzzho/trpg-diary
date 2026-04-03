@@ -155,11 +155,38 @@ export default function PublicProfilePage() {
     load()
   }, [username, user])
 
-  // BGM - 버튼 클릭 시 iframe embed 직접 삽입 (브라우저 정책 우회)
+  // BGM: mute=1로 자동재생 시작 → 버튼 클릭 시 postMessage로 음소거 해제
   const bgmVideoId = getYoutubeId(profile?.bgm_url)
   const [bgmOn, setBgmOn] = useState(false)
+  const [bgmReady, setBgmReady] = useState(false)
 
-  const toggleBgm = () => { setBgmOn(v => !v) }
+  // YouTube iframe API 메시지 수신
+  useEffect(() => {
+    if (!bgmVideoId) return
+    const handler = (e) => {
+      try {
+        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
+        if (data?.event === 'onReady' || data?.info?.playerState !== undefined) {
+          setBgmReady(true)
+        }
+      } catch {}
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [bgmVideoId])
+
+  const toggleBgm = () => {
+    const iframe = document.getElementById('bgm-iframe')
+    if (!iframe) return
+    if (bgmOn) {
+      iframe.contentWindow.postMessage(JSON.stringify({ event:'command', func:'mute' }), '*')
+      setBgmOn(false)
+    } else {
+      iframe.contentWindow.postMessage(JSON.stringify({ event:'command', func:'unMute' }), '*')
+      iframe.contentWindow.postMessage(JSON.stringify({ event:'command', func:'playVideo' }), '*')
+      setBgmOn(true)
+    }
+  }
 
   const toggleFav = async () => {
     if (!user) { alert('로그인 후 이용해주세요!'); return }
@@ -222,14 +249,13 @@ export default function PublicProfilePage() {
 
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
-      {/* BGM iframe - 켜기 클릭 시 DOM 삽입, 충분한 크기 필요 */}
-      {bgmVideoId && bgmOn && (
+      {/* BGM: 음소거로 자동재생, postMessage로 제어 */}
+      {bgmVideoId && (
         <iframe
-          key={`bgm-${bgmVideoId}`}
-          src={`https://www.youtube.com/embed/${bgmVideoId}?autoplay=1&mute=0&loop=1&playlist=${bgmVideoId}&controls=0&enablejsapi=1`}
-          style={{ position:'fixed', bottom:-300, left:-300, width:200, height:150, opacity:0, pointerEvents:'none', border:'none', zIndex:-1 }}
-          allow="autoplay; encrypted-media; fullscreen"
-          allowFullScreen
+          id="bgm-iframe"
+          src={`https://www.youtube.com/embed/${bgmVideoId}?autoplay=1&mute=1&loop=1&playlist=${bgmVideoId}&controls=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
+          style={{ position:'fixed', bottom:-500, left:-500, width:320, height:180, border:'none', zIndex:-999, pointerEvents:'none' }}
+          allow="autoplay; encrypted-media"
           title="bgm"
         />
       )}
@@ -274,7 +300,7 @@ export default function PublicProfilePage() {
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
                 <button className={`btn btn-sm ${bgmOn?'btn-primary':'btn-outline'}`} onClick={toggleBgm}
                   style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <Mi size="sm" color={bgmOn?'white':'accent'}>music_note</Mi>
+                  <Mi size="sm" color={bgmOn?'white':'accent'}>{bgmOn?'volume_up':'volume_off'}</Mi>
                   {bgmOn ? 'BGM 끄기' : 'BGM 켜기'}
                 </button>
                 {bgmOn && (

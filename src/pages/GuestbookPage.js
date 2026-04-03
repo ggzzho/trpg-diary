@@ -11,6 +11,88 @@ const fmtDT = (d) => {
   return `${date} ${time}`
 }
 
+// content에서 url과 메모 파싱 (공통 유틸)
+const parseEntry = (g) => {
+  const raw = g.content || ''
+  if (raw.includes('|||')) {
+    const idx = raw.indexOf('|||')
+    return { url: raw.slice(0, idx), memo: raw.slice(idx + 3) }
+  }
+  return { url: raw, memo: '' }
+}
+
+// 친구 페이지 칩 컴포넌트
+function FriendChip({ g, isOwner, userId, onEdit, onRemove }) {
+  const { url, memo } = parseEntry(g)
+  const href = url?.startsWith('http') ? url : g.author_username ? `/u/${g.author_username}` : '#'
+
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:10, background:'var(--color-surface)', border:'1px solid var(--color-border)', transition:'box-shadow 0.15s' }}
+      onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 12px var(--color-shadow)'}
+      onMouseLeave={e => e.currentTarget.style.boxShadow='none'}
+    >
+      {/* 아바타 */}
+      <a href={href} target="_blank" rel="noreferrer" style={{ textDecoration:'none', flexShrink:0 }}>
+        <div style={{ width:42, height:42, borderRadius:'50%', overflow:'hidden', background:'var(--color-primary)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1rem', color:'white', fontWeight:700 }}>
+          {g.author_avatar_url
+            ? <img src={g.author_avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.target.style.display='none' }}/>
+            : (g.author_name||'?')[0]
+          }
+        </div>
+      </a>
+
+      {/* 이름 + 메모 */}
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+          <a href={href} target="_blank" rel="noreferrer"
+            style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--color-text)', textDecoration:'none' }}
+            onMouseEnter={e => e.target.style.color='var(--color-primary)'}
+            onMouseLeave={e => e.target.style.color='var(--color-text)'}
+          >
+            {g.author_name}
+          </a>
+          {g.author_username && (
+            <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>@{g.author_username}</span>
+          )}
+        </div>
+        {/* 메모 박스 */}
+        {memo && (
+          <div style={{
+            marginTop: 5,
+            padding: '4px 10px',
+            borderRadius: 6,
+            background: 'var(--color-nav-active-bg)',
+            border: '1px solid var(--color-border)',
+            fontSize: '0.78rem',
+            color: 'var(--color-text-light)',
+            lineHeight: 1.5,
+            wordBreak: 'break-all',
+          }}>
+            <Mi size="sm" color="accent" style={{ marginRight:4, verticalAlign:'middle' }}>edit_note</Mi>
+            {memo}
+          </div>
+        )}
+      </div>
+
+      {/* 편집 버튼 */}
+      {(isOwner || (userId && g.author_id === userId)) && (
+        <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+          {isOwner && (
+            <button className="btn btn-ghost btn-sm" style={{ padding:'4px 7px' }}
+              onClick={() => onEdit(g)} title="수정">
+              <Mi size="sm" color="light">edit</Mi>
+            </button>
+          )}
+          <button className="btn btn-ghost btn-sm" style={{ padding:'4px 7px', color:'#e57373' }}
+            onClick={() => onRemove(g.id)} title="삭제">
+            <Mi size="sm" color="danger">close</Mi>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── 공개 페이지용 ──
 export function GuestbookPublicView({ ownerId }) {
   const { user, profile } = useAuth()
@@ -28,8 +110,8 @@ export function GuestbookPublicView({ ownerId }) {
   const [pageSubmitting, setPageSubmitting] = useState(false)
   const [pageDone, setPageDone] = useState(false)
 
-  // 오너 수정 상태
-  const [editingId, setEditingId] = useState(null)
+  // 수정 모달
+  const [editingItem, setEditingItem] = useState(null) // {id, nickname, memo}
   const [editForm, setEditForm] = useState({ nickname:'', memo:'' })
 
   const isOwner = !!(user && ownerId && user.id === ownerId)
@@ -68,7 +150,8 @@ export function GuestbookPublicView({ ownerId }) {
       author_name:pageForm.nickname.trim(),
       author_username:m ? m[1] : null,
       author_avatar_url:pageForm.avatar_url.trim() || null,
-      content:pageForm.url.trim(), type:'mypage',
+      content:pageForm.url.trim(),
+      type:'mypage',
     })
     setPageForm({ nickname:'', url:'', avatar_url:'' })
     setPageFormOpen(false)
@@ -76,44 +159,68 @@ export function GuestbookPublicView({ ownerId }) {
     load(); setPageSubmitting(false)
   }
 
-  const removeEntry = async (id) => { await supabase.from('guestbook').delete().eq('id', id); load() }
+  const removeEntry = async (id) => {
+    await supabase.from('guestbook').delete().eq('id', id); load()
+  }
 
-  // 수정 저장
-  const saveEdit = async (id) => {
-    await supabase.from('guestbook').update({
-      author_name: editForm.nickname.trim(),
-      // memo는 별도 컬럼이 없으면 content에 저장하거나, description 활용
-      // 여기서는 author_name에 메모를 덧붙이는 대신 별도 필드로 저장
-    }).eq('id', id)
-    // description 컬럼이 없으면 content를 메모로 활용 (url || 메모 구분자)
-    const item = mypages.find(p => p.id === id)
-    const originalUrl = item?.content?.startsWith('http') ? item.content : item?.author_username ? `https://trpg-diary.vercel.app/u/${item.author_username}` : item?.content || ''
-    const newContent = editForm.memo.trim() ? `${originalUrl}|||${editForm.memo.trim()}` : originalUrl
+  const openEdit = (g) => {
+    const { memo } = parseEntry(g)
+    setEditingItem(g)
+    setEditForm({ nickname: g.author_name || '', memo })
+  }
+
+  const saveEdit = async () => {
+    if (!editingItem) return
+    const { url } = parseEntry(editingItem) // 기존 URL만 추출
+    const newContent = editForm.memo.trim()
+      ? `${url}|||${editForm.memo.trim()}`
+      : url
     await supabase.from('guestbook').update({
       author_name: editForm.nickname.trim(),
       content: newContent,
-    }).eq('id', id)
-    setEditingId(null); load()
-  }
-
-  // url과 메모 파싱
-  const parseEntry = (g) => {
-    const raw = g.content || ''
-    if (raw.includes('|||')) {
-      const [url, memo] = raw.split('|||')
-      return { url, memo }
-    }
-    return { url: raw, memo: '' }
+    }).eq('id', editingItem.id)
+    setEditingItem(null)
+    load()
   }
 
   return (
     <div>
+      {/* 수정 모달 */}
+      {editingItem && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={e => { if (e.target === e.currentTarget) setEditingItem(null) }}>
+          <div style={{ background:'var(--color-surface)', borderRadius:12, padding:24, width:'100%', maxWidth:380, boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontWeight:700, fontSize:'1rem', marginBottom:16 }}>친구 페이지 수정</div>
+            <div className="form-group">
+              <label className="form-label">닉네임</label>
+              <input className="form-input" autoComplete="off" value={editForm.nickname}
+                onChange={e => setEditForm(f => ({...f, nickname:e.target.value}))}/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">메모</label>
+              <textarea className="form-textarea" autoComplete="off"
+                placeholder="이 친구에 대한 메모를 남겨요..." rows={3}
+                value={editForm.memo} onChange={e => setEditForm(f => ({...f, memo:e.target.value}))}/>
+            </div>
+            <div className="flex justify-end gap-8">
+              <button className="btn btn-outline btn-sm" onClick={() => setEditingItem(null)}>취소</button>
+              <button className="btn btn-primary btn-sm" onClick={saveEdit}>저장</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 탭 */}
       <div className="flex gap-8" style={{ marginBottom:20 }}>
-        <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}>
+        <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}
+          style={{ display:'flex', alignItems:'center', gap:4 }}>
+          <Mi size="sm" color={tab==='message'?'white':'accent'}>mail</Mi>
           방명록 ({messages.length})
         </button>
-        <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={() => setTab('mypage')}>
-          <><Mi size='sm'>link</Mi> 친구 페이지 목록 ({mypages.length})</>
+        <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={() => setTab('mypage')}
+          style={{ display:'flex', alignItems:'center', gap:4 }}>
+          <Mi size="sm" color={tab==='mypage'?'white':'accent'}>link</Mi>
+          친구 페이지 목록 ({mypages.length})
         </button>
       </div>
 
@@ -137,7 +244,6 @@ export function GuestbookPublicView({ ownerId }) {
               </div>
             </div>
           </div>
-
           {loading
             ? <div className="text-sm text-light" style={{ textAlign:'center', padding:20 }}>불러오는 중...</div>
             : messages.length === 0
@@ -155,7 +261,8 @@ export function GuestbookPublicView({ ownerId }) {
                           <div className="flex items-center gap-8">
                             <span className="text-xs text-light">{fmtDT(g.created_at)}</span>
                             {(isOwner || g.author_id === user?.id) && (
-                              <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px' }} onClick={() => removeEntry(g.id)}>삭제</button>
+                              <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px' }}
+                                onClick={() => removeEntry(g.id)}>삭제</button>
                             )}
                           </div>
                         </div>
@@ -177,7 +284,9 @@ export function GuestbookPublicView({ ownerId }) {
           <div className="card" style={{ marginBottom:16, padding:'16px 20px' }}>
             <div className="flex justify-between items-center" style={{ marginBottom: pageFormOpen ? 14 : 0 }}>
               <div>
-                <div style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:2 }}><Mi size="sm" style={{marginRight:5}}>link</Mi>내 페이지 남기기</div>
+                <div style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:2, display:'flex', alignItems:'center', gap:5 }}>
+                  <Mi size="sm">link</Mi>내 페이지 남기기
+                </div>
                 <div className="text-xs text-light">내 공개 페이지 링크를 이곳에 남겨요</div>
               </div>
               <div className="flex items-center gap-8">
@@ -224,8 +333,9 @@ export function GuestbookPublicView({ ownerId }) {
           </div>
 
           {isOwner && mypages.length > 0 && (
-            <div style={{ marginBottom:12, padding:'8px 14px', borderRadius:8, background:'var(--color-nav-active-bg)', fontSize:'0.8rem', color:'var(--color-text-light)' }}>
-              💡 ✏️ 버튼으로 닉네임·메모 수정, ✕ 버튼으로 삭제할 수 있어요
+            <div style={{ marginBottom:12, padding:'8px 14px', borderRadius:8, background:'var(--color-nav-active-bg)', fontSize:'0.8rem', color:'var(--color-text-light)', display:'flex', alignItems:'center', gap:6 }}>
+              <Mi size="sm" color="light">edit</Mi>
+              연필 버튼으로 닉네임·메모 수정, X 버튼으로 삭제할 수 있어요
             </div>
           )}
 
@@ -234,77 +344,10 @@ export function GuestbookPublicView({ ownerId }) {
             : mypages.length === 0
               ? <div className="card" style={{ textAlign:'center', padding:32, color:'var(--color-text-light)', fontSize:'0.85rem' }}>아직 남긴 페이지가 없어요</div>
               : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                  {mypages.map(g => {
-                    const { url, memo } = parseEntry(g)
-                    const href = url?.startsWith('http') ? url : g.author_username ? `/u/${g.author_username}` : '#'
-                    const isEditing = editingId === g.id
-
-                    return (
-                      <div key={g.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:12 }}>
-                        {/* 아바타 */}
-                        <a href={href} target="_blank" rel="noreferrer" style={{ textDecoration:'none', flexShrink:0 }}>
-                          <div style={{ width:40, height:40, borderRadius:'50%', overflow:'hidden', background:'var(--color-primary)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.9rem', color:'white', fontWeight:700 }}>
-                            {g.author_avatar_url
-                              ? <img src={g.author_avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.target.style.display='none' }}/>
-                              : (g.author_name||'?')[0]
-                            }
-                          </div>
-                        </a>
-
-                        {/* 내용 */}
-                        <div style={{ flex:1, minWidth:0 }}>
-                          {isEditing ? (
-                            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                              <input className="form-input" autoComplete="off" value={editForm.nickname}
-                                onChange={e => setEditForm(f => ({...f, nickname:e.target.value}))}
-                                placeholder="닉네임" style={{ fontSize:'0.85rem' }}/>
-                              <input className="form-input" autoComplete="off" value={editForm.memo}
-                                onChange={e => setEditForm(f => ({...f, memo:e.target.value}))}
-                                placeholder="메모 (선택)" style={{ fontSize:'0.82rem' }}/>
-                            </div>
-                          ) : (
-                            <div>
-                              <a href={href} target="_blank" rel="noreferrer"
-                                style={{ fontWeight:600, fontSize:'0.9rem', color:'var(--color-text)', textDecoration:'none' }}>
-                                {g.author_name}
-                              </a>
-                              {g.author_username && (
-                                <span className="text-xs text-light" style={{ marginLeft:6 }}>@{g.author_username}</span>
-                              )}
-                              {memo && (
-                                <div className="text-xs text-light" style={{ marginTop:2 }}>📝 {memo}</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* 오너 편집 버튼 */}
-                        {isOwner && (
-                          <div className="flex gap-6" style={{ flexShrink:0 }}>
-                            {isEditing ? (
-                              <>
-                                <button className="btn btn-primary btn-sm" style={{ padding:'3px 10px' }} onClick={() => saveEdit(g.id)}>저장</button>
-                                <button className="btn btn-ghost btn-sm" style={{ padding:'3px 8px' }} onClick={() => setEditingId(null)}>취소</button>
-                              </>
-                            ) : (
-                              <>
-                                <button className="btn btn-ghost btn-sm" style={{ padding:'3px 8px' }}
-                                  onClick={() => { setEditingId(g.id); setEditForm({ nickname:g.author_name||'', memo }) }}
-                                  title="수정">✏️</button>
-                                <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'3px 8px' }}
-                                  onClick={() => removeEntry(g.id)} title="삭제">✕</button>
-                              </>
-                            )}
-                          </div>
-                        )}
-                        {/* 본인이 남긴 경우 삭제 */}
-                        {!isOwner && g.author_id && g.author_id === user?.id && (
-                          <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'3px 8px', flexShrink:0 }}
-                            onClick={() => removeEntry(g.id)}>✕</button>
-                        )}
-                      </div>
-                    )
-                  })}
+                  {mypages.map(g => (
+                    <FriendChip key={g.id} g={g} isOwner={isOwner} userId={user?.id}
+                      onEdit={openEdit} onRemove={removeEntry}/>
+                  ))}
                 </div>
           }
         </div>
@@ -323,7 +366,7 @@ export function GuestbookPage({ ownerId }) {
   const [mypages, setMypages] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('message')
-  const [editingId, setEditingId] = useState(null)
+  const [editingItem, setEditingItem] = useState(null)
   const [editForm, setEditForm] = useState({ nickname:'', memo:'' })
 
   const load = async () => {
@@ -338,35 +381,68 @@ export function GuestbookPage({ ownerId }) {
 
   const removeEntry = async (id) => { await supabase.from('guestbook').delete().eq('id', id); load() }
 
-  const parseEntry = (g) => {
-    const raw = g.content || ''
-    if (raw.includes('|||')) {
-      const [url, memo] = raw.split('|||')
-      return { url, memo }
-    }
-    return { url: raw, memo: '' }
+  const openEdit = (g) => {
+    const { memo } = parseEntry(g)
+    setEditingItem(g)
+    setEditForm({ nickname: g.author_name || '', memo })
   }
 
-  const saveEdit = async (id) => {
-    const item = mypages.find(p => p.id === id)
-    const { url } = parseEntry(item)
-    const newContent = editForm.memo.trim() ? `${url}|||${editForm.memo.trim()}` : url
-    await supabase.from('guestbook').update({ author_name:editForm.nickname.trim(), content:newContent }).eq('id', id)
-    setEditingId(null); load()
+  const saveEdit = async () => {
+    if (!editingItem) return
+    const { url } = parseEntry(editingItem) // 기존 URL만 추출 (메모 제외)
+    const newContent = editForm.memo.trim()
+      ? `${url}|||${editForm.memo.trim()}`
+      : url
+    await supabase.from('guestbook').update({
+      author_name: editForm.nickname.trim(),
+      content: newContent,
+    }).eq('id', editingItem.id)
+    setEditingItem(null)
+    load()
   }
 
   return (
     <div className="fade-in">
+      {/* 수정 모달 */}
+      {editingItem && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={e => { if (e.target === e.currentTarget) setEditingItem(null) }}>
+          <div style={{ background:'var(--color-surface)', borderRadius:12, padding:24, width:'100%', maxWidth:380, boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontWeight:700, fontSize:'1rem', marginBottom:16 }}>친구 페이지 수정</div>
+            <div className="form-group">
+              <label className="form-label">닉네임</label>
+              <input className="form-input" autoComplete="off" value={editForm.nickname}
+                onChange={e => setEditForm(f => ({...f, nickname:e.target.value}))}/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">메모</label>
+              <textarea className="form-textarea" autoComplete="off"
+                placeholder="이 친구에 대한 메모를 남겨요..." rows={3}
+                value={editForm.memo} onChange={e => setEditForm(f => ({...f, memo:e.target.value}))}/>
+            </div>
+            <div className="flex justify-end gap-8">
+              <button className="btn btn-outline btn-sm" onClick={() => setEditingItem(null)}>취소</button>
+              <button className="btn btn-primary btn-sm" onClick={saveEdit}>저장</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="page-header">
-        <h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>mail</Mi>방명록</h1>
+        <h1 className="page-title"><Mi style={{ marginRight:8, verticalAlign:'middle' }}>mail</Mi>방명록</h1>
         <p className="page-subtitle">내 공개 페이지에 남겨진 방명록을 관리해요</p>
       </div>
+
       <div className="flex gap-8" style={{ marginBottom:20 }}>
-        <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}>
+        <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}
+          style={{ display:'flex', alignItems:'center', gap:4 }}>
+          <Mi size="sm" color={tab==='message'?'white':'accent'}>mail</Mi>
           방명록 ({messages.length})
         </button>
-        <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={() => setTab('mypage')}>
-          <><Mi size='sm'>link</Mi> 친구 페이지 목록 ({mypages.length})</>
+        <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={() => setTab('mypage')}
+          style={{ display:'flex', alignItems:'center', gap:4 }}>
+          <Mi size="sm" color={tab==='mypage'?'white':'accent'}>link</Mi>
+          친구 페이지 목록 ({mypages.length})
         </button>
       </div>
 
@@ -387,7 +463,8 @@ export function GuestbookPage({ ownerId }) {
                       </div>
                       <div className="flex items-center gap-8">
                         <span className="text-xs text-light">{fmtDT(g.created_at)}</span>
-                        <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px' }} onClick={() => removeEntry(g.id)}>삭제</button>
+                        <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px' }}
+                          onClick={() => removeEntry(g.id)}>삭제</button>
                       </div>
                     </div>
                     <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>
@@ -401,8 +478,9 @@ export function GuestbookPage({ ownerId }) {
       {tab === 'mypage' && (
         <div>
           {mypages.length > 0 && (
-            <div style={{ marginBottom:12, padding:'8px 14px', borderRadius:8, background:'var(--color-nav-active-bg)', fontSize:'0.8rem', color:'var(--color-text-light)' }}>
-              💡 ✏️ 버튼으로 닉네임·메모 수정, ✕ 버튼으로 삭제할 수 있어요
+            <div style={{ marginBottom:12, padding:'8px 14px', borderRadius:8, background:'var(--color-nav-active-bg)', fontSize:'0.8rem', color:'var(--color-text-light)', display:'flex', alignItems:'center', gap:6 }}>
+              <Mi size="sm" color="light">edit</Mi>
+              연필 버튼으로 닉네임·메모 수정, X 버튼으로 삭제할 수 있어요
             </div>
           )}
           {loading
@@ -412,59 +490,10 @@ export function GuestbookPage({ ownerId }) {
                   아직 남긴 페이지가 없어요.<br/><span style={{ fontSize:'0.8rem' }}>방문자들이 공개 페이지에서 링크를 남길 수 있어요!</span>
                 </div>
               : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                  {mypages.map(g => {
-                    const { url, memo } = parseEntry(g)
-                    const href = url?.startsWith('http') ? url : g.author_username ? `/u/${g.author_username}` : '#'
-                    const isEditing = editingId === g.id
-                    return (
-                      <div key={g.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:12 }}>
-                        <a href={href} target="_blank" rel="noreferrer" style={{ textDecoration:'none', flexShrink:0 }}>
-                          <div style={{ width:40, height:40, borderRadius:'50%', overflow:'hidden', background:'var(--color-primary)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.9rem', color:'white', fontWeight:700 }}>
-                            {g.author_avatar_url
-                              ? <img src={g.author_avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.target.style.display='none' }}/>
-                              : (g.author_name||'?')[0]
-                            }
-                          </div>
-                        </a>
-                        <div style={{ flex:1, minWidth:0 }}>
-                          {isEditing ? (
-                            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                              <input className="form-input" autoComplete="off" value={editForm.nickname}
-                                onChange={e => setEditForm(f => ({...f, nickname:e.target.value}))}
-                                placeholder="닉네임" style={{ fontSize:'0.85rem' }}/>
-                              <input className="form-input" autoComplete="off" value={editForm.memo}
-                                onChange={e => setEditForm(f => ({...f, memo:e.target.value}))}
-                                placeholder="메모 (선택)" style={{ fontSize:'0.82rem' }}/>
-                            </div>
-                          ) : (
-                            <div>
-                              <a href={href} target="_blank" rel="noreferrer"
-                                style={{ fontWeight:600, fontSize:'0.9rem', color:'var(--color-text)', textDecoration:'none' }}>
-                                {g.author_name}
-                              </a>
-                              {g.author_username && <span className="text-xs text-light" style={{ marginLeft:6 }}>@{g.author_username}</span>}
-                              {memo && <div className="text-xs text-light" style={{ marginTop:2 }}>📝 {memo}</div>}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-6" style={{ flexShrink:0 }}>
-                          {isEditing ? (
-                            <>
-                              <button className="btn btn-primary btn-sm" style={{ padding:'3px 10px' }} onClick={() => saveEdit(g.id)}>저장</button>
-                              <button className="btn btn-ghost btn-sm" style={{ padding:'3px 8px' }} onClick={() => setEditingId(null)}>취소</button>
-                            </>
-                          ) : (
-                            <>
-                              <button className="btn btn-ghost btn-sm" style={{ padding:'3px 8px' }}
-                                onClick={() => { setEditingId(g.id); setEditForm({ nickname:g.author_name||'', memo }) }}>✏️</button>
-                              <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'3px 8px' }}
-                                onClick={() => removeEntry(g.id)}>✕</button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+                  {mypages.map(g => (
+                    <FriendChip key={g.id} g={g} isOwner={true} userId={user?.id}
+                      onEdit={openEdit} onRemove={removeEntry}/>
+                  ))}
                 </div>
           }
         </div>
