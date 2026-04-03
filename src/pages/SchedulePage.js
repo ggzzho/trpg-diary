@@ -14,15 +14,9 @@ const STATUS_MAP = {
 }
 const BLANK = { title:'', scheduled_date:'', scheduled_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false }
 
-// 날짜 박스 컴포넌트 - 테마 컬러 적용
 function DateBox({ dateStr }) {
   return (
-    <div style={{
-      background:'var(--color-primary)',
-      borderRadius:8, padding:'8px 12px',
-      textAlign:'center', minWidth:50, flexShrink:0,
-      boxShadow:'0 2px 8px var(--color-btn-shadow)'
-    }}>
+    <div style={{ background:'var(--color-primary)', borderRadius:8, padding:'8px 12px', textAlign:'center', minWidth:50, flexShrink:0, boxShadow:'0 2px 8px var(--color-btn-shadow)' }}>
       <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.8)'}}>{format(new Date(dateStr),'M월',{locale:ko})}</div>
       <div style={{fontSize:'1.3rem',color:'white',fontWeight:700,lineHeight:1}}>{format(new Date(dateStr),'d')}</div>
       <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.8)'}}>{format(new Date(dateStr),'EEE',{locale:ko})}</div>
@@ -45,6 +39,11 @@ export default function SchedulePage() {
   const [ruleManager, setRuleManager] = useState(false)
   const [summaryPeriod, setSummaryPeriod] = useState('month')
   const [summaryDate, setSummaryDate] = useState(new Date())
+  // 복사/이동 기능
+  const [copyModal, setCopyModal] = useState(false)
+  const [copyTarget, setCopyTarget] = useState(null)
+  const [copyMode, setCopyMode] = useState('copy') // 'copy' | 'move'
+  const [copyDate, setCopyDate] = useState('')
 
   const load = async () => { const {data}=await schedulesApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
@@ -52,6 +51,7 @@ export default function SchedulePage() {
   const set = k => e => setForm(f => ({...f, [k]: e.target.value}))
   const openNew = (date) => { setEditing(null); setForm({...BLANK, scheduled_date:date||new Date().toISOString().split('T')[0]}); setModal(true) }
   const openEdit = (item) => { setEditing(item); setForm({...item}); setModal(true) }
+
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
     const payload = {...form, scheduled_time:form.scheduled_time||null}
@@ -60,6 +60,20 @@ export default function SchedulePage() {
     setModal(false); load()
   }
   const remove = async id => { await schedulesApi.remove(id); load() }
+
+  // 복사/이동 실행
+  const executeCopyMove = async () => {
+    if (!copyDate || !copyTarget) return
+    if (copyMode === 'copy') {
+      // 복사: 새 항목 생성
+      const {id, created_at, ...rest} = copyTarget
+      await schedulesApi.create({...rest, scheduled_date: copyDate, user_id: user.id})
+    } else {
+      // 이동: 날짜만 업데이트
+      await schedulesApi.update(copyTarget.id, {...copyTarget, scheduled_date: copyDate})
+    }
+    setCopyModal(false); setCopyTarget(null); setCopyDate(''); load()
+  }
 
   const today = new Date().toISOString().split('T')[0]
   const filtered = items.filter(i => {
@@ -95,8 +109,15 @@ export default function SchedulePage() {
           <div key={dateStr} className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,calendarDate)?'other-month':''}`} onClick={()=>openNew(dateStr)}>
             <div className="calendar-date">{format(d,'d')}</div>
             {di.map(ev=>(
-              <div key={ev.id} className={`calendar-event ${ev.is_gm?'gm':''} ${ev.status==='completed'?'completed':''} ${ev.status==='cancelled'?'cancelled':''}`}
-                onClick={e=>{e.stopPropagation();openEdit(ev)}} title={ev.title}>{ev.title}</div>
+              <div key={ev.id}
+                className={`calendar-event ${ev.is_gm?'gm':''} ${ev.status==='completed'?'completed':''} ${ev.status==='cancelled'?'cancelled':''}`}
+                title={ev.title}
+                onClick={e=>{e.stopPropagation();openEdit(ev)}}
+                style={{
+                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                  cursor:'pointer'
+                }}
+              >{ev.title}</div>
             ))}
           </div>
         )
@@ -122,40 +143,36 @@ export default function SchedulePage() {
   }
 
   const renderYear = () => {
-    // 연 뷰도 현재 filter 상태 반영
     const yearItems = items.filter(i => {
-      if (filter === 'upcoming') return i.scheduled_date >= today && i.status !== 'cancelled'
-      if (filter === 'past') return i.scheduled_date < today || i.status === 'completed'
-      if (filter === 'cancelled') return i.status === 'cancelled'
-      return true // 'all'
+      if (filter==='upcoming') return i.scheduled_date>=today&&i.status!=='cancelled'
+      if (filter==='past') return i.scheduled_date<today||i.status==='completed'
+      if (filter==='cancelled') return i.status==='cancelled'
+      return true
     })
-
     return (
-    <div>
-      <div className="flex justify-between items-center" style={{marginBottom:16}}>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setYearView(y=>y-1)}>‹ {yearView-1}년</button>
-        <span style={{fontWeight:700,fontSize:'1rem',color:'var(--color-accent)'}}>{yearView}년</span>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setYearView(y=>y+1)}>{yearView+1}년 ›</button>
+      <div>
+        <div className="flex justify-between items-center" style={{marginBottom:16}}>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setYearView(y=>y-1)}>‹ {yearView-1}년</button>
+          <span style={{fontWeight:700,fontSize:'1rem',color:'var(--color-accent)'}}>{yearView}년</span>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setYearView(y=>y+1)}>{yearView+1}년 ›</button>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
+          {Array.from({length:12},(_,m)=>{
+            const mi=yearItems.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===yearView&&getMonth(d)===m})
+            return (
+              <div key={m} className="card card-sm" style={{cursor:'pointer'}} onClick={()=>{setCalendarDate(new Date(yearView,m,1));setViewMode('calendar')}}>
+                <div style={{fontWeight:700,fontSize:'0.85rem',color:'var(--color-accent)',marginBottom:6}}>{m+1}월 <span className="text-xs text-light">({mi.length})</span></div>
+                {mi.slice(0,3).map(i=>(
+                  <div key={i.id} style={{fontSize:'0.62rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:i.status==='cancelled'?'#e57373':i.is_gm?'var(--color-accent)':'var(--color-primary)',color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    {i.status==='cancelled'?'[취소] ':''}{i.title}
+                  </div>
+                ))}
+                {mi.length>3&&<div className="text-xs text-light">+{mi.length-3}개 더</div>}
+              </div>
+            )
+          })}
+        </div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-        {Array.from({length:12},(_,m)=>{
-          const mi=yearItems.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===yearView&&getMonth(d)===m})
-          return (
-            <div key={m} className="card card-sm" style={{cursor:'pointer'}} onClick={()=>{setCalendarDate(new Date(yearView,m,1));setViewMode('calendar')}}>
-              <div style={{fontWeight:700,fontSize:'0.85rem',color:'var(--color-accent)',marginBottom:6}}>{m+1}월 <span className="text-xs text-light">({mi.length})</span></div>
-              {mi.slice(0,3).map(i=>(
-                <div key={i.id} style={{
-                  fontSize:'0.62rem',padding:'2px 5px',borderRadius:3,marginBottom:2,
-                  background: i.status==='cancelled' ? '#e57373' : i.is_gm ? 'var(--color-accent)' : 'var(--color-primary)',
-                  color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'
-                }}>{i.status==='cancelled'?'[취소] ':''}{i.title}</div>
-              ))}
-              {mi.length>3&&<div className="text-xs text-light">+{mi.length-3}개 더</div>}
-            </div>
-          )
-        })}
-      </div>
-    </div>
     )
   }
 
@@ -242,11 +259,11 @@ export default function SchedulePage() {
               {filtered.map(item=>(
                 <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
                   <DateBox dateStr={item.scheduled_date} />
-                  <div style={{flex:1}}>
+                  <div style={{flex:1, minWidth:0}}>
                     <div className="flex items-center gap-8" style={{marginBottom:3}}>
-                      <span style={{fontWeight:600,fontSize:'0.88rem'}}>{item.title}</span>
-                      <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`}>{STATUS_MAP[item.status]?.label}</span>
-                      {item.is_gm&&<span className="badge badge-primary">GM</span>}
+                      <span style={{fontWeight:600,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.title}</span>
+                      <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{flexShrink:0}}>{STATUS_MAP[item.status]?.label}</span>
+                      {item.is_gm&&<span className="badge badge-primary" style={{flexShrink:0}}>GM</span>}
                     </div>
                     <div className="text-xs text-light flex gap-12">
                       {item.system_name&&<span>🎲 {item.system_name}</span>}
@@ -255,7 +272,9 @@ export default function SchedulePage() {
                     </div>
                     {item.description&&<p className="text-sm text-light" style={{marginTop:4}}>{item.description}</p>}
                   </div>
-                  <div className="flex gap-8">
+                  <div className="flex gap-8" style={{flexShrink:0}}>
+                    {/* 복사/이동 버튼 */}
+                    <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={()=>{setCopyTarget(item);setCopyDate(item.scheduled_date);setCopyMode('copy');setCopyModal(true)}}>📋</button>
                     <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
                     <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
                   </div>
@@ -264,6 +283,7 @@ export default function SchedulePage() {
             </div>
       )}
 
+      {/* 등록/수정 모달 */}
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'일정 수정':'새 일정 추가'}
         footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
@@ -289,6 +309,29 @@ export default function SchedulePage() {
           </div>
         </div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.description||''} onChange={set('description')} style={{minHeight:72}} /></div>
+      </Modal>
+
+      {/* 복사/이동 모달 */}
+      <Modal isOpen={copyModal} onClose={()=>setCopyModal(false)} title="일정 복사 / 이동"
+        footer={<><button className="btn btn-outline btn-sm" onClick={()=>setCopyModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={executeCopyMove}>{copyMode==='copy'?'복사하기':'이동하기'}</button></>}
+      >
+        <div style={{marginBottom:14,padding:12,borderRadius:8,background:'var(--color-nav-active-bg)'}}>
+          <div style={{fontWeight:600,fontSize:'0.88rem',marginBottom:4}}>{copyTarget?.title}</div>
+          <div className="text-xs text-light">{copyTarget?.scheduled_date} · {copyTarget?.system_name}</div>
+        </div>
+        <div className="flex gap-8" style={{marginBottom:16}}>
+          <button className={`btn btn-sm ${copyMode==='copy'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('copy')}>📋 복사</button>
+          <button className={`btn btn-sm ${copyMode==='move'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('move')}>✂️ 이동</button>
+        </div>
+        <div className="form-group">
+          <label className="form-label">{copyMode==='copy'?'복사할 날짜':'이동할 날짜'}</label>
+          <input className="form-input" type="date" value={copyDate} onChange={e=>setCopyDate(e.target.value)} />
+        </div>
+        <p className="text-xs text-light">
+          {copyMode==='copy'
+            ? '선택한 날짜에 동일한 일정이 새로 생성돼요.'
+            : '기존 일정의 날짜가 변경돼요.'}
+        </p>
       </Modal>
 
       <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)} />

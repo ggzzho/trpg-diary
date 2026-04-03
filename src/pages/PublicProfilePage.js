@@ -15,6 +15,20 @@ function calcDday(dateStr) {
   return Math.floor((new Date() - new Date(dateStr)) / (1000*60*60*24))
 }
 
+// 태그 칩 - PlayLogPage와 동일한 스타일
+const TAG_COLORS = {
+  series: { bg:'rgba(200,169,110,0.18)', color:'#8b6f47', border:'rgba(200,169,110,0.5)' },
+  role_PL: { bg:'rgba(100,149,237,0.15)', color:'#2a5aaa', border:'rgba(100,149,237,0.4)' },
+  role_GM: { bg:'rgba(155,137,196,0.15)', color:'#5a3a9c', border:'rgba(155,137,196,0.4)' },
+  rule: { bg:'rgba(156,175,136,0.18)', color:'#4a6a30', border:'rgba(156,175,136,0.5)' },
+}
+function TagChip({ type, label }) {
+  const c = type==='series' ? TAG_COLORS.series : type==='role' ? (label==='GM' ? TAG_COLORS.role_GM : TAG_COLORS.role_PL) : TAG_COLORS.rule
+  return (
+    <span style={{display:'inline-flex',alignItems:'center',padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:c.bg,color:c.color,border:`1px solid ${c.border}`,whiteSpace:'nowrap'}}>{label}</span>
+  )
+}
+
 export default function PublicProfilePage() {
   const { username } = useParams()
   const { user } = useAuth()
@@ -29,7 +43,6 @@ export default function PublicProfilePage() {
       const { data: p, error } = await getProfile(username)
       if (error || !p) { setNotFound(true); setLoading(false); return }
       setProfile(p)
-
       applyTheme(p.theme_color||'#c8a96e', p.theme_bg_color||'#faf6f0', p.theme_accent||'#8b6f47')
       applyBackground(p.background_image_url||'', p.bg_opacity!==undefined ? p.bg_opacity : 1)
 
@@ -42,22 +55,17 @@ export default function PublicProfilePage() {
         supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true),
         supabase.from('schedules').select('*').eq('user_id',p.id).gte('scheduled_date',today).neq('status','cancelled').order('scheduled_date'),
       ])
-
       setData({
-        logs: logs.data||[], rulebooks: rulebooks.data||[],
-        scenarios: scenarios.data||[], pairs: pairs.data||[],
-        availability: availability.data||[], schedules: schedules.data||[],
+        logs:logs.data||[], rulebooks:rulebooks.data||[],
+        scenarios:scenarios.data||[], pairs:pairs.data||[],
+        availability:availability.data||[], schedules:schedules.data||[],
       })
       setLoading(false)
     }
     load()
   }, [username])
 
-  if (loading) return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{textAlign:'center',color:'var(--color-text-light)',fontSize:'0.88rem'}}>불러오는 중...</div>
-    </div>
-  )
+  if (loading) return <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{color:'var(--color-text-light)',fontSize:'0.88rem'}}>불러오는 중...</div></div>
 
   if (notFound) return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
@@ -69,7 +77,6 @@ export default function PublicProfilePage() {
     </div>
   )
 
-  // 프로필 섹션 (신규 방식 우선, 구버전 호환)
   const profileSections = (() => {
     if (profile.profile_sections?.length > 0) return profile.profile_sections
     const legacy = []
@@ -90,44 +97,27 @@ export default function PublicProfilePage() {
   ]
 
   return (
-    <div style={{maxWidth:820, margin:'0 auto', padding:'20px 20px 40px'}}>
+    <div style={{maxWidth:860, margin:'0 auto', padding:'20px 20px 40px'}}>
 
-      {/* ── 프로필 카드 (X 트위터 스타일) ── */}
-      <div className="card" style={{marginBottom:24, padding:0, overflow:'visible', position:'relative'}}>
-
-        {/* 헤더 이미지 - 카드 상단에 radius 유지 */}
-        <div style={{
-          height: 200,
-          background: 'var(--color-nav-active-bg)',
-          borderRadius:'var(--radius) var(--radius) 0 0',
-          overflow: 'hidden',
-          flexShrink: 0
-        }}>
+      {/* 프로필 카드 - X 트위터 스타일 */}
+      <div className="card" style={{marginBottom:24, overflow:'visible', padding:0, position:'relative'}}>
+        {/* 헤더 이미지 */}
+        <div style={{height:200, background:'var(--color-nav-active-bg)', borderRadius:'var(--radius) var(--radius) 0 0', overflow:'hidden', flexShrink:0}}>
           {profile.header_image_url
             ? <img src={profile.header_image_url} alt="header" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center top'}} />
             : <div style={{width:'100%',height:'100%',background:`linear-gradient(135deg, var(--color-primary), var(--color-accent))`,opacity:0.3}} />
           }
         </div>
 
-        {/* 프로필 내용 */}
         <div style={{padding:'0 24px 24px', textAlign:'center'}}>
-          {/* 아바타 - 헤더 경계에 반쯤 걸치게 (overflow visible 덕분에 안 잘림) */}
+          {/* 아바타 */}
           <div style={{display:'flex', justifyContent:'center', marginTop:-44, marginBottom:12}}>
-            <div className="user-avatar" style={{
-              width:88, height:88, fontSize:'2.2rem',
-              border:'4px solid white',
-              boxShadow:'0 4px 20px rgba(0,0,0,0.18)',
-              background:'var(--color-surface)',
-              zIndex: 2,
-              position: 'relative'
-            }}>
+            <div className="user-avatar" style={{width:88,height:88,fontSize:'2.2rem',border:'4px solid white',boxShadow:'0 4px 20px rgba(0,0,0,0.18)',background:'var(--color-surface)',position:'relative',zIndex:2}}>
               {profile.avatar_url ? <img src={profile.avatar_url} alt="avatar" /> : (profile.display_name||'?')[0]}
             </div>
           </div>
 
-          <h1 style={{fontSize:'1.5rem',fontWeight:700,color:'var(--color-accent)',letterSpacing:'-0.03em',marginBottom:2}}>
-            {profile.display_name||profile.username}
-          </h1>
+          <h1 style={{fontSize:'1.5rem',fontWeight:700,color:'var(--color-accent)',letterSpacing:'-0.03em',marginBottom:2}}>{profile.display_name||profile.username}</h1>
           <p className="text-sm text-light">@{profile.username}</p>
 
           {/* 통계 */}
@@ -142,7 +132,7 @@ export default function PublicProfilePage() {
 
           {/* 커스텀 프로필 섹션 */}
           {profileSections.filter(s=>s.value).length > 0 && (
-            <div style={{marginTop:16, textAlign:'left', display:'flex', flexDirection:'column', gap:12}}>
+            <div style={{marginTop:16,textAlign:'left',display:'flex',flexDirection:'column',gap:12}}>
               {profileSections.filter(s=>s.value).map((section,i)=>(
                 <div key={i}>
                   <div style={{fontSize:'0.72rem',fontWeight:700,color:'var(--color-accent)',marginBottom:4}}>{section.label}</div>
@@ -154,7 +144,7 @@ export default function PublicProfilePage() {
 
           {/* 외부 링크 */}
           {profile.external_links?.length > 0 && (
-            <div style={{marginTop:14, display:'flex', gap:8, flexWrap:'wrap', justifyContent:'center'}}>
+            <div style={{marginTop:14,display:'flex',gap:8,flexWrap:'wrap',justifyContent:'center'}}>
               {profile.external_links.map((link,i)=>(
                 <a key={i} href={link.url} target="_blank" rel="noreferrer"
                   style={{padding:'4px 12px',borderRadius:100,background:'var(--color-nav-active-bg)',color:'var(--color-accent)',fontSize:'0.76rem',fontWeight:600,textDecoration:'none'}}>
@@ -187,10 +177,10 @@ export default function PublicProfilePage() {
                   <div style={{fontSize:'1.2rem',color:'white',fontWeight:700,lineHeight:1}}>{format(new Date(s.scheduled_date),'d')}</div>
                   <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.8)'}}>{format(new Date(s.scheduled_date),'EEE',{locale:ko})}</div>
                 </div>
-                <div style={{flex:1}}>
+                <div style={{flex:1,minWidth:0}}>
                   <div className="flex items-center gap-8" style={{marginBottom:3}}>
-                    <span style={{fontWeight:600,fontSize:'0.88rem'}}>{s.title}</span>
-                    {s.is_gm&&<span className="badge badge-primary">GM</span>}
+                    <span style={{fontWeight:600,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.title}</span>
+                    {s.is_gm&&<span className="badge badge-primary" style={{flexShrink:0}}>GM</span>}
                   </div>
                   <div className="text-xs text-light flex gap-12">
                     {s.system_name&&<span>🎲 {s.system_name}</span>}
@@ -204,33 +194,35 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* ── 기록 (가로형 카드) ── */}
+      {/* ── 기록 (가로형 카드 + TagChip) ── */}
       {activeTab==='logs' && (
-        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:14}}>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(238px, 1fr))', gap:13}}>
           {data.logs?.length===0
             ? <div className="card" style={{textAlign:'center',padding:36,color:'var(--color-text-light)',fontSize:'0.85rem',gridColumn:'1/-1'}}>아직 기록이 없어요</div>
             : data.logs?.map(l=>(
               <div key={l.id} style={{borderRadius:12,overflow:'hidden',background:'var(--color-surface)',border:'1px solid var(--color-border)',boxShadow:'0 2px 12px var(--color-shadow)',display:'flex',flexDirection:'column'}}>
-                {/* 이미지 + 그라데이션 + 태그 - 16:9 */}
+                {/* 이미지 16:9 + 그라데이션 + 태그 */}
                 <div style={{position:'relative', paddingTop:'56.25%'}}>
                   <div style={{position:'absolute',inset:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-                    {l.session_image_url ? <img src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <span style={{fontSize:'3rem',opacity:0.2}}>📖</span>}
+                    {l.session_image_url ? <img src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <span style={{fontSize:'2.5rem',opacity:0.2}}>📖</span>}
                   </div>
                   <div style={{position:'absolute',bottom:0,left:0,right:0,height:'65%',background:'linear-gradient(to top, var(--color-bg) 0%, rgba(255,255,255,0.6) 55%, transparent 100%)',pointerEvents:'none'}} />
                   <div style={{position:'absolute',bottom:10,left:10,right:10,display:'flex',gap:4,flexWrap:'wrap'}}>
-                    {l.series_tag&&<span style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(200,169,110,0.2)',color:'#8b6f47',border:'1px solid rgba(200,169,110,0.4)'}}>{l.series_tag}</span>}
-                    <span style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background: l.role==='GM'?'rgba(155,137,196,0.18)':'rgba(100,149,237,0.15)',color: l.role==='GM'?'#5a3a9c':'#2a5aaa',border:`1px solid ${l.role==='GM'?'rgba(155,137,196,0.4)':'rgba(100,149,237,0.35)'}`}}>{l.role}</span>
-                    {l.system_name&&<span style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(156,175,136,0.18)',color:'#4a6a30',border:'1px solid rgba(156,175,136,0.4)'}}>{l.system_name}</span>}
+                    {l.series_tag&&<TagChip type="series" label={l.series_tag} />}
+                    <TagChip type="role" label={l.role} />
+                    {l.system_name&&<TagChip type="rule" label={l.system_name} />}
                   </div>
                 </div>
                 {/* 정보 */}
-                <div style={{padding:'10px 12px 12px',flex:1,display:'flex',flexDirection:'column',gap:3}}>
-                  <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3}}>{l.title}</div>
-                  {l.together_with&&<div style={{fontSize:'0.7rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:3}}>GM.</span>{l.together_with}</div>}
-                  {l.character_name&&<div style={{fontSize:'0.7rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:3}}>PC.</span>{l.character_name}</div>}
-                  {l.played_date&&<div style={{fontSize:'0.7rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:3}}>Date.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
-                  {l.rating>0&&<div className="stars" style={{fontSize:'0.78rem',marginTop:2}}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}
-                  {l.scenario_link&&<a href={l.scenario_link} target="_blank" rel="noreferrer" style={{fontSize:'0.7rem',color:'var(--color-primary)',marginTop:2}}>🔗 시나리오 링크</a>}
+                <div style={{padding:'10px 12px 12px',flex:1,display:'flex',flexDirection:'column'}}>
+                  <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,marginBottom:8}}>{l.title}</div>
+                  <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                    {l.together_with&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>GM.</span>{l.together_with}</div>}
+                    {l.character_name&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>PL.</span>{l.character_name}</div>}
+                    {l.played_date&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>Date.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
+                  </div>
+                  {l.rating>0&&<div className="stars" style={{fontSize:'0.72rem',marginTop:6}}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}
+                  {l.scenario_link&&<a href={l.scenario_link} target="_blank" rel="noreferrer" style={{fontSize:'0.68rem',color:'var(--color-primary)',marginTop:4}}>🔗 시나리오 링크</a>}
                 </div>
               </div>
             ))
@@ -288,7 +280,7 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* ── 페어 (큰 섬네일 + D+day + 관계태그) ── */}
+      {/* ── 페어 (큰 섬네일 + D+day) ── */}
       {activeTab==='pairs' && (
         <div className="grid-auto">
           {data.pairs?.length===0
@@ -324,7 +316,7 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* ── 공수표 ── */}
+      {/* ── 공수표 목록 ── */}
       {activeTab==='availability' && (
         <div className="grid-auto">
           {data.availability?.length===0

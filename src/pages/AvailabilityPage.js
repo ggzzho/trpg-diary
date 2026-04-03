@@ -37,7 +37,7 @@ export function AvailabilityPage() {
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
         <div>
-          <h1 className="page-title">📋 공수표 리스트</h1>
+          <h1 className="page-title">📋 공수표 목록</h1>
           <p className="page-subtitle">플레이 가능한 날짜와 원하는 조건을 공개해요</p>
         </div>
         <button className="btn btn-primary" onClick={openNew}>+ 공수표 추가</button>
