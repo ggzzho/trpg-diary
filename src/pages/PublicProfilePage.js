@@ -266,14 +266,25 @@ export default function PublicProfilePage() {
               </button>
             )}
             {bgmVideoId && (
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                <button className={`btn btn-sm ${bgmOn?'btn-primary':'btn-outline'}`}
-                  onClick={toggleBgm}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                <button className={`btn btn-sm ${bgmOn?'btn-primary':'btn-outline'}`} onClick={toggleBgm}>
                   {bgmOn ? '🎵 BGM 끄기' : '🎵 BGM 켜기'}
                 </button>
                 {bgmOn && (
-                  <div style={{ fontSize:'0.65rem', color:'var(--color-text-light)', textAlign:'center', maxWidth:200 }}>
-                    소리가 안 들리면 브라우저 주소창 왼쪽 🔒 아이콘 → <strong>사이트 설정 → 소리 → 허용</strong>
+                  <div style={{ fontSize:'0.68rem', color:'var(--color-text-light)', textAlign:'center', maxWidth:260, lineHeight:1.5,
+                    padding:'8px 12px', borderRadius:8, background:'var(--color-nav-active-bg)', border:'1px solid var(--color-border)' }}>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>🔇 소리가 안 들리면?</div>
+                    <div style={{ marginBottom:4 }}>
+                      <span style={{ fontWeight:600 }}>🌐 크롬</span><br/>
+                      주소창 왼쪽 <strong>🔒 또는 ⓘ</strong> 클릭<br/>
+                      → <strong>사이트 설정</strong> → <strong>소리 → 허용</strong><br/>
+                      (없으면: 오른쪽 상단 <strong>⋮ → 설정 → 개인정보 → 사이트 설정 → 소리</strong>)
+                    </div>
+                    <div>
+                      <span style={{ fontWeight:600 }}>🐳 웨일</span><br/>
+                      주소창에 <strong>whale://settings/content/sound</strong> 입력<br/>
+                      → 소리 재생이 허용됨 → 이 사이트 주소 추가
+                    </div>
                   </div>
                 )}
               </div>
