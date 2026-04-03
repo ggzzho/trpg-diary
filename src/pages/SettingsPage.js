@@ -19,14 +19,30 @@ function hexToRgb(hex) {
   catch { return [200,169,110] }
 }
 
+// 기본 프로필 항목
+const DEFAULT_SECTIONS = [
+  { id: 'play_style', label: '플레이 스타일', value: '' },
+  { id: 'caution', label: '주의 사항', value: '' },
+  { id: 'extra_info', label: '기타 사항', value: '' },
+]
+
 export default function SettingsPage() {
   const { user, profile, refreshProfile } = useAuth()
+
+  // 프로필 섹션 초기화 (기존 데이터 있으면 불러오기, 없으면 기본값)
+  const initSections = () => {
+    if (profile?.profile_sections?.length > 0) return profile.profile_sections
+    return DEFAULT_SECTIONS.map(s => ({
+      ...s,
+      value: profile?.[s.id] || ''
+    }))
+  }
+
   const [form, setForm] = useState({
     display_name: profile?.display_name||'',
-    play_style: profile?.play_style||'',
-    caution: profile?.caution||'',
-    extra_info: profile?.extra_info||'',
+    profile_sections: initSections(),
     external_links: profile?.external_links||[],
+    header_image_url: profile?.header_image_url||'',
     theme_color: profile?.theme_color||'#c8a96e',
     theme_bg_color: profile?.theme_bg_color||'#faf6f0',
     theme_accent: profile?.theme_accent||'#8b6f47',
@@ -37,11 +53,34 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [headerUploading, setHeaderUploading] = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [tab, setTab] = useState('profile')
   const [newLink, setNewLink] = useState({label:'',url:''})
 
   const set = k => e => setForm(f => ({...f, [k]: e.target.value}))
+
+  // 프로필 섹션 관련
+  const updateSection = (idx, field, value) => {
+    setForm(f => {
+      const sections = [...f.profile_sections]
+      sections[idx] = {...sections[idx], [field]: value}
+      return {...f, profile_sections: sections}
+    })
+  }
+  const addSection = () => {
+    setForm(f => ({
+      ...f,
+      profile_sections: [...f.profile_sections, {
+        id: `custom_${Date.now()}`,
+        label: '새 항목',
+        value: ''
+      }]
+    }))
+  }
+  const removeSection = (idx) => {
+    setForm(f => ({...f, profile_sections: f.profile_sections.filter((_,i)=>i!==idx)}))
+  }
 
   const applyPreset = p => { setForm(f=>({...f,theme_color:p.primary,theme_bg_color:p.bg,theme_accent:p.accent})); applyTheme(p.primary,p.bg,p.accent) }
   const handleColorChange = (key,value) => { const u={...form,[key]:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent) }
@@ -63,6 +102,14 @@ export default function SettingsPage() {
     setUploading(false)
   }
 
+  const handleHeaderUpload = async e => {
+    const file=e.target.files?.[0]; if(!file) return; setHeaderUploading(true)
+    const {url,error}=await uploadFile('backgrounds',`${user.id}/header-${Date.now()}`,file)
+    if(url) setForm(f=>({...f,header_image_url:url}))
+    else alert('업로드 실패: '+(error?.message||''))
+    setHeaderUploading(false)
+  }
+
   const handleAvatarUpload = async e => {
     const file=e.target.files?.[0]; if(!file) return; setAvatarUploading(true)
     const {url,error}=await uploadFile('avatars',`${user.id}/avatar-${Date.now()}`,file)
@@ -71,7 +118,6 @@ export default function SettingsPage() {
     setAvatarUploading(false)
   }
 
-  // 외부 링크 관리
   const addLink = () => {
     if (!newLink.label||!newLink.url) return
     setForm(f=>({...f, external_links:[...(f.external_links||[]),{...newLink}]}))
@@ -94,14 +140,32 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      <div className="card card-lg" style={{maxWidth:600}}>
+      <div className="card card-lg" style={{maxWidth:620}}>
 
         {/* ── 프로필 ── */}
         {tab==='profile' && (
           <>
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>프로필 설정</h2>
 
-            {/* 아바타 */}
+            {/* 헤더 이미지 */}
+            <div className="form-group">
+              <label className="form-label">공개 페이지 헤더 이미지</label>
+              {form.header_image_url && (
+                <div style={{borderRadius:8,overflow:'hidden',marginBottom:8,height:100,background:'var(--color-nav-active-bg)'}}>
+                  <img src={form.header_image_url} alt="header" style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                </div>
+              )}
+              <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                <input className="form-input" placeholder="https://... 이미지 URL" value={form.header_image_url||''} onChange={set('header_image_url')} style={{flex:1}} />
+                <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>
+                  {headerUploading?'업로드 중...':'📁 업로드'}
+                  <input type="file" accept="image/*" style={{display:'none'}} onChange={handleHeaderUpload} disabled={headerUploading} />
+                </label>
+                {form.header_image_url&&<button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,header_image_url:''}))}>제거</button>}
+              </div>
+            </div>
+
+            {/* 프로필 사진 */}
             <div className="form-group flex items-center gap-16">
               <div className="user-avatar" style={{width:56,height:56,fontSize:'1.3rem'}}>
                 {profile?.avatar_url?<img src={profile.avatar_url} alt="avatar"/>:(profile?.display_name||'?')[0]}
@@ -111,7 +175,6 @@ export default function SettingsPage() {
                   {avatarUploading?'업로드 중...':'프로필 사진 변경'}
                   <input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatarUpload} disabled={avatarUploading} />
                 </label>
-                <div className="text-xs text-light" style={{marginTop:5}}>JPG, PNG (최대 2MB)</div>
               </div>
             </div>
 
@@ -128,26 +191,39 @@ export default function SettingsPage() {
               <input className="form-input" placeholder="모험가 홍길동" value={form.display_name} onChange={set('display_name')} />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">플레이 스타일</label>
-              <textarea className="form-textarea" placeholder="선호하는 장르, 분위기, 플레이 방식 등..." value={form.play_style||''} onChange={set('play_style')}
-                style={{minHeight:80, whiteSpace:'pre-wrap'}} />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">주의 사항</label>
-              <textarea className="form-textarea" placeholder="지뢰, 비선호 요소, 컨디션 등..." value={form.caution||''} onChange={set('caution')}
-                style={{minHeight:80, whiteSpace:'pre-wrap'}} />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">기타 사항</label>
-              <textarea className="form-textarea" placeholder="그 외 전달하고 싶은 내용..." value={form.extra_info||''} onChange={set('extra_info')}
-                style={{minHeight:80, whiteSpace:'pre-wrap'}} />
+            {/* 커스텀 프로필 항목 */}
+            <div style={{marginBottom:8}}>
+              <div className="flex justify-between items-center" style={{marginBottom:12}}>
+                <label className="form-label" style={{marginBottom:0}}>프로필 소개 항목</label>
+                <button type="button" className="btn btn-outline btn-sm" onClick={addSection}>+ 항목 추가</button>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                {form.profile_sections.map((section,idx)=>(
+                  <div key={section.id} style={{border:'1px solid var(--color-border)',borderRadius:8,padding:12,background:'var(--color-nav-active-bg)'}}>
+                    <div className="flex justify-between items-center" style={{marginBottom:8}}>
+                      <input
+                        className="form-input"
+                        value={section.label}
+                        onChange={e=>updateSection(idx,'label',e.target.value)}
+                        style={{fontWeight:600,fontSize:'0.82rem',flex:1,marginRight:8,background:'transparent',border:'1px solid var(--color-border)'}}
+                        placeholder="항목 이름"
+                      />
+                      <button type="button" className="btn btn-ghost btn-sm" style={{color:'#e57373',flexShrink:0}} onClick={()=>removeSection(idx)}>삭제</button>
+                    </div>
+                    <textarea
+                      className="form-textarea"
+                      value={section.value||''}
+                      onChange={e=>updateSection(idx,'value',e.target.value)}
+                      placeholder={`${section.label} 내용 입력...`}
+                      style={{minHeight:72,whiteSpace:'pre-wrap'}}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* 외부 링크 */}
-            <div className="form-group">
+            <div className="form-group" style={{marginTop:16}}>
               <label className="form-label">외부 링크 (성향표, 구글 시트 등)</label>
               {(form.external_links||[]).map((link,idx)=>(
                 <div key={idx} style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}>
@@ -208,7 +284,7 @@ export default function SettingsPage() {
               </div>
               {form.background_image_url&&(
                 <div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}>
-                  <img src={form.background_image_url} alt="bg preview" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} />
+                  <img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} />
                   <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1)}}>제거</button>
                 </div>
               )}

@@ -14,6 +14,22 @@ const STATUS_MAP = {
 }
 const BLANK = { title:'', scheduled_date:'', scheduled_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false }
 
+// 날짜 박스 컴포넌트 - 테마 컬러 적용
+function DateBox({ dateStr }) {
+  return (
+    <div style={{
+      background:'var(--color-primary)',
+      borderRadius:8, padding:'8px 12px',
+      textAlign:'center', minWidth:50, flexShrink:0,
+      boxShadow:'0 2px 8px var(--color-btn-shadow)'
+    }}>
+      <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.8)'}}>{format(new Date(dateStr),'M월',{locale:ko})}</div>
+      <div style={{fontSize:'1.3rem',color:'white',fontWeight:700,lineHeight:1}}>{format(new Date(dateStr),'d')}</div>
+      <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.8)'}}>{format(new Date(dateStr),'EEE',{locale:ko})}</div>
+    </div>
+  )
+}
+
 export default function SchedulePage() {
   const { user } = useAuth()
   const [items, setItems] = useState([])
@@ -30,46 +46,45 @@ export default function SchedulePage() {
   const [summaryPeriod, setSummaryPeriod] = useState('month')
   const [summaryDate, setSummaryDate] = useState(new Date())
 
-  const load = async () => { const {data} = await schedulesApi.getAll(user.id); setItems(data||[]); setLoading(false) }
+  const load = async () => { const {data}=await schedulesApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
 
   const set = k => e => setForm(f => ({...f, [k]: e.target.value}))
-  const openNew = (date) => { setEditing(null); setForm({...BLANK, scheduled_date: date||new Date().toISOString().split('T')[0]}); setModal(true) }
+  const openNew = (date) => { setEditing(null); setForm({...BLANK, scheduled_date:date||new Date().toISOString().split('T')[0]}); setModal(true) }
   const openEdit = (item) => { setEditing(item); setForm({...item}); setModal(true) }
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
-    const payload = {...form, scheduled_time: form.scheduled_time||null}
+    const payload = {...form, scheduled_time:form.scheduled_time||null}
     if (editing) await schedulesApi.update(editing.id, payload)
-    else await schedulesApi.create({...payload, user_id: user.id})
+    else await schedulesApi.create({...payload, user_id:user.id})
     setModal(false); load()
   }
   const remove = async id => { await schedulesApi.remove(id); load() }
 
   const today = new Date().toISOString().split('T')[0]
   const filtered = items.filter(i => {
-    if (filter==='upcoming') return i.scheduled_date>=today && i.status!=='cancelled'
-    if (filter==='past') return i.scheduled_date<today || i.status==='completed'
+    if (filter==='upcoming') return i.scheduled_date>=today&&i.status!=='cancelled'
+    if (filter==='past') return i.scheduled_date<today||i.status==='completed'
     if (filter==='cancelled') return i.status==='cancelled'
     return true
   }).sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date))
 
-  // 결산
   const summaryStats = useMemo(() => {
-    let t = items.filter(i => i.status==='completed' || i.scheduled_date<today)
+    let t = items.filter(i=>i.status==='completed'||i.scheduled_date<today)
     if (summaryPeriod==='month') {
       const y=getYear(summaryDate), m=getMonth(summaryDate)
-      t = t.filter(i => { const d=new Date(i.scheduled_date); return getYear(d)===y&&getMonth(d)===m })
+      t = t.filter(i=>{ const d=new Date(i.scheduled_date); return getYear(d)===y&&getMonth(d)===m })
     } else {
-      t = t.filter(i => getYear(new Date(i.scheduled_date))===yearView)
+      t = t.filter(i=>getYear(new Date(i.scheduled_date))===yearView)
     }
     const total=t.length, gmCount=t.filter(i=>i.is_gm).length, plCount=total-gmCount
-    const rc={}; t.forEach(i => { if(i.system_name) rc[i.system_name]=(rc[i.system_name]||0)+1 })
-    return { total, gmCount, plCount, topRules: Object.entries(rc).sort((a,b)=>b[1]-a[1]).slice(0,5) }
-  }, [items, summaryPeriod, summaryDate, yearView])
+    const rc={}; t.forEach(i=>{if(i.system_name) rc[i.system_name]=(rc[i.system_name]||0)+1})
+    return {total,gmCount,plCount,topRules:Object.entries(rc).sort((a,b)=>b[1]-a[1]).slice(0,5)}
+  }, [items,summaryPeriod,summaryDate,yearView])
 
   const renderCalendar = () => {
-    const startDate = startOfWeek(startOfMonth(calendarDate), {weekStartsOn:0})
-    const endDate = endOfWeek(endOfMonth(calendarDate), {weekStartsOn:0})
+    const startDate = startOfWeek(startOfMonth(calendarDate),{weekStartsOn:0})
+    const endDate = endOfWeek(endOfMonth(calendarDate),{weekStartsOn:0})
     const rows=[]; let day=startDate
     while (day<=endDate) {
       const week=[]
@@ -115,14 +130,14 @@ export default function SchedulePage() {
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
         {Array.from({length:12},(_,m)=>{
-          const mi=items.filter(i=>{ const d=new Date(i.scheduled_date); return getYear(d)===yearView&&getMonth(d)===m })
+          const mi=items.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===yearView&&getMonth(d)===m})
           return (
             <div key={m} className="card card-sm" style={{cursor:'pointer'}} onClick={()=>{setCalendarDate(new Date(yearView,m,1));setViewMode('calendar')}}>
               <div style={{fontWeight:700,fontSize:'0.85rem',color:'var(--color-accent)',marginBottom:6}}>{m+1}월 <span className="text-xs text-light">({mi.length})</span></div>
               {mi.slice(0,3).map(i=>(
                 <div key={i.id} style={{fontSize:'0.62rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:i.is_gm?'var(--color-accent)':'var(--color-primary)',color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{i.title}</div>
               ))}
-              {mi.length>3 && <div className="text-xs text-light">+{mi.length-3}개 더</div>}
+              {mi.length>3&&<div className="text-xs text-light">+{mi.length-3}개 더</div>}
             </div>
           )
         })}
@@ -158,7 +173,7 @@ export default function SchedulePage() {
           </div>
         ))}
       </div>
-      {summaryStats.topRules.length>0 && (
+      {summaryStats.topRules.length>0&&(
         <div className="card">
           <div style={{fontWeight:700,marginBottom:14,color:'var(--color-accent)'}}>🎲 룰별 횟수</div>
           {summaryStats.topRules.map(([rule,count])=>(
@@ -172,7 +187,7 @@ export default function SchedulePage() {
           ))}
         </div>
       )}
-      {summaryStats.total===0 && <div className="card" style={{textAlign:'center',padding:40,color:'var(--color-text-light)',fontSize:'0.88rem'}}>해당 기간에 완료된 세션이 없어요</div>}
+      {summaryStats.total===0&&<div className="card" style={{textAlign:'center',padding:40,color:'var(--color-text-light)',fontSize:'0.88rem'}}>해당 기간에 완료된 세션이 없어요</div>}
     </div>
   )
 
@@ -187,7 +202,7 @@ export default function SchedulePage() {
       </div>
 
       <div className="flex justify-between items-center" style={{marginBottom:18,flexWrap:'wrap',gap:8}}>
-        {viewMode!=='summary' && (
+        {viewMode!=='summary'&&(
           <div className="flex gap-8">
             {[{k:'upcoming',l:'예정'},{k:'past',l:'지나간'},{k:'cancelled',l:'취소됨'},{k:'all',l:'전체'}].map(f=>(
               <button key={f.k} className={`btn btn-sm ${filter===f.k?'btn-primary':'btn-outline'}`} onClick={()=>setFilter(f.k)}>{f.l}</button>
@@ -203,20 +218,16 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {viewMode==='calendar' && <div className="card">{renderCalendar()}</div>}
-      {viewMode==='year' && renderYear()}
-      {viewMode==='summary' && renderSummary()}
-      {viewMode==='list' && (
+      {viewMode==='calendar'&&<div className="card">{renderCalendar()}</div>}
+      {viewMode==='year'&&renderYear()}
+      {viewMode==='summary'&&renderSummary()}
+      {viewMode==='list'&&(
         loading ? <LoadingSpinner /> : filtered.length===0
           ? <EmptyState icon="📅" title="일정이 없어요" action={<button className="btn btn-primary" onClick={()=>openNew()}>추가하기</button>} />
           : <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {filtered.map(item=>(
                 <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
-                  <div style={{background:'rgba(200,169,110,0.12)',borderRadius:8,padding:'8px 12px',textAlign:'center',minWidth:50,flexShrink:0}}>
-                    <div style={{fontSize:'0.62rem',color:'var(--color-text-light)'}}>{format(new Date(item.scheduled_date),'M월',{locale:ko})}</div>
-                    <div style={{fontSize:'1.3rem',color:'var(--color-accent)',fontWeight:700,lineHeight:1}}>{format(new Date(item.scheduled_date),'d')}</div>
-                    <div style={{fontSize:'0.62rem',color:'var(--color-text-light)'}}>{format(new Date(item.scheduled_date),'EEE',{locale:ko})}</div>
-                  </div>
+                  <DateBox dateStr={item.scheduled_date} />
                   <div style={{flex:1}}>
                     <div className="flex items-center gap-8" style={{marginBottom:3}}>
                       <span style={{fontWeight:600,fontSize:'0.88rem'}}>{item.title}</span>

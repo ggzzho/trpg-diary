@@ -100,25 +100,14 @@ export function PairsPage() {
               return (
                 <div key={item.id} className="card" style={{padding:0,overflow:'hidden'}}>
                   {/* 큰 섬네일 */}
-                  <div style={{
-                    height:160, background:'var(--color-nav-active-bg)',
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    overflow:'hidden', position:'relative'
-                  }}>
+                  <div style={{height:160,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',position:'relative'}}>
                     {item.pair_image_url
                       ? <img src={item.pair_image_url} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
                       : <span style={{fontSize:'4rem',opacity:0.25}}>👤</span>
                     }
-
-                    {/* D+day 크게 우상단 */}
+                    {/* D+day 우상단 크게 */}
                     {dday !== null && (
-                      <div style={{
-                        position:'absolute', top:10, right:10,
-                        background:'var(--color-primary)',
-                        color:'white', borderRadius:8,
-                        padding:'4px 10px', textAlign:'center',
-                        boxShadow:'0 2px 8px rgba(0,0,0,0.2)'
-                      }}>
+                      <div style={{position:'absolute',top:10,right:10,background:'var(--color-primary)',color:'white',borderRadius:8,padding:'4px 10px',textAlign:'center',boxShadow:'0 2px 8px rgba(0,0,0,0.2)'}}>
                         <div style={{fontSize:'0.6rem',opacity:0.85,letterSpacing:'0.05em'}}>함께한 지</div>
                         <div style={{fontSize:'1.1rem',fontWeight:700,lineHeight:1.2}}>D+{dday}</div>
                       </div>
@@ -127,35 +116,29 @@ export function PairsPage() {
 
                   {/* 내용 */}
                   <div style={{padding:'12px 14px'}}>
-                    {/* 이름 + 캐릭터명 */}
-                    <div style={{marginBottom:8}}>
-                      <div style={{fontWeight:700,fontSize:'1rem'}}>{item.name}</div>
-                      {item.nickname && (
-                        <div className="text-xs text-light">캐릭터: {item.nickname}</div>
-                      )}
-                    </div>
-
+                    <div style={{fontWeight:700,fontSize:'1rem',marginBottom:4}}>{item.name}</div>
+                    {/* 페어 캐릭터명 */}
+                    {item.nickname && (
+                      <div className="text-xs text-light" style={{marginBottom:6}}>페어 캐릭터: {item.nickname}</div>
+                    )}
                     {/* 관계 태그 */}
                     {item.relations?.length > 0 && (
                       <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:8}}>
-                        {item.relations.map(r => (
+                        {item.relations.map(r=>(
                           <span key={r} className="badge badge-primary">{r}</span>
                         ))}
                       </div>
                     )}
-
                     {/* 부가 정보 */}
-                    <div className="text-xs text-light" style={{display:'flex',flexDirection:'column',gap:3}}>
-                      {item.first_met_date && <span>📅 {item.first_met_date} 첫 만남</span>}
-                      {item.systems?.length > 0 && <span>📌 {item.systems.join(', ')}</span>}
-                    </div>
-
+                    {item.first_met_date && (
+                      <div className="text-xs text-light">📅 {item.first_met_date} 첫 만남</div>
+                    )}
                     {item.memo && (
                       <p className="text-xs text-light" style={{marginTop:8,borderTop:'1px solid var(--color-border)',paddingTop:8}}>{item.memo}</p>
                     )}
                   </div>
 
-                  {/* 액션 버튼 */}
+                  {/* 액션 */}
                   <div style={{padding:'8px 14px',borderTop:'1px solid var(--color-border)',display:'flex',gap:8,justifyContent:'flex-end'}}>
                     <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
                     <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
@@ -174,8 +157,6 @@ export function PairsPage() {
           <div className="form-group"><label className="form-label">페어명 *</label><input className="form-input" value={form.name} onChange={set('name')} /></div>
           <div className="form-group"><label className="form-label">페어 캐릭터명</label><input className="form-input" placeholder="캐릭터 이름" value={form.nickname||''} onChange={set('nickname')} /></div>
         </div>
-
-        {/* 페어 이미지 */}
         <div className="form-group">
           <label className="form-label">페어 이미지</label>
           <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
@@ -185,15 +166,13 @@ export function PairsPage() {
               <input type="file" accept="image/*" style={{display:'none'}} onChange={handleImgUpload} disabled={imgUploading} />
             </label>
           </div>
-          {form.pair_image_url && (
+          {form.pair_image_url&&(
             <div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}>
               <img src={form.pair_image_url} alt="preview" style={{width:60,height:60,objectFit:'cover',borderRadius:8,border:'1px solid var(--color-border)'}} />
               <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,pair_image_url:''}))}>제거</button>
             </div>
           )}
         </div>
-
-        {/* 관계 태그 다중 선택 */}
         <div className="form-group">
           <label className="form-label">관계
             <button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button>
@@ -204,13 +183,11 @@ export function PairsPage() {
                 {relationTags.map(tag=>(
                   <button key={tag.id} type="button"
                     className={`btn btn-sm ${form.relations?.includes(tag.name)?'btn-primary':'btn-outline'}`}
-                    onClick={()=>toggleRelation(tag.name)}
-                  >{tag.name}</button>
+                    onClick={()=>toggleRelation(tag.name)}>{tag.name}</button>
                 ))}
               </div>
           }
         </div>
-
         <div className="form-group"><label className="form-label">처음 만난 날</label><input className="form-input" type="date" value={form.first_met_date||''} onChange={set('first_met_date')} /></div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{minHeight:70}} /></div>
       </Modal>
