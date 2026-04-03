@@ -14,9 +14,12 @@ const STATUS_MAP = {
 }
 const BLANK = { title:'', scheduled_date:'', scheduled_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false }
 
+// 시간 표시 HH:MM (초 제거)
+const fmtTime = t => t ? t.slice(0,5) : ''
+
 function DateBox({ dateStr }) {
   return (
-    <div style={{ background:'var(--color-primary)', borderRadius:8, padding:'8px 12px', textAlign:'center', minWidth:50, flexShrink:0, boxShadow:'0 2px 8px var(--color-btn-shadow)' }}>
+    <div style={{background:'var(--color-primary)',borderRadius:8,padding:'8px 12px',textAlign:'center',minWidth:50,flexShrink:0,boxShadow:'0 2px 8px var(--color-btn-shadow)'}}>
       <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.8)'}}>{format(new Date(dateStr),'M월',{locale:ko})}</div>
       <div style={{fontSize:'1.3rem',color:'white',fontWeight:700,lineHeight:1}}>{format(new Date(dateStr),'d')}</div>
       <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.8)'}}>{format(new Date(dateStr),'EEE',{locale:ko})}</div>
@@ -39,18 +42,18 @@ export default function SchedulePage() {
   const [ruleManager, setRuleManager] = useState(false)
   const [summaryPeriod, setSummaryPeriod] = useState('month')
   const [summaryDate, setSummaryDate] = useState(new Date())
-  // 복사/이동 기능
   const [copyModal, setCopyModal] = useState(false)
   const [copyTarget, setCopyTarget] = useState(null)
-  const [copyMode, setCopyMode] = useState('copy') // 'copy' | 'move'
+  const [copyMode, setCopyMode] = useState('copy')
   const [copyDate, setCopyDate] = useState('')
 
   const load = async () => { const {data}=await schedulesApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
 
-  const set = k => e => setForm(f => ({...f, [k]: e.target.value}))
-  const openNew = (date) => { setEditing(null); setForm({...BLANK, scheduled_date:date||new Date().toISOString().split('T')[0]}); setModal(true) }
-  const openEdit = (item) => { setEditing(item); setForm({...item}); setModal(true) }
+  const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
+  const openNew = date => { setEditing(null); setForm({...BLANK, scheduled_date:date||new Date().toISOString().split('T')[0]}); setModal(true) }
+  const openEdit = item => { setEditing(item); setForm({...item}); setModal(true) }
+  const openCopy = (item, e) => { e?.stopPropagation(); setCopyTarget(item); setCopyDate(item.scheduled_date); setCopyMode('copy'); setCopyModal(true) }
 
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
@@ -60,17 +63,13 @@ export default function SchedulePage() {
     setModal(false); load()
   }
   const remove = async id => { await schedulesApi.remove(id); load() }
-
-  // 복사/이동 실행
   const executeCopyMove = async () => {
-    if (!copyDate || !copyTarget) return
-    if (copyMode === 'copy') {
-      // 복사: 새 항목 생성
-      const {id, created_at, ...rest} = copyTarget
-      await schedulesApi.create({...rest, scheduled_date: copyDate, user_id: user.id})
+    if (!copyDate||!copyTarget) return
+    if (copyMode==='copy') {
+      const {id,created_at,...rest} = copyTarget
+      await schedulesApi.create({...rest, scheduled_date:copyDate, user_id:user.id})
     } else {
-      // 이동: 날짜만 업데이트
-      await schedulesApi.update(copyTarget.id, {...copyTarget, scheduled_date: copyDate})
+      await schedulesApi.update(copyTarget.id, {...copyTarget, scheduled_date:copyDate})
     }
     setCopyModal(false); setCopyTarget(null); setCopyDate(''); load()
   }
@@ -86,19 +85,17 @@ export default function SchedulePage() {
   const summaryStats = useMemo(() => {
     let t = items.filter(i=>i.status==='completed'||i.scheduled_date<today)
     if (summaryPeriod==='month') {
-      const y=getYear(summaryDate), m=getMonth(summaryDate)
-      t = t.filter(i=>{ const d=new Date(i.scheduled_date); return getYear(d)===y&&getMonth(d)===m })
-    } else {
-      t = t.filter(i=>getYear(new Date(i.scheduled_date))===yearView)
-    }
-    const total=t.length, gmCount=t.filter(i=>i.is_gm).length, plCount=total-gmCount
-    const rc={}; t.forEach(i=>{if(i.system_name) rc[i.system_name]=(rc[i.system_name]||0)+1})
+      const y=getYear(summaryDate),m=getMonth(summaryDate)
+      t=t.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===y&&getMonth(d)===m})
+    } else t=t.filter(i=>getYear(new Date(i.scheduled_date))===yearView)
+    const total=t.length,gmCount=t.filter(i=>i.is_gm).length,plCount=total-gmCount
+    const rc={}; t.forEach(i=>{if(i.system_name)rc[i.system_name]=(rc[i.system_name]||0)+1})
     return {total,gmCount,plCount,topRules:Object.entries(rc).sort((a,b)=>b[1]-a[1]).slice(0,5)}
   }, [items,summaryPeriod,summaryDate,yearView])
 
   const renderCalendar = () => {
-    const startDate = startOfWeek(startOfMonth(calendarDate),{weekStartsOn:0})
-    const endDate = endOfWeek(endOfMonth(calendarDate),{weekStartsOn:0})
+    const startDate=startOfWeek(startOfMonth(calendarDate),{weekStartsOn:0})
+    const endDate=endOfWeek(endOfMonth(calendarDate),{weekStartsOn:0})
     const rows=[]; let day=startDate
     while (day<=endDate) {
       const week=[]
@@ -108,17 +105,24 @@ export default function SchedulePage() {
         week.push(
           <div key={dateStr} className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,calendarDate)?'other-month':''}`} onClick={()=>openNew(dateStr)}>
             <div className="calendar-date">{format(d,'d')}</div>
-            {di.map(ev=>(
-              <div key={ev.id}
-                className={`calendar-event ${ev.is_gm?'gm':''} ${ev.status==='completed'?'completed':''} ${ev.status==='cancelled'?'cancelled':''}`}
-                title={ev.title}
+            {di.slice(0,2).map(ev=>(
+              <div key={ev.id} className={`calendar-event ${ev.is_gm?'gm':''} ${ev.status==='cancelled'?'cancelled':''} ${ev.status==='completed'?'completed':''}`}
                 onClick={e=>{e.stopPropagation();openEdit(ev)}}
-                style={{
-                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                  cursor:'pointer'
-                }}
-              >{ev.title}</div>
+                title={ev.title}
+              >
+                {fmtTime(ev.scheduled_time)&&<span style={{opacity:0.85,marginRight:2}}>{fmtTime(ev.scheduled_time)}</span>}
+                {ev.title}
+              </div>
             ))}
+            {di.length>2&&(
+              <div style={{fontSize:'0.55rem',color:'var(--color-text-light)',paddingLeft:2}}>+{di.length-2}개 더</div>
+            )}
+            {/* 복사/이동 버튼 - 첫 번째 이벤트에만 */}
+            {di.length>0&&(
+              <div style={{position:'absolute',top:3,right:3}} onClick={e=>e.stopPropagation()}>
+                <button style={{fontSize:'0.6rem',background:'none',border:'none',cursor:'pointer',padding:'1px 3px',borderRadius:3,opacity:0.6}} title="복사/이동" onClick={e=>openCopy(di[0],e)}>📋</button>
+              </div>
+            )}
           </div>
         )
         day=addDays(day,1)
@@ -137,16 +141,16 @@ export default function SchedulePage() {
             <div key={d} className="calendar-day-header" style={{color:i===0?'#e57373':i===6?'#6b8cba':'var(--color-text-light)'}}>{d}</div>
           ))}
         </div>
-        <div className="calendar-grid">{rows}</div>
+        <div className="calendar-grid" style={{position:'relative'}}>{rows}</div>
       </div>
     )
   }
 
   const renderYear = () => {
-    const yearItems = items.filter(i => {
-      if (filter==='upcoming') return i.scheduled_date>=today&&i.status!=='cancelled'
-      if (filter==='past') return i.scheduled_date<today||i.status==='completed'
-      if (filter==='cancelled') return i.status==='cancelled'
+    const yearItems = items.filter(i=>{
+      if(filter==='upcoming') return i.scheduled_date>=today&&i.status!=='cancelled'
+      if(filter==='past') return i.scheduled_date<today||i.status==='completed'
+      if(filter==='cancelled') return i.status==='cancelled'
       return true
     })
     return (
@@ -218,20 +222,15 @@ export default function SchedulePage() {
           ))}
         </div>
       )}
-      {summaryStats.total===0&&<div className="card" style={{textAlign:'center',padding:40,color:'var(--color-text-light)',fontSize:'0.88rem'}}>해당 기간에 완료된 세션이 없어요</div>}
     </div>
   )
 
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
-        <div>
-          <h1 className="page-title">📅 일정 관리</h1>
-          <p className="page-subtitle">예정된 세션과 지나간 플레이 일정을 관리해요</p>
-        </div>
+        <div><h1 className="page-title">📅 일정 관리</h1><p className="page-subtitle">예정된 세션과 지나간 플레이 일정을 관리해요</p></div>
         <button className="btn btn-primary" onClick={()=>openNew()}>+ 일정 추가</button>
       </div>
-
       <div className="flex justify-between items-center" style={{marginBottom:18,flexWrap:'wrap',gap:8}}>
         {viewMode!=='summary'&&(
           <div className="flex gap-8">
@@ -248,53 +247,50 @@ export default function SchedulePage() {
           <button className={`btn btn-sm ${viewMode==='summary'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('summary')}>📊 결산</button>
         </div>
       </div>
-
       {viewMode==='calendar'&&<div className="card">{renderCalendar()}</div>}
       {viewMode==='year'&&renderYear()}
       {viewMode==='summary'&&renderSummary()}
       {viewMode==='list'&&(
-        loading ? <LoadingSpinner /> : filtered.length===0
-          ? <EmptyState icon="📅" title="일정이 없어요" action={<button className="btn btn-primary" onClick={()=>openNew()}>추가하기</button>} />
-          : <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              {filtered.map(item=>(
-                <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
-                  <DateBox dateStr={item.scheduled_date} />
-                  <div style={{flex:1, minWidth:0}}>
-                    <div className="flex items-center gap-8" style={{marginBottom:3}}>
-                      <span style={{fontWeight:600,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.title}</span>
-                      <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{flexShrink:0}}>{STATUS_MAP[item.status]?.label}</span>
-                      {item.is_gm&&<span className="badge badge-primary" style={{flexShrink:0}}>GM</span>}
-                    </div>
-                    <div className="text-xs text-light flex gap-12">
-                      {item.system_name&&<span>🎲 {item.system_name}</span>}
-                      {item.scheduled_time&&<span>🕐 {item.scheduled_time}</span>}
-                      {item.location&&<span>🌐 {item.location}</span>}
-                    </div>
-                    {item.description&&<p className="text-sm text-light" style={{marginTop:4}}>{item.description}</p>}
+        loading?<LoadingSpinner/>:filtered.length===0
+          ?<EmptyState icon="📅" title="일정이 없어요" action={<button className="btn btn-primary" onClick={()=>openNew()}>추가하기</button>}/>
+          :<div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {filtered.map(item=>(
+              <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
+                <DateBox dateStr={item.scheduled_date}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="flex items-center gap-8" style={{marginBottom:3}}>
+                    <span style={{fontWeight:600,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.title}</span>
+                    <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{flexShrink:0}}>{STATUS_MAP[item.status]?.label}</span>
+                    {item.is_gm&&<span className="badge badge-primary" style={{flexShrink:0}}>GM</span>}
                   </div>
-                  <div className="flex gap-8" style={{flexShrink:0}}>
-                    {/* 복사/이동 버튼 */}
-                    <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={()=>{setCopyTarget(item);setCopyDate(item.scheduled_date);setCopyMode('copy');setCopyModal(true)}}>📋</button>
-                    <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
-                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
+                  <div className="text-xs text-light flex gap-12">
+                    {item.system_name&&<span>🎲 {item.system_name}</span>}
+                    {item.scheduled_time&&<span>🕐 {fmtTime(item.scheduled_time)}</span>}
+                    {item.location&&<span>🌐 {item.location}</span>}
                   </div>
+                  {item.description&&<p className="text-sm text-light" style={{marginTop:4}}>{item.description}</p>}
                 </div>
-              ))}
-            </div>
+                <div className="flex gap-8" style={{flexShrink:0}}>
+                  <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}>📋</button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
+                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
+                </div>
+              </div>
+            ))}
+          </div>
       )}
 
-      {/* 등록/수정 모달 */}
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'일정 수정':'새 일정 추가'}
         footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
-        <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" placeholder="세션명" value={form.title} onChange={set('title')} /></div>
+        <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
         <div className="grid-2">
-          <div className="form-group"><label className="form-label">날짜 *</label><input className="form-input" type="date" value={form.scheduled_date} onChange={set('scheduled_date')} /></div>
-          <div className="form-group"><label className="form-label">시간</label><input className="form-input" type="time" value={form.scheduled_time||''} onChange={set('scheduled_time')} /></div>
+          <div className="form-group"><label className="form-label">날짜 *</label><input className="form-input" type="date" value={form.scheduled_date} onChange={set('scheduled_date')}/></div>
+          <div className="form-group"><label className="form-label">시간</label><input className="form-input" type="time" value={form.scheduled_time||''} onChange={set('scheduled_time')}/></div>
         </div>
         <div className="grid-2">
-          <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))} /></div>
-          <div className="form-group"><label className="form-label">사이트</label><input className="form-input" placeholder="roll20, 코코포리아..." value={form.location||''} onChange={set('location')} /></div>
+          <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
+          <div className="form-group"><label className="form-label">사이트</label><input className="form-input" placeholder="roll20, 코코포리아..." value={form.location||''} onChange={set('location')}/></div>
         </div>
         <div className="grid-2">
           <div className="form-group"><label className="form-label">상태</label>
@@ -308,16 +304,15 @@ export default function SchedulePage() {
             </select>
           </div>
         </div>
-        <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.description||''} onChange={set('description')} style={{minHeight:72}} /></div>
+        <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.description||''} onChange={set('description')} style={{minHeight:72}}/></div>
       </Modal>
 
-      {/* 복사/이동 모달 */}
       <Modal isOpen={copyModal} onClose={()=>setCopyModal(false)} title="일정 복사 / 이동"
         footer={<><button className="btn btn-outline btn-sm" onClick={()=>setCopyModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={executeCopyMove}>{copyMode==='copy'?'복사하기':'이동하기'}</button></>}
       >
         <div style={{marginBottom:14,padding:12,borderRadius:8,background:'var(--color-nav-active-bg)'}}>
           <div style={{fontWeight:600,fontSize:'0.88rem',marginBottom:4}}>{copyTarget?.title}</div>
-          <div className="text-xs text-light">{copyTarget?.scheduled_date} · {copyTarget?.system_name}</div>
+          <div className="text-xs text-light">{copyTarget?.scheduled_date}</div>
         </div>
         <div className="flex gap-8" style={{marginBottom:16}}>
           <button className={`btn btn-sm ${copyMode==='copy'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('copy')}>📋 복사</button>
@@ -325,17 +320,12 @@ export default function SchedulePage() {
         </div>
         <div className="form-group">
           <label className="form-label">{copyMode==='copy'?'복사할 날짜':'이동할 날짜'}</label>
-          <input className="form-input" type="date" value={copyDate} onChange={e=>setCopyDate(e.target.value)} />
+          <input className="form-input" type="date" value={copyDate} onChange={e=>setCopyDate(e.target.value)}/>
         </div>
-        <p className="text-xs text-light">
-          {copyMode==='copy'
-            ? '선택한 날짜에 동일한 일정이 새로 생성돼요.'
-            : '기존 일정의 날짜가 변경돼요.'}
-        </p>
       </Modal>
 
-      <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)} />
-      <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 일정을 삭제하시겠어요?" />
+      <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)}/>
+      <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 일정을 삭제하시겠어요?"/>
     </div>
   )
 }

@@ -22,14 +22,13 @@ import './index.css'
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ textAlign:'center', color:'var(--color-text-light)', fontSize:'0.85rem' }}>
-        <div style={{ fontSize:'1.8rem', marginBottom:10 }}>✦</div>
-        불러오는 중...
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{textAlign:'center',color:'var(--color-text-light)',fontSize:'0.85rem'}}>
+        <div style={{fontSize:'1.8rem',marginBottom:10}}>✦</div>불러오는 중...
       </div>
     </div>
   )
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/login" replace/>
   return children
 }
 
@@ -45,23 +44,29 @@ function PrivateLayout({ children }) {
   )
 }
 
+// 비밀번호 재설정 페이지
+function ResetPasswordPage() {
+  return <PrivateLayout><SettingsPage initialTab="password" /></PrivateLayout>
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<AuthPage />} />
-      <Route path="/u/:username" element={<PublicProfilePage />} />
-      <Route path="/dashboard" element={<PrivateLayout><Dashboard /></PrivateLayout>} />
-      <Route path="/schedule" element={<PrivateLayout><SchedulePage /></PrivateLayout>} />
-      <Route path="/availability" element={<PrivateLayout><AvailabilityPage /></PrivateLayout>} />
-      <Route path="/logs" element={<PrivateLayout><PlayLogPage /></PrivateLayout>} />
-      <Route path="/rulebooks" element={<PrivateLayout><RulebookPage /></PrivateLayout>} />
-      <Route path="/scenarios" element={<PrivateLayout><ScenarioPage /></PrivateLayout>} />
-      <Route path="/pairs" element={<PrivateLayout><PairsPage /></PrivateLayout>} />
-      <Route path="/bookmarks" element={<PrivateLayout><BookmarkPage /></PrivateLayout>} />
-      <Route path="/guestbook" element={<PrivateLayout><GuestbookPage /></PrivateLayout>} />
-      <Route path="/settings" element={<PrivateLayout><SettingsPage /></PrivateLayout>} />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/login" element={<AuthPage/>}/>
+      <Route path="/u/:username" element={<PublicProfilePage/>}/>
+      <Route path="/reset-password" element={<ResetPasswordPage/>}/>
+      <Route path="/dashboard" element={<PrivateLayout><Dashboard/></PrivateLayout>}/>
+      <Route path="/schedule" element={<PrivateLayout><SchedulePage/></PrivateLayout>}/>
+      <Route path="/availability" element={<PrivateLayout><AvailabilityPage/></PrivateLayout>}/>
+      <Route path="/logs" element={<PrivateLayout><PlayLogPage/></PrivateLayout>}/>
+      <Route path="/rulebooks" element={<PrivateLayout><RulebookPage/></PrivateLayout>}/>
+      <Route path="/scenarios" element={<PrivateLayout><ScenarioPage/></PrivateLayout>}/>
+      <Route path="/pairs" element={<PrivateLayout><PairsPage/></PrivateLayout>}/>
+      <Route path="/bookmarks" element={<PrivateLayout><BookmarkPage/></PrivateLayout>}/>
+      <Route path="/guestbook" element={<PrivateLayout><GuestbookPage/></PrivateLayout>}/>
+      <Route path="/settings" element={<PrivateLayout><SettingsPage/></PrivateLayout>}/>
+      <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
+      <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
     </Routes>
   )
 }
@@ -70,7 +75,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <AppRoutes/>
       </AuthProvider>
     </BrowserRouter>
   )

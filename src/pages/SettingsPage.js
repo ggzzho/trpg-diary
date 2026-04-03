@@ -1,85 +1,83 @@
 // src/pages/SettingsPage.js
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
-import { updateProfile, uploadFile } from '../lib/supabase'
+import { updateProfile, uploadFile, supabase } from '../lib/supabase'
 
 const PRESET_COLORS = [
-  { name: '황토 다이어리', primary: '#c8a96e', bg: '#faf6f0', accent: '#8b6f47' },
-  { name: '심야 블루', primary: '#6b8cba', bg: '#f0f2f8', accent: '#3a5a8c' },
-  { name: '숲속 초록', primary: '#7aaa7a', bg: '#f2f8f2', accent: '#4a7a4a' },
-  { name: '장미 핑크', primary: '#c47a8a', bg: '#fdf2f4', accent: '#8c4a5a' },
-  { name: '라벤더', primary: '#9b89c4', bg: '#f5f2fb', accent: '#6a4a9c' },
-  { name: '먹물 흑백', primary: '#666666', bg: '#f8f8f8', accent: '#333333' },
+  { name:'황토 다이어리', primary:'#c8a96e', bg:'#faf6f0', accent:'#8b6f47' },
+  { name:'심야 블루', primary:'#6b8cba', bg:'#f0f2f8', accent:'#3a5a8c' },
+  { name:'숲속 초록', primary:'#7aaa7a', bg:'#f2f8f2', accent:'#4a7a4a' },
+  { name:'장미 핑크', primary:'#c47a8a', bg:'#fdf2f4', accent:'#8c4a5a' },
+  { name:'라벤더', primary:'#9b89c4', bg:'#f5f2fb', accent:'#6a4a9c' },
+  { name:'먹물 흑백', primary:'#666666', bg:'#f8f8f8', accent:'#333333' },
 ]
-
 function hexToRgb(hex) {
   if (!hex||hex.length<7) return [200,169,110]
   try { return [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)] }
   catch { return [200,169,110] }
 }
-
-// 기본 프로필 항목
 const DEFAULT_SECTIONS = [
-  { id: 'play_style', label: '플레이 스타일', value: '' },
-  { id: 'caution', label: '주의 사항', value: '' },
-  { id: 'extra_info', label: '기타 사항', value: '' },
+  {id:'play_style', label:'플레이 스타일', value:''},
+  {id:'caution', label:'주의 사항', value:''},
+  {id:'extra_info', label:'기타 사항', value:''},
 ]
 
 export default function SettingsPage() {
   const { user, profile, refreshProfile } = useAuth()
-
-  // 프로필 섹션 초기화 (기존 데이터 있으면 불러오기, 없으면 기본값)
-  const initSections = () => {
-    if (profile?.profile_sections?.length > 0) return profile.profile_sections
-    return DEFAULT_SECTIONS.map(s => ({
-      ...s,
-      value: profile?.[s.id] || ''
-    }))
-  }
-
-  const [form, setForm] = useState({
-    display_name: profile?.display_name||'',
-    profile_sections: initSections(),
-    external_links: profile?.external_links||[],
-    header_image_url: profile?.header_image_url||'',
-    theme_color: profile?.theme_color||'#c8a96e',
-    theme_bg_color: profile?.theme_bg_color||'#faf6f0',
-    theme_accent: profile?.theme_accent||'#8b6f47',
-    background_image_url: profile?.background_image_url||'',
-    bg_opacity: profile?.bg_opacity!==undefined ? profile.bg_opacity : 1,
-    is_public: profile?.is_public??true,
-  })
+  const [tab, setTab] = useState('profile')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [headerUploading, setHeaderUploading] = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
-  const [tab, setTab] = useState('profile')
   const [newLink, setNewLink] = useState({label:'',url:''})
+  const [pwForm, setPwForm] = useState({current:'', next:'', confirm:''})
+  const [pwMsg, setPwMsg] = useState(null)
+  const [pwErr, setPwErr] = useState(null)
+  const dragIdx = useRef(null)
 
-  const set = k => e => setForm(f => ({...f, [k]: e.target.value}))
+  // ── form을 profile에서 초기화 (profile이 바뀔 때마다 동기화) ──
+  const buildForm = (p) => ({
+    display_name: p?.display_name||'',
+    profile_sections: p?.profile_sections?.length>0 ? p.profile_sections
+      : DEFAULT_SECTIONS.map(s=>({...s, value:p?.[s.id]||''})),
+    external_links: p?.external_links||[],
+    header_image_url: p?.header_image_url||'',
+    theme_color: p?.theme_color||'#c8a96e',
+    theme_bg_color: p?.theme_bg_color||'#faf6f0',
+    theme_accent: p?.theme_accent||'#8b6f47',
+    background_image_url: p?.background_image_url||'',
+    bg_opacity: p?.bg_opacity!==undefined ? p.bg_opacity : 1,
+    is_public: p?.is_public??true,
+  })
 
-  // 프로필 섹션 관련
-  const updateSection = (idx, field, value) => {
+  const [form, setForm] = useState(() => buildForm(profile))
+
+  // profile이 외부에서 바뀌면 form도 업데이트 (단, 현재 편집 중이면 덮어쓰지 않음)
+  const isMounted = useRef(false)
+  useEffect(() => {
+    if (!isMounted.current) { isMounted.current = true; return }
+    if (!saving) setForm(buildForm(profile))
+  }, [profile?.updated_at])
+
+  const set = k => e => setForm(f=>({...f, [k]:e.target.value}))
+  const updateSection = (idx,field,value) => setForm(f=>{const s=[...f.profile_sections];s[idx]={...s[idx],[field]:value};return {...f,profile_sections:s}})
+  const addSection = () => setForm(f=>({...f, profile_sections:[...f.profile_sections,{id:`custom_${Date.now()}`,label:'새 항목',value:''}]}))
+  const removeSection = idx => setForm(f=>({...f, profile_sections:f.profile_sections.filter((_,i)=>i!==idx)}))
+
+  // 드래그 순서 변경
+  const onDragStart = (idx) => { dragIdx.current = idx }
+  const onDragOver = (e, idx) => {
+    e.preventDefault()
+    if (dragIdx.current === idx) return
     setForm(f => {
-      const sections = [...f.profile_sections]
-      sections[idx] = {...sections[idx], [field]: value}
-      return {...f, profile_sections: sections}
+      const s = [...f.profile_sections]
+      const [dragged] = s.splice(dragIdx.current, 1)
+      s.splice(idx, 0, dragged)
+      dragIdx.current = idx
+      return {...f, profile_sections: s}
     })
-  }
-  const addSection = () => {
-    setForm(f => ({
-      ...f,
-      profile_sections: [...f.profile_sections, {
-        id: `custom_${Date.now()}`,
-        label: '새 항목',
-        value: ''
-      }]
-    }))
-  }
-  const removeSection = (idx) => {
-    setForm(f => ({...f, profile_sections: f.profile_sections.filter((_,i)=>i!==idx)}))
   }
 
   const applyPreset = p => { setForm(f=>({...f,theme_color:p.primary,theme_bg_color:p.bg,theme_accent:p.accent})); applyTheme(p.primary,p.bg,p.accent) }
@@ -90,7 +88,12 @@ export default function SettingsPage() {
   const save = async () => {
     setSaving(true)
     const {error} = await updateProfile(user.id, form)
-    if (!error) { refreshProfile(); setSaved(true); setTimeout(()=>setSaved(false),2500); applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent); applyBackground(form.background_image_url,form.bg_opacity) }
+    if (!error) {
+      await refreshProfile()
+      setSaved(true); setTimeout(()=>setSaved(false),2500)
+      applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent)
+      applyBackground(form.background_image_url,form.bg_opacity)
+    }
     setSaving(false)
   }
 
@@ -98,125 +101,92 @@ export default function SettingsPage() {
     const file=e.target.files?.[0]; if(!file) return; setUploading(true)
     const {url,error}=await uploadFile('backgrounds',`${user.id}/bg-${Date.now()}`,file)
     if(url){setForm(f=>({...f,background_image_url:url}));applyBackground(url,form.bg_opacity)}
-    else alert('업로드 실패: '+(error?.message||''))
+    else alert(error?.message||'업로드 실패')
     setUploading(false)
   }
-
   const handleHeaderUpload = async e => {
     const file=e.target.files?.[0]; if(!file) return; setHeaderUploading(true)
     const {url,error}=await uploadFile('backgrounds',`${user.id}/header-${Date.now()}`,file)
     if(url) setForm(f=>({...f,header_image_url:url}))
-    else alert('업로드 실패: '+(error?.message||''))
+    else alert(error?.message||'업로드 실패')
     setHeaderUploading(false)
   }
-
   const handleAvatarUpload = async e => {
     const file=e.target.files?.[0]; if(!file) return; setAvatarUploading(true)
     const {url,error}=await uploadFile('avatars',`${user.id}/avatar-${Date.now()}`,file)
     if(url){await updateProfile(user.id,{avatar_url:url});refreshProfile()}
-    else alert('업로드 실패: '+(error?.message||''))
+    else alert(error?.message||'업로드 실패')
     setAvatarUploading(false)
   }
 
-  const addLink = () => {
-    if (!newLink.label||!newLink.url) return
-    setForm(f=>({...f, external_links:[...(f.external_links||[]),{...newLink}]}))
-    setNewLink({label:'',url:''})
-  }
-  const removeLink = idx => setForm(f=>({...f, external_links:f.external_links.filter((_,i)=>i!==idx)}))
+  const addLink = () => { if(!newLink.label||!newLink.url) return; setForm(f=>({...f,external_links:[...(f.external_links||[]),{...newLink}]})); setNewLink({label:'',url:''}) }
+  const removeLink = idx => setForm(f=>({...f,external_links:f.external_links.filter((_,i)=>i!==idx)}))
 
-  const TABS = [{key:'profile',label:'👤 프로필'},{key:'theme',label:'🎨 테마'},{key:'privacy',label:'🔒 공개 설정'}]
+  // 비밀번호 변경
+  const handlePwChange = async e => {
+    e.preventDefault(); setPwErr(null); setPwMsg(null)
+    if (pwForm.next !== pwForm.confirm) { setPwErr('새 비밀번호가 일치하지 않아요.'); return }
+    if (pwForm.next.length < 6) { setPwErr('비밀번호는 6자 이상이어야 해요.'); return }
+    const {error} = await supabase.auth.updateUser({password: pwForm.next})
+    if (error) setPwErr(error.message)
+    else { setPwMsg('비밀번호가 변경됐어요! ✅'); setPwForm({current:'',next:'',confirm:''}) }
+  }
+
+  const TABS = [{key:'profile',label:'👤 프로필'},{key:'theme',label:'🎨 테마'},{key:'privacy',label:'🔒 공개 설정'},{key:'password',label:'🔑 비밀번호'}]
 
   return (
     <div className="fade-in">
-      <div className="page-header">
-        <h1 className="page-title">⚙️ 환경설정</h1>
-        <p className="page-subtitle">나만의 TRPG 다이어리를 꾸며보세요</p>
-      </div>
-
-      <div className="flex gap-8" style={{marginBottom:24}}>
-        {TABS.map(t=>(
-          <button key={t.key} className={`btn ${tab===t.key?'btn-primary':'btn-outline'}`} onClick={()=>setTab(t.key)}>{t.label}</button>
-        ))}
+      <div className="page-header"><h1 className="page-title">⚙️ 환경설정</h1><p className="page-subtitle">나만의 TRPG 다이어리를 꾸며보세요</p></div>
+      <div className="flex gap-8" style={{marginBottom:24,flexWrap:'wrap'}}>
+        {TABS.map(t=><button key={t.key} className={`btn ${tab===t.key?'btn-primary':'btn-outline'}`} onClick={()=>setTab(t.key)}>{t.label}</button>)}
       </div>
 
       <div className="card card-lg" style={{maxWidth:620}}>
 
         {/* ── 프로필 ── */}
-        {tab==='profile' && (
+        {tab==='profile'&&(
           <>
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>프로필 설정</h2>
-
             {/* 헤더 이미지 */}
             <div className="form-group">
               <label className="form-label">공개 페이지 헤더 이미지</label>
-              {form.header_image_url && (
-                <div style={{borderRadius:8,overflow:'hidden',marginBottom:8,height:100,background:'var(--color-nav-active-bg)'}}>
-                  <img src={form.header_image_url} alt="header" style={{width:'100%',height:'100%',objectFit:'cover'}} />
-                </div>
-              )}
+              {form.header_image_url&&<div style={{borderRadius:8,overflow:'hidden',marginBottom:8,height:90,background:'var(--color-nav-active-bg)'}}><img src={form.header_image_url} alt="header" style={{width:'100%',height:'100%',objectFit:'cover'}} /></div>}
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.header_image_url||''} onChange={set('header_image_url')} style={{flex:1}} />
-                <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>
-                  {headerUploading?'업로드 중...':'📁 업로드'}
-                  <input type="file" accept="image/*" style={{display:'none'}} onChange={handleHeaderUpload} disabled={headerUploading} />
-                </label>
+                <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>{headerUploading?'업로드 중...':'📁 업로드'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleHeaderUpload} disabled={headerUploading} /></label>
                 {form.header_image_url&&<button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,header_image_url:''}))}>제거</button>}
               </div>
             </div>
-
-            {/* 프로필 사진 */}
+            {/* 아바타 */}
             <div className="form-group flex items-center gap-16">
-              <div className="user-avatar" style={{width:56,height:56,fontSize:'1.3rem'}}>
-                {profile?.avatar_url?<img src={profile.avatar_url} alt="avatar"/>:(profile?.display_name||'?')[0]}
-              </div>
-              <div>
-                <label className="btn btn-outline btn-sm" style={{cursor:'pointer',display:'inline-flex'}}>
-                  {avatarUploading?'업로드 중...':'프로필 사진 변경'}
-                  <input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatarUpload} disabled={avatarUploading} />
-                </label>
-              </div>
+              <div className="user-avatar" style={{width:56,height:56,fontSize:'1.3rem'}}>{profile?.avatar_url?<img src={profile.avatar_url} alt="avatar"/>:(profile?.display_name||'?')[0]}</div>
+              <label className="btn btn-outline btn-sm" style={{cursor:'pointer',display:'inline-flex'}}>{avatarUploading?'업로드 중...':'프로필 사진 변경'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatarUpload} disabled={avatarUploading} /></label>
             </div>
+            <div className="form-group"><label className="form-label">사용자명 (URL)</label><div style={{display:'flex',alignItems:'center',gap:6}}><span className="text-light text-sm">{window.location.origin}/u/</span><input className="form-input" value={profile?.username||''} disabled style={{flex:1,opacity:0.6}} /></div></div>
+            <div className="form-group"><label className="form-label">표시 이름</label><input className="form-input" value={form.display_name} onChange={set('display_name')} /></div>
 
-            <div className="form-group">
-              <label className="form-label">사용자명 (URL)</label>
-              <div style={{display:'flex',alignItems:'center',gap:6}}>
-                <span className="text-light text-sm">{window.location.origin}/u/</span>
-                <input className="form-input" value={profile?.username||''} disabled style={{flex:1,opacity:0.6}} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">표시 이름</label>
-              <input className="form-input" placeholder="모험가 홍길동" value={form.display_name} onChange={set('display_name')} />
-            </div>
-
-            {/* 커스텀 프로필 항목 */}
+            {/* 커스텀 프로필 항목 (드래그 순서 변경) */}
             <div style={{marginBottom:8}}>
               <div className="flex justify-between items-center" style={{marginBottom:12}}>
                 <label className="form-label" style={{marginBottom:0}}>프로필 소개 항목</label>
                 <button type="button" className="btn btn-outline btn-sm" onClick={addSection}>+ 항목 추가</button>
               </div>
-              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
                 {form.profile_sections.map((section,idx)=>(
-                  <div key={section.id} style={{border:'1px solid var(--color-border)',borderRadius:8,padding:12,background:'var(--color-nav-active-bg)'}}>
+                  <div key={section.id}
+                    draggable
+                    onDragStart={()=>onDragStart(idx)}
+                    onDragOver={e=>onDragOver(e,idx)}
+                    style={{border:'1px solid var(--color-border)',borderRadius:8,padding:12,background:'var(--color-nav-active-bg)',cursor:'grab'}}
+                  >
                     <div className="flex justify-between items-center" style={{marginBottom:8}}>
-                      <input
-                        className="form-input"
-                        value={section.label}
-                        onChange={e=>updateSection(idx,'label',e.target.value)}
-                        style={{fontWeight:600,fontSize:'0.82rem',flex:1,marginRight:8,background:'transparent',border:'1px solid var(--color-border)'}}
-                        placeholder="항목 이름"
-                      />
+                      <div className="flex items-center gap-8" style={{flex:1,marginRight:8}}>
+                        <span style={{color:'var(--color-text-light)',fontSize:'0.9rem',cursor:'grab'}}>⠿</span>
+                        <input className="form-input" value={section.label} onChange={e=>updateSection(idx,'label',e.target.value)} style={{fontWeight:600,fontSize:'0.82rem',flex:1}} placeholder="항목 이름" />
+                      </div>
                       <button type="button" className="btn btn-ghost btn-sm" style={{color:'#e57373',flexShrink:0}} onClick={()=>removeSection(idx)}>삭제</button>
                     </div>
-                    <textarea
-                      className="form-textarea"
-                      value={section.value||''}
-                      onChange={e=>updateSection(idx,'value',e.target.value)}
-                      placeholder={`${section.label} 내용 입력...`}
-                      style={{minHeight:72,whiteSpace:'pre-wrap'}}
-                    />
+                    <textarea className="form-textarea" value={section.value||''} onChange={e=>updateSection(idx,'value',e.target.value)} placeholder={`${section.label} 내용 입력...`} style={{minHeight:72,whiteSpace:'pre-wrap'}} />
                   </div>
                 ))}
               </div>
@@ -227,36 +197,29 @@ export default function SettingsPage() {
               <label className="form-label">외부 링크 (성향표, 구글 시트 등)</label>
               {(form.external_links||[]).map((link,idx)=>(
                 <div key={idx} style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}>
-                  <span style={{flex:1,fontSize:'0.82rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                    {link.label} — <span style={{color:'var(--color-primary)'}}>{link.url}</span>
-                  </span>
+                  <span style={{flex:1,fontSize:'0.82rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{link.label} — <span style={{color:'var(--color-primary)'}}>{link.url}</span></span>
                   <button className="btn btn-ghost btn-sm" style={{color:'#e57373',flexShrink:0}} onClick={()=>removeLink(idx)}>삭제</button>
                 </div>
               ))}
               <div style={{display:'flex',gap:6,marginTop:8,flexWrap:'wrap'}}>
-                <input className="form-input" placeholder="링크 이름 (예: 성향표)" value={newLink.label} onChange={e=>setNewLink(l=>({...l,label:e.target.value}))} style={{flex:'0 0 140px'}} />
-                <input className="form-input" placeholder="https://..." value={newLink.url} onChange={e=>setNewLink(l=>({...l,url:e.target.value}))} style={{flex:1,minWidth:160}} />
-                <button className="btn btn-outline btn-sm" onClick={addLink} style={{flexShrink:0}}>추가</button>
+                <input className="form-input" placeholder="링크 이름" value={newLink.label} onChange={e=>setNewLink(l=>({...l,label:e.target.value}))} style={{flex:'0 0 130px'}} />
+                <input className="form-input" placeholder="https://..." value={newLink.url} onChange={e=>setNewLink(l=>({...l,url:e.target.value}))} style={{flex:1,minWidth:150}} />
+                <button className="btn btn-outline btn-sm" onClick={addLink}>추가</button>
               </div>
             </div>
           </>
         )}
 
         {/* ── 테마 ── */}
-        {tab==='theme' && (
+        {tab==='theme'&&(
           <>
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>테마 & 디자인</h2>
             <div className="form-group">
               <label className="form-label">프리셋 테마</label>
               <div className="grid-3" style={{gap:8}}>
                 {PRESET_COLORS.map(p=>(
-                  <button key={p.name} onClick={()=>applyPreset(p)}
-                    style={{padding:'10px 6px',borderRadius:8,cursor:'pointer',border:`2px solid ${form.theme_color===p.primary?'var(--color-text)':'transparent'}`,background:p.bg,textAlign:'center',transition:'all 0.2s'}}>
-                    <div style={{display:'flex',justifyContent:'center',gap:3,marginBottom:5}}>
-                      {[p.primary,p.accent,p.bg].map((c,i)=>(
-                        <div key={i} style={{width:13,height:13,borderRadius:'50%',background:c,border:'1px solid rgba(0,0,0,0.1)'}} />
-                      ))}
-                    </div>
+                  <button key={p.name} onClick={()=>applyPreset(p)} style={{padding:'10px 6px',borderRadius:8,cursor:'pointer',border:`2px solid ${form.theme_color===p.primary?'var(--color-text)':'transparent'}`,background:p.bg,textAlign:'center',transition:'all 0.2s'}}>
+                    <div style={{display:'flex',justifyContent:'center',gap:3,marginBottom:5}}>{[p.primary,p.accent,p.bg].map((c,i)=><div key={i} style={{width:13,height:13,borderRadius:'50%',background:c,border:'1px solid rgba(0,0,0,0.1)'}} />)}</div>
                     <div style={{fontSize:'0.68rem',color:p.accent,fontWeight:600}}>{p.name}</div>
                   </button>
                 ))}
@@ -275,19 +238,11 @@ export default function SettingsPage() {
             </div>
             <div className="form-group">
               <label className="form-label">배경 이미지</label>
-              <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.background_image_url} onChange={e=>handleBgUrlChange(e.target.value)} style={{flex:1}} />
-                <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>
-                  {uploading?'업로드 중...':'📁 파일 업로드'}
-                  <input type="file" accept="image/*" style={{display:'none'}} onChange={handleBgUpload} disabled={uploading} />
-                </label>
+                <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>{uploading?'업로드 중...':'📁 파일 업로드'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleBgUpload} disabled={uploading} /></label>
               </div>
-              {form.background_image_url&&(
-                <div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}>
-                  <img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} />
-                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1)}}>제거</button>
-                </div>
-              )}
+              {form.background_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} /><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1)}}>제거</button></div>}
             </div>
             {form.background_image_url&&(
               <div className="form-group">
@@ -310,7 +265,7 @@ export default function SettingsPage() {
         )}
 
         {/* ── 공개 설정 ── */}
-        {tab==='privacy' && (
+        {tab==='privacy'&&(
           <>
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>공개 설정</h2>
             <div className="card" style={{marginBottom:14,background:'var(--color-nav-active-bg)'}}>
@@ -320,25 +275,36 @@ export default function SettingsPage() {
                   <div className="text-sm text-light">다른 사람이 내 페이지를 볼 수 있어요</div>
                   {profile?.username&&<div className="text-xs" style={{marginTop:5,color:'var(--color-accent)'}}>🔗 {window.location.origin}/u/{profile.username}</div>}
                 </div>
-                <div onClick={()=>setForm(f=>({...f,is_public:!f.is_public}))}
-                  style={{width:40,height:22,borderRadius:11,background:form.is_public?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
+                <div onClick={()=>setForm(f=>({...f,is_public:!f.is_public}))} style={{width:40,height:22,borderRadius:11,background:form.is_public?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
                   <div style={{position:'absolute',top:2,left:form.is_public?20:2,width:18,height:18,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}} />
                 </div>
               </div>
             </div>
-            {form.is_public&&(
-              <div style={{padding:14,borderRadius:8,background:'rgba(104,159,56,0.08)',border:'1px solid rgba(104,159,56,0.2)'}}>
-                <div className="text-sm" style={{color:'#558b2f'}}>✅ 공개 상태예요.<br/><br/><strong>{window.location.origin}/u/{profile?.username}</strong></div>
-                <button className="btn btn-outline btn-sm" style={{marginTop:10}} onClick={()=>{navigator.clipboard.writeText(`${window.location.origin}/u/${profile?.username}`);alert('복사됐어요!')}}>링크 복사</button>
-              </div>
-            )}
+            {form.is_public&&<div style={{padding:14,borderRadius:8,background:'rgba(104,159,56,0.08)',border:'1px solid rgba(104,159,56,0.2)'}}><div className="text-sm" style={{color:'#558b2f'}}>✅ 공개 상태예요.<br/><br/><strong>{window.location.origin}/u/{profile?.username}</strong></div><button className="btn btn-outline btn-sm" style={{marginTop:10}} onClick={()=>{navigator.clipboard.writeText(`${window.location.origin}/u/${profile?.username}`);alert('복사됐어요!')}}>링크 복사</button></div>}
           </>
         )}
 
-        <div style={{marginTop:20,paddingTop:16,borderTop:'1px solid var(--color-border)',display:'flex',justifyContent:'flex-end',alignItems:'center',gap:10}}>
-          {saved&&<span className="text-sm" style={{color:'#558b2f'}}>✅ 저장됐어요!</span>}
-          <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?'저장 중...':'설정 저장'}</button>
-        </div>
+        {/* ── 비밀번호 변경 ── */}
+        {tab==='password'&&(
+          <>
+            <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>비밀번호 변경</h2>
+            {pwErr&&<div style={{padding:'10px 14px',borderRadius:8,background:'rgba(229,115,115,0.1)',border:'1px solid rgba(229,115,115,0.3)',color:'#c62828',fontSize:'0.82rem',marginBottom:14}}>{pwErr}</div>}
+            {pwMsg&&<div style={{padding:'10px 14px',borderRadius:8,background:'rgba(104,159,56,0.1)',border:'1px solid rgba(104,159,56,0.3)',color:'#33691e',fontSize:'0.82rem',marginBottom:14}}>{pwMsg}</div>}
+            <form onSubmit={handlePwChange}>
+              <div className="form-group"><label className="form-label">새 비밀번호</label><input className="form-input" type="password" placeholder="6자 이상" value={pwForm.next} onChange={e=>setPwForm(f=>({...f,next:e.target.value}))} required /></div>
+              <div className="form-group"><label className="form-label">새 비밀번호 확인</label><input className="form-input" type="password" placeholder="동일하게 입력" value={pwForm.confirm} onChange={e=>setPwForm(f=>({...f,confirm:e.target.value}))} required /></div>
+              <button className="btn btn-primary btn-sm" type="submit">비밀번호 변경</button>
+            </form>
+          </>
+        )}
+
+        {/* 저장 버튼 (비밀번호 탭 제외) */}
+        {tab!=='password'&&(
+          <div style={{marginTop:20,paddingTop:16,borderTop:'1px solid var(--color-border)',display:'flex',justifyContent:'flex-end',alignItems:'center',gap:10}}>
+            {saved&&<span className="text-sm" style={{color:'#558b2f'}}>✅ 저장됐어요!</span>}
+            <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?'저장 중...':'설정 저장'}</button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,113 +1,109 @@
 // src/pages/AuthPage.js
 import React, { useState } from 'react'
+import { signUp, signIn, supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import { signIn, signUp } from '../lib/supabase'
 
 export default function AuthPage() {
   const navigate = useNavigate()
-  const [mode, setMode] = useState('login') // 'login' | 'register'
-  const [form, setForm] = useState({ email: '', password: '', username: '', displayName: '' })
-  const [error, setError] = useState('')
+  const [mode, setMode] = useState('login') // 'login' | 'signup' | 'reset'
+  const [form, setForm] = useState({ email:'', password:'', username:'', displayName:'' })
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState('')
+  const [message, setMessage] = useState(null)
+  const [error, setError] = useState(null)
 
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
+  const set = k => e => setForm(f => ({...f, [k]: e.target.value}))
 
-  const handleSubmit = async () => {
-    setError(''); setSuccess('')
-    if (!form.email || !form.password) { setError('이메일과 비밀번호를 입력해주세요.'); return }
+  const handleLogin = async e => {
+    e.preventDefault(); setLoading(true); setError(null)
+    const { error } = await signIn(form.email, form.password)
+    if (error) setError('이메일 또는 비밀번호가 올바르지 않아요.')
+    else navigate('/dashboard')
+    setLoading(false)
+  }
 
-    setLoading(true)
-    if (mode === 'login') {
-      const { error } = await signIn(form.email, form.password)
-      if (error) setError('이메일 또는 비밀번호가 올바르지 않아요.')
-      else navigate('/dashboard')
-    } else {
-      if (!form.username) { setError('사용자명을 입력해주세요.'); setLoading(false); return }
-      if (form.username.length < 3) { setError('사용자명은 3자 이상이어야 해요.'); setLoading(false); return }
-      const { error } = await signUp(form.email, form.password, form.username, form.displayName || form.username)
-      if (error) {
-        if (error.message.includes('already registered')) setError('이미 사용 중인 이메일이에요.')
-        else setError(error.message)
-      } else {
-        setSuccess('가입 확인 메일을 보냈어요! 메일을 확인해주세요. ✉️')
-      }
+  const handleSignup = async e => {
+    e.preventDefault(); setLoading(true); setError(null)
+    if (!form.username || !/^[a-zA-Z0-9_]+$/.test(form.username)) {
+      setError('사용자명은 영문, 숫자, 밑줄(_)만 사용 가능해요.'); setLoading(false); return
     }
+    const { error } = await signUp(form.email, form.password, form.username, form.displayName||form.username)
+    if (error) setError(error.message)
+    else setMessage('가입 확인 메일을 보냈어요! 메일을 확인해주세요. 📬')
+    setLoading(false)
+  }
+
+  const handleReset = async e => {
+    e.preventDefault(); setLoading(true); setError(null)
+    const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    })
+    if (error) setError(error.message)
+    else setMessage('비밀번호 재설정 링크를 이메일로 보냈어요! 📬')
     setLoading(false)
   }
 
   return (
-    <div className="auth-wrapper">
-      <div className="auth-card">
-        <div className="auth-logo">
-          <h1>✦ TRPG Diary</h1>
-          <p>나만의 TRPG 기록을 남겨보세요</p>
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--color-bg)', padding:20 }}>
+      <div className="card card-lg" style={{ width:'100%', maxWidth:400 }}>
+        <div style={{ textAlign:'center', marginBottom:28 }}>
+          <div style={{ fontSize:'2rem', marginBottom:8 }}>✦</div>
+          <h1 style={{ fontWeight:800, color:'var(--color-accent)', fontSize:'1.5rem', letterSpacing:'-0.03em' }}>TRPG Diary</h1>
+          <p className="text-sm text-light" style={{ marginTop:4 }}>나만의 TRPG 기록 다이어리</p>
         </div>
 
-        <div className="flex gap-8" style={{ marginBottom: 28 }}>
-          {['login', 'register'].map(m => (
-            <button
-              key={m}
-              className={`btn ${mode === m ? 'btn-primary' : 'btn-outline'}`}
-              style={{ flex: 1, justifyContent: 'center' }}
-              onClick={() => { setMode(m); setError(''); setSuccess('') }}
-            >
-              {m === 'login' ? '로그인' : '회원가입'}
+        {/* 탭 */}
+        {mode !== 'reset' && (
+          <div className="flex" style={{ marginBottom:20, borderBottom:'1px solid var(--color-border)' }}>
+            {[{k:'login',l:'로그인'},{k:'signup',l:'회원가입'}].map(t=>(
+              <button key={t.k} onClick={()=>{setMode(t.k);setError(null);setMessage(null)}}
+                style={{ flex:1, padding:'8px 0', background:'none', border:'none', cursor:'pointer', fontWeight:mode===t.k?700:400, color:mode===t.k?'var(--color-accent)':'var(--color-text-light)', borderBottom:mode===t.k?'2px solid var(--color-accent)':'2px solid transparent', transition:'all 0.2s', fontSize:'0.88rem' }}>
+                {t.l}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {mode === 'reset' && (
+          <h2 style={{ fontWeight:700, color:'var(--color-accent)', marginBottom:20, fontSize:'1rem' }}>🔑 비밀번호 찾기</h2>
+        )}
+
+        {error && <div style={{ padding:'10px 14px', borderRadius:8, background:'rgba(229,115,115,0.1)', border:'1px solid rgba(229,115,115,0.3)', color:'#c62828', fontSize:'0.82rem', marginBottom:14 }}>{error}</div>}
+        {message && <div style={{ padding:'10px 14px', borderRadius:8, background:'rgba(104,159,56,0.1)', border:'1px solid rgba(104,159,56,0.3)', color:'#33691e', fontSize:'0.82rem', marginBottom:14 }}>{message}</div>}
+
+        {/* 로그인 */}
+        {mode === 'login' && !message && (
+          <form onSubmit={handleLogin}>
+            <div className="form-group"><label className="form-label">이메일</label><input className="form-input" type="email" placeholder="hello@example.com" value={form.email} onChange={set('email')} required /></div>
+            <div className="form-group"><label className="form-label">비밀번호</label><input className="form-input" type="password" placeholder="비밀번호" value={form.password} onChange={set('password')} required /></div>
+            <button className="btn btn-primary w-full" type="submit" disabled={loading} style={{ marginTop:8, justifyContent:'center' }}>{loading?'로그인 중...':'로그인'}</button>
+            <button type="button" className="btn btn-ghost btn-sm w-full" style={{ marginTop:8, justifyContent:'center', color:'var(--color-text-light)' }} onClick={()=>{setMode('reset');setError(null);setMessage(null)}}>
+              비밀번호를 잊으셨나요?
             </button>
-          ))}
-        </div>
+          </form>
+        )}
 
-        {mode === 'register' && (
-          <>
+        {/* 회원가입 */}
+        {mode === 'signup' && !message && (
+          <form onSubmit={handleSignup}>
+            <div className="form-group"><label className="form-label">이메일</label><input className="form-input" type="email" placeholder="hello@example.com" value={form.email} onChange={set('email')} required /></div>
+            <div className="form-group"><label className="form-label">비밀번호</label><input className="form-input" type="password" placeholder="6자 이상" value={form.password} onChange={set('password')} required minLength={6} /></div>
             <div className="form-group">
-              <label className="form-label">사용자명 * (URL에 사용됩니다)</label>
-              <input className="form-input" placeholder="trpg_lover" value={form.username} onChange={set('username')} />
+              <label className="form-label">사용자명 (URL에 사용)</label>
+              <input className="form-input" placeholder="trpg_player (영문, 숫자, _)" value={form.username} onChange={set('username')} required />
+              <div className="text-xs text-light" style={{ marginTop:3 }}>{window.location.origin}/u/{form.username||'...'}</div>
             </div>
-            <div className="form-group">
-              <label className="form-label">표시 이름</label>
-              <input className="form-input" placeholder="모험가 홍길동" value={form.displayName} onChange={set('displayName')} />
-            </div>
-          </>
+            <div className="form-group"><label className="form-label">표시 이름</label><input className="form-input" placeholder="모험가 홍길동" value={form.displayName} onChange={set('displayName')} /></div>
+            <button className="btn btn-primary w-full" type="submit" disabled={loading} style={{ marginTop:8, justifyContent:'center' }}>{loading?'가입 중...':'가입하기'}</button>
+          </form>
         )}
 
-        <div className="form-group">
-          <label className="form-label">이메일 *</label>
-          <input className="form-input" type="email" placeholder="dice@trpg.com" value={form.email} onChange={set('email')} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">비밀번호 *</label>
-          <input className="form-input" type="password" placeholder="8자 이상" value={form.password} onChange={set('password')}
-            onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
-        </div>
-
-        {error && (
-          <div style={{ background: 'rgba(229,115,115,0.1)', border: '1px solid rgba(229,115,115,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: '0.84rem', color: '#c62828' }}>
-            {error}
-          </div>
-        )}
-        {success && (
-          <div style={{ background: 'rgba(104,159,56,0.1)', border: '1px solid rgba(104,159,56,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: '0.84rem', color: '#558b2f' }}>
-            {success}
-          </div>
-        )}
-
-        <button
-          className="btn btn-primary w-full"
-          style={{ justifyContent: 'center', padding: '12px' }}
-          onClick={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? '처리 중...' : mode === 'login' ? '✦ 로그인' : '✦ 가입하기'}
-        </button>
-
-        {mode === 'login' && (
-          <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.8rem', color: 'var(--color-text-light)' }}>
-            아직 계정이 없으신가요?{' '}
-            <span style={{ color: 'var(--color-accent)', cursor: 'pointer' }} onClick={() => setMode('register')}>
-              회원가입
-            </span>
-          </p>
+        {/* 비밀번호 찾기 */}
+        {mode === 'reset' && !message && (
+          <form onSubmit={handleReset}>
+            <div className="form-group"><label className="form-label">가입한 이메일</label><input className="form-input" type="email" placeholder="hello@example.com" value={form.email} onChange={set('email')} required /></div>
+            <button className="btn btn-primary w-full" type="submit" disabled={loading} style={{ marginTop:8, justifyContent:'center' }}>{loading?'전송 중...':'재설정 링크 보내기'}</button>
+            <button type="button" className="btn btn-ghost btn-sm w-full" style={{ marginTop:8, justifyContent:'center' }} onClick={()=>{setMode('login');setError(null);setMessage(null)}}>← 로그인으로 돌아가기</button>
+          </form>
         )}
       </div>
     </div>
