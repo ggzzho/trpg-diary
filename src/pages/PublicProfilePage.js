@@ -266,11 +266,17 @@ export default function PublicProfilePage() {
               </button>
             )}
             {bgmVideoId && (
-              <button className={`btn btn-sm ${bgmOn?'btn-primary':'btn-outline'}`}
-                onClick={toggleBgm}
-                title={bgmOn ? 'BGM 끄기' : 'BGM 켜기'}>
-                {bgmOn ? '🎵 BGM 끄기' : '🎵 BGM 켜기'}
-              </button>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <button className={`btn btn-sm ${bgmOn?'btn-primary':'btn-outline'}`}
+                  onClick={toggleBgm}>
+                  {bgmOn ? '🎵 BGM 끄기' : '🎵 BGM 켜기'}
+                </button>
+                {bgmOn && (
+                  <div style={{ fontSize:'0.65rem', color:'var(--color-text-light)', textAlign:'center', maxWidth:200 }}>
+                    소리가 안 들리면 브라우저 주소창 왼쪽 🔒 아이콘 → <strong>사이트 설정 → 소리 → 허용</strong>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
