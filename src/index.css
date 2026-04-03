@@ -488,3 +488,33 @@ body::before {
 .calendar-event.gm { background: var(--color-accent); }
 .calendar-event.completed { background: #aaa; }
 .calendar-event.cancelled { background: #e57373; }
+
+/* ── Material Symbols ─────────────────────────────────── */
+.ms {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  color: var(--color-accent);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.ms-filled {
+  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+.ms-sm { font-size: 16px; }
+.ms-lg { font-size: 24px; }
+.ms-muted { color: var(--color-text-light); }
+.ms-white { color: white; }
+.ms-danger { color: #e57373; }
+/* 네비 메뉴 아이콘 크기 */
+.nav-icon .ms { font-size: 18px; }

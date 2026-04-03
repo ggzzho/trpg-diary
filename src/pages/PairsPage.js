@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { pairsApi, uploadFile, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager } from '../components/Layout'
+import { Mi } from '../components/Mi'
 
 const BLANK = { name:'', nickname:'', memo:'', relations:[], first_met_date:'', pair_image_url:'' }
 const cleanPayload = f => ({...f, first_met_date:f.first_met_date||null, relations:f.relations||[]})
@@ -78,18 +79,18 @@ export function PairsPage() {
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
-        <div><h1 className="page-title">👥 페어 목록</h1><p className="page-subtitle">함께한 소중한 동료들을 기록해요 ({items.length}명)</p></div>
+        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>people</Mi>페어 목록</h1><p className="page-subtitle">함께한 소중한 동료들을 기록해요 ({items.length}명)</p></div>
         <div className="flex gap-8">
-          <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}>🏷️ 관계 관리</button>
-          <button className="btn btn-primary" onClick={openNew}>+ 페어 추가</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}><Mi size='sm'>sell</Mi> 관계 관리</button>
+          <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 페어 추가</button>
         </div>
       </div>
 
       {/* 정렬 + 태그 필터 - 간격 추가 */}
       <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20,flexWrap:'wrap'}}>
         <div className="flex gap-10">
-          <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`} onClick={()=>setSortOrder('asc')}>↑ 오름차순</button>
-          <button className={`btn btn-sm ${sortOrder==='desc'?'btn-primary':'btn-outline'}`} onClick={()=>setSortOrder('desc')}>↓ 내림차순</button>
+          <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`} onClick={()=>setSortOrder('asc')}><Mi size='sm'>arrow_upward</Mi> 오름차순</button>
+          <button className={`btn btn-sm ${sortOrder==='desc'?'btn-primary':'btn-outline'}`} onClick={()=>setSortOrder('desc')}><Mi size='sm'>arrow_downward</Mi> 내림차순</button>
         </div>
         {relationTags.length>0&&(
           <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
@@ -101,7 +102,7 @@ export function PairsPage() {
       </div>
 
       {loading?<LoadingSpinner/>:filtered.length===0
-        ?<EmptyState icon="👥" title="페어가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
+        ?<EmptyState icon="people" title="페어가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
         :<div className="grid-auto">
           {filtered.map(item=>{
             const dday=calcDday(item.first_met_date)
@@ -122,7 +123,7 @@ export function PairsPage() {
                   <div style={{fontWeight:700,fontSize:'1rem',marginBottom:4}}>{item.name}</div>
                   {item.nickname&&<div className="text-xs text-light" style={{marginBottom:6}}>페어 캐릭터: {item.nickname}</div>}
                   {displayRelations.length>0&&<div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:6}}>{displayRelations.map(r=><span key={r} className="badge badge-primary">{r}</span>)}</div>}
-                  {item.first_met_date&&<div className="text-xs text-light">📅 {item.first_met_date} 첫 만남</div>}
+                  {item.first_met_date&&<div className="text-xs text-light"><><Mi size='sm' color='light'>calendar_today</Mi> {item.first_met_date}</> 첫 만남</div>}
                   {item.memo&&<p className="text-xs text-light" style={{marginTop:8,borderTop:'1px solid var(--color-border)',paddingTop:8}}>{item.memo}</p>}
                 </div>
                 <div style={{padding:'8px 14px',borderTop:'1px solid var(--color-border)',display:'flex',gap:8,justifyContent:'flex-end'}}>

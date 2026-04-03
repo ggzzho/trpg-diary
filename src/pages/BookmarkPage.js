@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { bookmarksApi, bookmarkTagsApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager } from '../components/Layout'
+import { Mi } from '../components/Mi'
 
 const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[] }
 
@@ -123,10 +124,10 @@ export function BookmarkPage() {
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
-        <div><h1 className="page-title">🔖 북마크</h1><p className="page-subtitle">유용한 링크와 배포 자료들을 모아요</p></div>
+        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>bookmark</Mi>북마크</h1><p className="page-subtitle">유용한 링크와 배포 자료들을 모아요</p></div>
         <div className="flex gap-8">
-          <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}>🏷️ 태그 관리</button>
-          <button className="btn btn-primary" onClick={openNew}>+ 북마크 추가</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}><Mi size='sm'>sell</Mi> 태그 관리</button>
+          <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 북마크 추가</button>
         </div>
       </div>
       <div style={{marginBottom:20}}>
@@ -139,7 +140,7 @@ export function BookmarkPage() {
         )}
       </div>
       {loading?<LoadingSpinner/>:filtered.length===0
-        ?<EmptyState icon="🔖" title="북마크가 없어요" description="유용한 링크를 추가해보세요!" action={<button className="btn btn-primary" onClick={openNew}>북마크 추가</button>}/>
+        ?<EmptyState icon="bookmark" title="북마크가 없어요" description="유용한 링크를 추가해보세요!" action={<button className="btn btn-primary" onClick={openNew}>북마크 추가</button>}/>
         :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))',gap:14}}>
           {filtered.map(item=>(
             <div key={item.id}
@@ -150,7 +151,7 @@ export function BookmarkPage() {
               <div style={{height:130,background:'var(--color-nav-active-bg)',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:'pointer'}}
                 onClick={()=>window.open(item.url,'_blank','noopener,noreferrer')}
               >
-                {item.thumbnail_url?<img src={item.thumbnail_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}>🔗</span>}
+                {item.thumbnail_url?<img src={item.thumbnail_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}><Mi size="lg" color="light">link</Mi></span>}
                 {item.tags?.length>0&&(
                   <div style={{position:'absolute',bottom:8,left:8,right:8,display:'flex',gap:4,flexWrap:'wrap'}}>
                     {item.tags.filter(t=>tags.map(tg=>tg.name).includes(t)).map(tag=>(
@@ -164,8 +165,8 @@ export function BookmarkPage() {
               >
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.title||item.url}</div>
                 {item.description&&<div style={{fontSize:'0.72rem',color:'var(--color-text-light)',lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.description}</div>}
-                <div style={{fontSize:'0.65rem',color:'var(--color-text-light)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'auto',paddingTop:4}}>🌐 {item.url}</div>
-                {item.memo&&<div style={{fontSize:'0.72rem',color:'var(--color-accent)',padding:'5px 8px',borderRadius:6,background:'var(--color-nav-active-bg)',marginTop:4,wordBreak:'break-all',overflowWrap:'break-word',whiteSpace:'pre-wrap'}}>📝 {item.memo}</div>}
+                <div style={{fontSize:'0.65rem',color:'var(--color-text-light)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'auto',paddingTop:4}}><><Mi size='sm' color='light'>link</Mi> {item.url}</></div>
+                {item.memo&&<div style={{fontSize:'0.72rem',color:'var(--color-accent)',padding:'5px 8px',borderRadius:6,background:'var(--color-nav-active-bg)',marginTop:4,wordBreak:'break-all',overflowWrap:'break-word',whiteSpace:'pre-wrap'}}><><Mi size='sm' color='accent'>edit_note</Mi> {item.memo}</></div>}
               </div>
               <div style={{padding:'6px 12px 10px',display:'flex',gap:6,justifyContent:'flex-end',borderTop:'1px solid var(--color-border)'}} onClick={e=>e.stopPropagation()}>
                 <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>

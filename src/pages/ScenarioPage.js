@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { scenariosApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
+import { Mi } from '../components/Mi'
 import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
 
 const BLANK = { title:'', system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status:'unplayed', memo:'', purchase_date:'', scenario_url:'' }
@@ -42,8 +43,8 @@ export function ScenarioPage() {
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
-        <div><h1 className="page-title">📗 시나리오 목록</h1><p className="page-subtitle">보유/위시 TRPG 시나리오 목록이예요 ({items.length}개)</p></div>
-        <button className="btn btn-primary" onClick={openNew}>+ 시나리오 추가</button>
+        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>description</Mi>시나리오 목록</h1><p className="page-subtitle">보유/위시 TRPG 시나리오 목록이예요 ({items.length}개)</p></div>
+        <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 시나리오 추가</button>
       </div>
 
       <div className="flex gap-8" style={{marginBottom:12,flexWrap:'wrap'}}>
@@ -58,12 +59,12 @@ export function ScenarioPage() {
       </div>
 
       {loading?<LoadingSpinner/>:filtered.length===0
-        ?<EmptyState icon="📗" title="시나리오가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
+        ?<EmptyState icon="description" title="시나리오가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
         :<div style={{display:'flex',flexDirection:'column',gap:8}}>
           {filtered.map(item=>(
             <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
               <div style={{width:48,height:48,borderRadius:8,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                {item.cover_image_url?<img src={item.cover_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'1.5rem',opacity:0.4}}>📗</span>}
+                {item.cover_image_url?<img src={item.cover_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'1.5rem',opacity:0.4}}><Mi size="lg" color="light">description</Mi></span>}
               </div>
               <div style={{flex:1,minWidth:0}}>
                 <div className="flex items-center gap-8" style={{marginBottom:5}}>
@@ -72,11 +73,11 @@ export function ScenarioPage() {
                 </div>
                 {/* 항목 간격 추가 */}
                 <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
-                  {item.system_name&&<span className="text-xs text-light">🎲 {item.system_name}</span>}
-                  {item.author&&<span className="text-xs text-light">✏️ {item.author}</span>}
-                  {item.player_count&&<span className="text-xs text-light">👥 {item.player_count}</span>}
+                  {item.system_name&&<span className="text-xs text-light"><><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</></span>}
+                  {item.author&&<span className="text-xs text-light"><><Mi size='sm' color='light'>person</Mi> {item.author}</></span>}
+                  {item.player_count&&<span className="text-xs text-light"><><Mi size='sm' color='light'>group</Mi> {item.player_count}</></span>}
                 </div>
-                {item.scenario_url&&<a href={item.scenario_url} target="_blank" rel="noreferrer" style={{fontSize:'0.7rem',color:'var(--color-primary)',marginTop:3,display:'block'}}>🔗 시나리오 링크</a>}
+                {item.scenario_url&&<a href={item.scenario_url} target="_blank" rel="noreferrer" style={{fontSize:'0.7rem',color:'var(--color-primary)',marginTop:3,display:'block'}}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
                 {item.memo&&<p className="text-xs text-light" style={{marginTop:3}}>{item.memo}</p>}
               </div>
               <div className="flex gap-8">

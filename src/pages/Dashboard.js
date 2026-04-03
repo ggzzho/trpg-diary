@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { schedulesApi, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
-import { SCENARIO_ICON } from '../components/Layout'
+import { Mi } from '../components/Mi'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 
@@ -46,10 +46,10 @@ export default function Dashboard() {
   }
 
   const STAT_CARDS = [
-    {label:'다녀온 기록', value:stats.logs, icon:'📖', to:'/logs', unit:'회'},
-    {label:'보유 룰북', value:stats.rulebooks, icon:'📚', to:'/rulebooks', unit:'권'},
-    {label:'시나리오 목록', value:stats.scenarios, icon:SCENARIO_ICON, to:'/scenarios', unit:'개'},
-    {label:'페어 목록', value:stats.pairs, icon:'👥', to:'/pairs', unit:'명'},
+    {label:'다녀온 기록', value:stats.logs, icon:'auto_stories', to:'/logs', unit:'회'},
+    {label:'보유 룰북', value:stats.rulebooks, icon:'menu_book', to:'/rulebooks', unit:'권'},
+    {label:'시나리오 목록', value:stats.scenarios, icon:'description', to:'/scenarios', unit:'개'},
+    {label:'페어 목록', value:stats.pairs, icon:'people', to:'/pairs', unit:'명'},
   ]
 
   return (
@@ -64,7 +64,7 @@ export default function Dashboard() {
         {STAT_CARDS.map(c=>(
           <Link key={c.label} to={c.to} style={{textDecoration:'none'}}>
             <div className="card" style={{display:'flex',alignItems:'center',gap:14,padding:'14px 16px'}}>
-              <span style={{fontSize:'1.8rem'}}>{c.icon}</span>
+              <Mi size="lg" style={{fontSize:28}}>{c.icon}</Mi>
               <div>
                 <div className="text-serif" style={{fontSize:'1.6rem',color:'var(--color-accent)',fontWeight:700,lineHeight:1}}>
                   {loading?'—':c.value}<span style={{fontSize:'0.8rem',marginLeft:3}}>{c.unit}</span>
@@ -81,7 +81,7 @@ export default function Dashboard() {
         <div className="card">
           <div className="flex justify-between items-center" style={{marginBottom:16}}>
             <div>
-              <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem'}}>📅 다가오는 일정</h2>
+              <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem'}}><Mi style={{marginRight:6}}>calendar_month</Mi>다가오는 일정</h2>
               <div className="text-xs text-light">{format(today,'yyyy년 M월 d일 (EEE)',{locale:ko})}</div>
             </div>
             <Link to="/schedule" className="btn btn-ghost btn-sm">전체 보기</Link>
@@ -115,7 +115,7 @@ export default function Dashboard() {
         {/* 최근 기록 */}
         <div className="card">
           <div className="flex justify-between items-center" style={{marginBottom:16}}>
-            <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem'}}>📖 최근 기록</h2>
+            <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem'}}><Mi style={{marginRight:6}}>auto_stories</Mi>최근 기록</h2>
             <Link to="/logs" className="btn btn-ghost btn-sm">전체 보기</Link>
           </div>
           {recentLogs.length===0
@@ -136,7 +136,7 @@ export default function Dashboard() {
       {/* 즐겨찾기 */}
       {favorites.length>0&&(
         <div className="card" style={{marginTop:16}}>
-          <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem',marginBottom:14}}>⭐ 즐겨찾기</h2>
+          <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem',marginBottom:14}}>즐겨찾기</h2>
           <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
             {favorites.map(f=>(
               <a key={f.id} href={`/u/${f.target_username}`} target="_blank" rel="noreferrer"
@@ -154,7 +154,7 @@ export default function Dashboard() {
       {profile&&(
         <div className="card" style={{marginTop:16,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <div>
-            <div className="text-serif" style={{color:'var(--color-accent)',marginBottom:3,fontSize:'0.95rem'}}>🔗 내 공개 페이지</div>
+            <div className="text-serif" style={{color:'var(--color-accent)',marginBottom:3,fontSize:'0.95rem'}}><Mi style={{marginRight:6}}>open_in_new</Mi>내 공개 페이지</div>
             <div className="text-sm text-light">{window.location.origin}/u/{profile.username}</div>
           </div>
           <button className="btn btn-outline btn-sm" onClick={()=>{navigator.clipboard.writeText(`${window.location.origin}/u/${profile.username}`);alert('링크가 복사되었어요!')}}>링크 복사</button>

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { updateProfile, uploadFile, supabase } from '../lib/supabase'
+import { Mi } from '../components/Mi'
 
 const PRESET_COLORS = [
   { name:'황토 다이어리', primary:'#c8a96e', bg:'#faf6f0', accent:'#8b6f47' },
@@ -133,13 +134,13 @@ export default function SettingsPage() {
     else { setPwMsg('비밀번호가 변경됐어요! ✅'); setPwForm({current:'',next:'',confirm:''}) }
   }
 
-  const TABS = [{key:'profile',label:'👤 프로필'},{key:'theme',label:'🎨 테마'},{key:'privacy',label:'🔒 공개 설정'},{key:'password',label:'🔑 비밀번호'}]
+  const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'theme',label:'테마',icon:'palette'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'}]
 
   return (
     <div className="fade-in">
-      <div className="page-header"><h1 className="page-title">⚙️ 환경설정</h1><p className="page-subtitle">나만의 TRPG 다이어리를 꾸며보세요</p></div>
+      <div className="page-header"><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>settings</Mi>환경설정</h1><p className="page-subtitle">나만의 TRPG 다이어리를 꾸며보세요</p></div>
       <div className="flex gap-8" style={{marginBottom:24,flexWrap:'wrap'}}>
-        {TABS.map(t=><button key={t.key} className={`btn ${tab===t.key?'btn-primary':'btn-outline'}`} onClick={()=>setTab(t.key)}>{t.label}</button>)}
+        {TABS.map(t=><button key={t.key} className={`btn ${tab===t.key?'btn-primary':'btn-outline'}`} onClick={()=>setTab(t.key)} style={{display:'flex',alignItems:'center',gap:4}}><Mi size='sm' color={tab===t.key?'white':'accent'}>{t.icon}</Mi>{t.label}</button>)}
       </div>
 
       <div className="card card-lg" style={{maxWidth:620}}>
@@ -195,7 +196,7 @@ export default function SettingsPage() {
 
             {/* BGM */}
             <div className="form-group" style={{marginTop:24}}>
-              <label className="form-label">🎵 공개 페이지 BGM (YouTube URL)</label>
+              <label className="form-label"><Mi size="sm" style={{marginRight:4}}>music_note</Mi>공개 페이지 BGM (YouTube URL)</label>
               <input className="form-input" placeholder="https://www.youtube.com/watch?v=..." value={form.bgm_url||''} onChange={set('bgm_url')}/>
               <div className="text-xs text-light" style={{marginTop:4}}>공개 페이지 방문자가 BGM 켜기/끄기 버튼으로 음악을 틀 수 있어요</div>
             </div>
@@ -281,7 +282,7 @@ export default function SettingsPage() {
                 <div>
                   <div style={{fontWeight:600,marginBottom:3,fontSize:'0.9rem'}}>공개 페이지 활성화</div>
                   <div className="text-sm text-light">다른 사람이 내 페이지를 볼 수 있어요</div>
-                  {profile?.username&&<div className="text-xs" style={{marginTop:5,color:'var(--color-accent)'}}>🔗 {window.location.origin}/u/{profile.username}</div>}
+                  {profile?.username&&<div className="text-xs" style={{marginTop:5,color:'var(--color-accent)'}}><Mi size="sm">link</Mi> {window.location.origin}/u/{profile.username}</div>}
                 </div>
                 <div onClick={()=>setForm(f=>({...f,is_public:!f.is_public}))} style={{width:40,height:22,borderRadius:11,background:form.is_public?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
                   <div style={{position:'absolute',top:2,left:form.is_public?20:2,width:18,height:18,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}} />
@@ -295,13 +296,13 @@ export default function SettingsPage() {
         {/* ── 비밀번호 변경 ── */}
         {tab==='password'&&(
           <>
-            <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>비밀번호 변경</h2>
+            <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}><Mi size='sm' color='white'>lock_reset</Mi> 비밀번호 변경</h2>
             {pwErr&&<div style={{padding:'10px 14px',borderRadius:8,background:'rgba(229,115,115,0.1)',border:'1px solid rgba(229,115,115,0.3)',color:'#c62828',fontSize:'0.82rem',marginBottom:14}}>{pwErr}</div>}
             {pwMsg&&<div style={{padding:'10px 14px',borderRadius:8,background:'rgba(104,159,56,0.1)',border:'1px solid rgba(104,159,56,0.3)',color:'#33691e',fontSize:'0.82rem',marginBottom:14}}>{pwMsg}</div>}
             <form onSubmit={handlePwChange}>
               <div className="form-group"><label className="form-label">새 비밀번호</label><input className="form-input" type="password" placeholder="6자 이상" value={pwForm.next} onChange={e=>setPwForm(f=>({...f,next:e.target.value}))} required /></div>
               <div className="form-group"><label className="form-label">새 비밀번호 확인</label><input className="form-input" type="password" placeholder="동일하게 입력" value={pwForm.confirm} onChange={e=>setPwForm(f=>({...f,confirm:e.target.value}))} required /></div>
-              <button className="btn btn-primary btn-sm" type="submit">비밀번호 변경</button>
+              <button className="btn btn-primary btn-sm" type="submit"><Mi size='sm' color='white'>lock_reset</Mi> 비밀번호 변경</button>
             </form>
           </>
         )}

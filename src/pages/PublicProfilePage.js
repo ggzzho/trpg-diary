@@ -7,6 +7,7 @@ import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { GuestbookPublicView } from './GuestbookPage'
 import { LogDetailContent } from './PlayLogPage'
 import { FOOTER_TEXT, Modal } from '../components/Layout'
+import { Mi } from '../components/Mi'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, isSameMonth, isToday, addMonths, subMonths
@@ -185,7 +186,7 @@ export default function PublicProfilePage() {
   if (notFound) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       <div style={{ textAlign:'center' }}>
-        <div style={{ fontSize:'2.5rem', marginBottom:14 }}>📗</div>
+        <Mi size='lg' style={{fontSize:40,marginBottom:14}}>description</Mi>
         <h1 style={{ fontWeight:700, color:'var(--color-accent)', marginBottom:7, fontSize:'1.3rem' }}>페이지를 찾을 수 없어요</h1>
         <p style={{ color:'var(--color-text-light)', fontSize:'0.85rem' }}>@{username} 사용자가 없거나 비공개예요</p>
       </div>
@@ -204,13 +205,13 @@ export default function PublicProfilePage() {
   })()
 
   const TABS = [
-    { key:'schedules', label:'📅 일정', count:data.schedules?.length },
-    { key:'logs', label:'📖 기록', count:data.logs?.length },
-    { key:'rulebooks', label:'📚 룰북', count:data.rulebooks?.length },
-    { key:'scenarios', label:'📗 시나리오', count:data.scenarios?.length },
-    { key:'pairs', label:'👥 페어', count:data.pairs?.length },
-    { key:'availability', label:'📋 공수표', count:data.availability?.length },
-    { key:'guestbook', label:'💌 방명록' },
+    { key:'schedules', label:'일정', icon:'calendar_month', count:data.schedules?.length },
+    { key:'logs', label:'기록', icon:'auto_stories', count:data.logs?.length },
+    { key:'rulebooks', label:'룰북', icon:'menu_book', count:data.rulebooks?.length },
+    { key:'scenarios', label:'시나리오', icon:'description', count:data.scenarios?.length },
+    { key:'pairs', label:'페어', icon:'people', count:data.pairs?.length },
+    { key:'availability', label:'공수표', icon:'event_available', count:data.availability?.length },
+    { key:'guestbook', label:'방명록', icon:'mail' },
   ]
 
   // 페어 정렬 (내 페이지 정렬 방식 연동)
@@ -221,12 +222,14 @@ export default function PublicProfilePage() {
 
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
-      {/* BGM iframe embed - 켜기 버튼 클릭 시 표시 */}
+      {/* BGM iframe - 켜기 클릭 시 DOM 삽입, 충분한 크기 필요 */}
       {bgmVideoId && bgmOn && (
         <iframe
-          src={`https://www.youtube.com/embed/${bgmVideoId}?autoplay=1&loop=1&playlist=${bgmVideoId}&controls=0`}
-          style={{ position:'fixed', bottom:0, left:0, width:1, height:1, opacity:0.01, pointerEvents:'none', border:'none' }}
-          allow="autoplay; encrypted-media"
+          key={`bgm-${bgmVideoId}`}
+          src={`https://www.youtube.com/embed/${bgmVideoId}?autoplay=1&mute=0&loop=1&playlist=${bgmVideoId}&controls=0&enablejsapi=1`}
+          style={{ position:'fixed', bottom:-300, left:-300, width:200, height:150, opacity:0, pointerEvents:'none', border:'none', zIndex:-1 }}
+          allow="autoplay; encrypted-media; fullscreen"
+          allowFullScreen
           title="bgm"
         />
       )}
@@ -261,14 +264,18 @@ export default function PublicProfilePage() {
           <div style={{ display:'flex', justifyContent:'center', gap:8, marginBottom:12 }}>
             {!isMyPage && (
               <button className={`btn btn-sm ${isFav?'btn-primary':'btn-outline'}`}
-                onClick={toggleFav} disabled={favLoading}>
-                {isFav ? '⭐ 즐겨찾기 중' : '☆ 즐겨찾기'}
+                onClick={toggleFav} disabled={favLoading}
+                style={{ display:'flex', alignItems:'center', gap:4 }}>
+                <Mi size="sm" color={isFav?'white':'accent'} filled={isFav}>star</Mi>
+                {isFav ? '즐겨찾기 중' : '즐겨찾기'}
               </button>
             )}
             {bgmVideoId && (
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
-                <button className={`btn btn-sm ${bgmOn?'btn-primary':'btn-outline'}`} onClick={toggleBgm}>
-                  {bgmOn ? '🎵 BGM 끄기' : '🎵 BGM 켜기'}
+                <button className={`btn btn-sm ${bgmOn?'btn-primary':'btn-outline'}`} onClick={toggleBgm}
+                  style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <Mi size="sm" color={bgmOn?'white':'accent'}>music_note</Mi>
+                  {bgmOn ? 'BGM 끄기' : 'BGM 켜기'}
                 </button>
                 {bgmOn && (
                   <div style={{ fontSize:'0.68rem', color:'var(--color-text-light)', textAlign:'center', maxWidth:260, lineHeight:1.5,
@@ -329,7 +336,7 @@ export default function PublicProfilePage() {
               {profile.external_links.map((link,i) => (
                 <a key={i} href={link.url} target="_blank" rel="noreferrer"
                   style={{ padding:'4px 12px', borderRadius:100, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', fontSize:'0.76rem', fontWeight:600, textDecoration:'none' }}>
-                  🔗 {link.label}
+                  <><Mi size="sm">link</Mi> {link.label}</>
                 </a>
               ))}
             </div>
@@ -342,7 +349,9 @@ export default function PublicProfilePage() {
         {TABS.map(t => (
           <button key={t.key}
             className={`btn btn-sm ${activeTab===t.key?'btn-primary':'btn-outline'}`}
-            onClick={() => setActiveTab(t.key)}>
+            onClick={() => setActiveTab(t.key)}
+            style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <Mi size="sm" color={activeTab===t.key?'white':'accent'}>{t.icon}</Mi>
             {t.label}{t.count !== undefined ? ` (${t.count})` : ''}
           </button>
         ))}
@@ -370,7 +379,7 @@ export default function PublicProfilePage() {
                     <div style={{ position:'absolute', inset:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
                       {l.session_image_url
                         ? <img src={l.session_image_url} alt={l.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                        : <span style={{ fontSize:'2.5rem', opacity:0.2 }}>📖</span>
+                        : <span style={{ fontSize:'2.5rem', opacity:0.2 }}><Mi size='lg' color='light'>auto_stories</Mi></span>
                       }
                     </div>
                     <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'65%', background:'linear-gradient(to top,var(--color-bg) 0%,rgba(255,255,255,0.6) 55%,transparent 100%)', pointerEvents:'none' }}/>
@@ -414,12 +423,12 @@ export default function PublicProfilePage() {
             : data.rulebooks.map(r => (
               <div key={r.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:14 }}>
                 <div style={{ width:48, height:48, borderRadius:8, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {r.cover_image_url ? <img src={r.cover_image_url} alt={r.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.5rem', opacity:0.4 }}>📚</span>}
+                  {r.cover_image_url ? <img src={r.cover_image_url} alt={r.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.5rem', opacity:0.4 }}><Mi size='lg' color='light'>menu_book</Mi></span>}
                 </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:700, fontSize:'0.9rem', marginBottom:4 }}>{r.title}</div>
                   <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:r.tags?.length>0?4:0 }}>
-                    {r.system_name && <span className="text-xs text-light">🎲 {r.system_name}</span>}
+                    {r.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {r.system_name}</span>}
                     {r.format && <span className="badge badge-primary" style={{ fontSize:'0.62rem' }}>{r.format==='physical'?'실물':r.format==='digital'?'전자':'실물+전자'}</span>}
                   </div>
                   {r.tags?.length > 0 && (
@@ -442,7 +451,7 @@ export default function PublicProfilePage() {
             : data.scenarios.map(s => (
               <div key={s.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:14 }}>
                 <div style={{ width:48, height:48, borderRadius:8, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {s.cover_image_url ? <img src={s.cover_image_url} alt={s.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.5rem', opacity:0.4 }}>📗</span>}
+                  {s.cover_image_url ? <img src={s.cover_image_url} alt={s.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.5rem', opacity:0.4 }}><Mi size='lg' color='light'>description</Mi></span>}
                 </div>
                 <div style={{ flex:1 }}>
                   <div className="flex items-center gap-8" style={{ marginBottom:5 }}>
@@ -450,11 +459,11 @@ export default function PublicProfilePage() {
                     <span className="badge badge-gray">{SCENARIO_STATUS[s.status]}</span>
                   </div>
                   <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-                    {s.system_name && <span className="text-xs text-light">🎲 {s.system_name}</span>}
-                    {s.author && <span className="text-xs text-light">✏️ {s.author}</span>}
-                    {s.player_count && <span className="text-xs text-light">👥 {s.player_count}</span>}
+                    {s.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {s.system_name}</span>}
+                    {s.author && <span className="text-xs text-light"><Mi size='sm' color='light'>edit</Mi> {s.author}</span>}
+                    {s.player_count && <span className="text-xs text-light"><><Mi size="sm" color="light">group</Mi> {s.player_count}</></span>}
                   </div>
-                  {s.scenario_url && <a href={s.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:3, display:'block' }}>🔗 시나리오 링크</a>}
+                  {s.scenario_url && <a href={s.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:3, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
                 </div>
               </div>
             ))
@@ -493,7 +502,7 @@ export default function PublicProfilePage() {
                           {p.relations.map(r => <span key={r} className="badge badge-primary">{r}</span>)}
                         </div>
                       )}
-                      {p.first_met_date && <div className="text-xs text-light">📅 {p.first_met_date} 첫 만남</div>}
+                      {p.first_met_date && <div className="text-xs text-light"><Mi size='sm' color='light'>calendar_today</Mi> {p.first_met_date} 첫 만남</div>}
                       {p.memo && <p className="text-xs text-light" style={{ marginTop:8, borderTop:'1px solid var(--color-border)', paddingTop:8 }}>{p.memo}</p>}
                     </div>
                   </div>
@@ -519,11 +528,11 @@ export default function PublicProfilePage() {
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:4 }}>{a.title}</div>
                     <div className="text-xs text-light flex gap-12" style={{ marginBottom:a.description||a.together_with?5:0 }}>
-                      {a.system_name && <span>🎲 {a.system_name}</span>}
+                      {a.system_name && <span><Mi size='sm' color='light'>sports_esports</Mi> {a.system_name}</span>}
                       {a.together_with && <span>👤 {a.together_with}</span>}
                     </div>
                     {a.description && <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)' }}>{a.description}</p>}
-                    {a.scenario_link && <a href={a.scenario_link} target="_blank" rel="noreferrer" style={{ fontSize:'0.78rem', color:'var(--color-primary)', display:'block', marginTop:5 }}>🔗 시나리오 링크</a>}
+                    {a.scenario_link && <a href={a.scenario_link} target="_blank" rel="noreferrer" style={{ fontSize:'0.78rem', color:'var(--color-primary)', display:'block', marginTop:5 }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
                   </div>
                 </div>
               </div>

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { schedulesApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
+import { Mi } from '../components/Mi'
 import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, isSameMonth, isToday, addMonths, subMonths, getYear, getMonth } from 'date-fns'
@@ -123,7 +124,7 @@ export default function SchedulePage() {
                   style={{fontSize:'0.58rem',background:'rgba(255,255,255,0.8)',border:'none',cursor:'pointer',padding:'1px 3px',borderRadius:3,lineHeight:1}}
                   title="복사/이동"
                   onClick={e=>openCopy(di[0],e)}
-                >📋</button>
+                ><Mi size='sm'>content_copy</Mi></button>
               </div>
             )}
           </div>
@@ -214,7 +215,7 @@ export default function SchedulePage() {
       </div>
       {summaryStats.topRules.length>0&&(
         <div className="card">
-          <div style={{fontWeight:700,marginBottom:14,color:'var(--color-accent)'}}>🎲 룰별 횟수</div>
+          <div style={{fontWeight:700,marginBottom:14,color:'var(--color-accent)'}}><Mi size="sm" style={{marginRight:5}}>sports_esports</Mi>룰별 횟수</div>
           {summaryStats.topRules.map(([rule,count])=>(
             <div key={rule} style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
               <span style={{fontSize:'0.88rem'}}>{rule}</span>
@@ -232,8 +233,8 @@ export default function SchedulePage() {
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
-        <div><h1 className="page-title">📅 일정 관리</h1><p className="page-subtitle">예정된 세션과 지나간 플레이 일정을 관리해요</p></div>
-        <button className="btn btn-primary" onClick={()=>openNew()}>+ 일정 추가</button>
+        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>calendar_month</Mi>일정 관리</h1><p className="page-subtitle">예정된 세션과 지나간 플레이 일정을 관리해요</p></div>
+        <button className="btn btn-primary" onClick={()=>openNew()}><Mi size='sm' color='white'>add</Mi> 일정 추가</button>
       </div>
       <div className="flex justify-between items-center" style={{marginBottom:18,flexWrap:'wrap',gap:8}}>
         {viewMode!=='summary'&&(
@@ -250,10 +251,10 @@ export default function SchedulePage() {
         )}
         {viewMode==='summary'&&<div/>}
         <div className="flex gap-8">
-          <button className={`btn btn-sm ${viewMode==='list'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('list')}>≡ 리스트</button>
-          <button className={`btn btn-sm ${viewMode==='calendar'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('calendar')}>📅 월</button>
-          <button className={`btn btn-sm ${viewMode==='year'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('year')}>📆 연</button>
-          <button className={`btn btn-sm ${viewMode==='summary'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('summary')}>📊 결산</button>
+          <button className={`btn btn-sm ${viewMode==='list'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('list')}><Mi size='sm'>list</Mi> 리스트</button>
+          <button className={`btn btn-sm ${viewMode==='calendar'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('calendar')}><Mi size='sm'>calendar_month</Mi> 월</button>
+          <button className={`btn btn-sm ${viewMode==='year'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('year')}><Mi size='sm'>calendar_view_month</Mi> 연</button>
+          <button className={`btn btn-sm ${viewMode==='summary'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('summary')}><Mi size='sm'>bar_chart</Mi> 결산</button>
         </div>
       </div>
       {viewMode==='calendar'&&<div className="card">{renderCalendar()}</div>}
@@ -261,7 +262,7 @@ export default function SchedulePage() {
       {viewMode==='summary'&&renderSummary()}
       {viewMode==='list'&&(
         loading?<LoadingSpinner/>:filtered.length===0
-          ?<EmptyState icon="📅" title="일정이 없어요" action={<button className="btn btn-primary" onClick={()=>openNew()}>추가하기</button>}/>
+          ?<EmptyState icon="calendar_month" title="일정이 없어요" action={<button className="btn btn-primary" onClick={()=>openNew()}>추가하기</button>}/>
           :<div style={{display:'flex',flexDirection:'column',gap:10}}>
             {filtered.map(item=>(
               <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
@@ -273,14 +274,14 @@ export default function SchedulePage() {
                     {item.is_gm&&<span className="badge badge-primary" style={{flexShrink:0}}>GM</span>}
                   </div>
                   <div className="text-xs text-light flex gap-12">
-                    {item.system_name&&<span>🎲 {item.system_name}</span>}
+                    {item.system_name&&<span><><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}</></span>}
                     {item.scheduled_time&&<span>🕐 {fmtTime(item.scheduled_time)}</span>}
                     {item.location&&<span>🌐 {item.location}</span>}
                   </div>
                   {item.description&&<p className="text-sm text-light" style={{marginTop:4}}>{item.description}</p>}
                 </div>
                 <div className="flex gap-8" style={{flexShrink:0}}>
-                  <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}>📋</button>
+                  <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
                   <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
                   <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
                 </div>
@@ -324,8 +325,8 @@ export default function SchedulePage() {
           <div className="text-xs text-light">{copyTarget?.scheduled_date}</div>
         </div>
         <div className="flex gap-8" style={{marginBottom:16}}>
-          <button className={`btn btn-sm ${copyMode==='copy'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('copy')}>📋 복사</button>
-          <button className={`btn btn-sm ${copyMode==='move'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('move')}>✂️ 이동</button>
+          <button className={`btn btn-sm ${copyMode==='copy'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('copy')}><Mi size='sm' color='white'>content_copy</Mi> 복사</button>
+          <button className={`btn btn-sm ${copyMode==='move'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('move')}><Mi size='sm' color='white'>cut</Mi> 이동</button>
         </div>
         <div className="form-group">
           <label className="form-label">{copyMode==='copy'?'복사할 날짜':'이동할 날짜'}</label>

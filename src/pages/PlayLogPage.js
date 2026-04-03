@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { playLogsApi, uploadFile } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, StarRating } from '../components/Layout'
+import { Mi } from '../components/Mi'
 import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
 import { format } from 'date-fns'
 
@@ -41,7 +42,7 @@ export function SpoilerBlock({ detail, isOwner }) {
 
   return (
     <div style={{marginTop:12,borderTop:'1px solid var(--color-border)',paddingTop:12}}>
-      <div style={{fontWeight:700,fontSize:'0.82rem',color:'#e57373',marginBottom:8}}>⚠️ 스포일러 내용</div>
+      <div style={{fontWeight:700,fontSize:'0.82rem',color:'#e57373',marginBottom:8}}><Mi size='sm' color='danger'>warning</Mi> 스포일러 내용</div>
       {(isOwner || unlocked)
         ? <div style={{padding:12,borderRadius:8,background:'rgba(229,115,115,0.08)',border:'1px solid rgba(229,115,115,0.2)'}}>
             <p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.spoiler_content}</p>
@@ -87,8 +88,8 @@ export function LogDetailContent({ detail, isOwner }) {
       {detail.memo && (
         <div style={{marginBottom:12}}><div className="form-label">메모</div><p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.memo}</p></div>
       )}
-      {detail.scenario_link && <div style={{marginBottom:6}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>🔗 시나리오 링크</a></div>}
-      {detail.session_log_url && <div style={{marginBottom:12}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>📝 세션 로그 백업</a></div>}
+      {detail.scenario_link && <div style={{marginBottom:6}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}><Mi size='sm'>link</Mi> 시나리오 링크</a></div>}
+      {detail.session_log_url && <div style={{marginBottom:12}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}><Mi size='sm'>save</Mi> 세션 로그 백업</a></div>}
       <SpoilerBlock detail={detail} isOwner={!!isOwner}/>
     </div>
   )
@@ -150,8 +151,8 @@ export function PlayLogPage() {
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
-        <div><h1 className="page-title">📖 다녀온 기록</h1><p className="page-subtitle">플레이한 세션들의 소중한 기억을 남겨요</p></div>
-        <button className="btn btn-primary" onClick={openNew}>+ 기록 추가</button>
+        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>auto_stories</Mi>다녀온 기록</h1><p className="page-subtitle">플레이한 세션들의 소중한 기억을 남겨요</p></div>
+        <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 기록 추가</button>
       </div>
 
       <div style={{marginBottom:20}}>
@@ -168,7 +169,7 @@ export function PlayLogPage() {
       </div>
 
       {loading?<LoadingSpinner/>:filtered.length===0
-        ?<EmptyState icon="📖" title="기록이 없어요" action={<button className="btn btn-primary" onClick={openNew}>기록 추가</button>}/>
+        ?<EmptyState icon="auto_stories" title="기록이 없어요" action={<button className="btn btn-primary" onClick={openNew}>기록 추가</button>}/>
         :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(238px,1fr))',gap:13}}>
           {filtered.map(item=>(
             <div key={item.id}
@@ -179,7 +180,7 @@ export function PlayLogPage() {
             >
               <div style={{position:'relative',paddingTop:'56.25%'}}>
                 <div style={{position:'absolute',inset:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-                  {item.session_image_url?<img src={item.session_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}>📖</span>}
+                  {item.session_image_url?<img src={item.session_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}><Mi size="lg" color="light">auto_stories</Mi></span>}
                 </div>
                 <div style={{position:'absolute',bottom:0,left:0,right:0,height:'65%',background:'linear-gradient(to top,var(--color-bg) 0%,rgba(255,255,255,0.6) 55%,transparent 100%)',pointerEvents:'none'}}/>
                 <div style={{position:'absolute',bottom:10,left:10,right:10,display:'flex',gap:4,flexWrap:'wrap'}}>
@@ -201,7 +202,7 @@ export function PlayLogPage() {
                   {item.npc&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>등장인물.</span>{item.npc}</div>}
                 </div>
                 {item.rating>0&&<div className="stars" style={{fontSize:'0.72rem',marginTop:6}}>{'★'.repeat(item.rating)}{'☆'.repeat(5-item.rating)}</div>}
-                {item.spoiler_content&&<div style={{marginTop:4,fontSize:'0.62rem',color:'#e57373'}}>⚠️ 스포일러 포함</div>}
+                {item.spoiler_content&&<div style={{marginTop:4,fontSize:'0.62rem',color:'#e57373'}}><><Mi size='sm' color='danger'>warning</Mi> 스포일러 포함</></div>}
               </div>
               <div style={{padding:'8px 12px 10px',marginTop:8,borderTop:'1px solid var(--color-border)',display:'flex',gap:5,justifyContent:'flex-end'}} onClick={e=>e.stopPropagation()}>
                 <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
@@ -221,12 +222,12 @@ export function PlayLogPage() {
             <LogDetailContent detail={detail} isOwner={true}/>
             {relatedItems.length>0&&(
               <div style={{borderTop:'1px solid var(--color-border)',paddingTop:14,marginTop:14}}>
-                <div style={{fontWeight:700,fontSize:'0.82rem',color:'var(--color-accent)',marginBottom:10}}>📚 {detail.series_tag} 시리즈의 다른 기록 ({relatedItems.length})</div>
+                <div style={{fontWeight:700,fontSize:'0.82rem',color:'var(--color-accent)',marginBottom:10}}><Mi size="sm">auto_stories</Mi> {detail.series_tag} 시리즈의 다른 기록 ({relatedItems.length})</div>
                 <div style={{display:'flex',flexDirection:'column',gap:7}}>
                   {relatedItems.map(r=>(
                     <div key={r.id} style={{display:'flex',gap:10,alignItems:'center',padding:'8px 10px',borderRadius:8,background:'var(--color-nav-active-bg)',cursor:'pointer'}} onClick={()=>setDetail(r)}>
                       <div style={{width:44,height:44,borderRadius:6,overflow:'hidden',flexShrink:0,background:'var(--color-border)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                        {r.session_image_url?<img src={r.session_image_url} alt={r.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'1.2rem',opacity:0.4}}>📖</span>}
+                        {r.session_image_url?<img src={r.session_image_url} alt={r.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'1.2rem',opacity:0.4}}><Mi size="lg" color="light">auto_stories</Mi></span>}
                       </div>
                       <div style={{flex:1,overflow:'hidden'}}>
                         <div style={{fontWeight:600,fontSize:'0.84rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.title}</div>
@@ -282,7 +283,7 @@ export function PlayLogPage() {
 
           {/* 스포일러 섹션 */}
           <div style={{marginTop:8,padding:14,borderRadius:8,border:'1px solid rgba(229,115,115,0.3)',background:'rgba(229,115,115,0.04)'}}>
-            <div style={{fontWeight:700,fontSize:'0.82rem',color:'#c62828',marginBottom:10}}>⚠️ 스포일러 내용 (선택)</div>
+            <div style={{fontWeight:700,fontSize:'0.82rem',color:'#c62828',marginBottom:10}}><Mi size='sm' color='danger'>warning</Mi> 스포일러 내용 (선택)</div>
             <div className="form-group">
               <label className="form-label">스포일러 내용</label>
               <textarea className="form-textarea" autoComplete="off" name="spoiler_txt"

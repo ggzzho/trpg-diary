@@ -1,6 +1,7 @@
 // src/pages/GuestbookPage.js
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { Mi } from '../components/Mi'
 import { supabase } from '../lib/supabase'
 
 const fmtDT = (d) => {
@@ -109,10 +110,10 @@ export function GuestbookPublicView({ ownerId }) {
     <div>
       <div className="flex gap-8" style={{ marginBottom:20 }}>
         <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}>
-          💌 방명록 ({messages.length})
+          방명록 ({messages.length})
         </button>
         <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={() => setTab('mypage')}>
-          🔗 친구 페이지 목록 ({mypages.length})
+          <><Mi size='sm'>link</Mi> 친구 페이지 목록 ({mypages.length})</>
         </button>
       </div>
 
@@ -176,7 +177,7 @@ export function GuestbookPublicView({ ownerId }) {
           <div className="card" style={{ marginBottom:16, padding:'16px 20px' }}>
             <div className="flex justify-between items-center" style={{ marginBottom: pageFormOpen ? 14 : 0 }}>
               <div>
-                <div style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:2 }}>🔗 내 페이지 남기기</div>
+                <div style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:2 }}><Mi size="sm" style={{marginRight:5}}>link</Mi>내 페이지 남기기</div>
                 <div className="text-xs text-light">내 공개 페이지 링크를 이곳에 남겨요</div>
               </div>
               <div className="flex items-center gap-8">
@@ -224,7 +225,7 @@ export function GuestbookPublicView({ ownerId }) {
 
           {isOwner && mypages.length > 0 && (
             <div style={{ marginBottom:12, padding:'8px 14px', borderRadius:8, background:'var(--color-nav-active-bg)', fontSize:'0.8rem', color:'var(--color-text-light)' }}>
-              💡 연필 버튼으로 닉네임·메모 수정, ✕ 버튼으로 삭제할 수 있어요
+              💡 ✏️ 버튼으로 닉네임·메모 수정, ✕ 버튼으로 삭제할 수 있어요
             </div>
           )}
 
@@ -357,15 +358,15 @@ export function GuestbookPage({ ownerId }) {
   return (
     <div className="fade-in">
       <div className="page-header">
-        <h1 className="page-title">💌 방명록</h1>
+        <h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>mail</Mi>방명록</h1>
         <p className="page-subtitle">내 공개 페이지에 남겨진 방명록을 관리해요</p>
       </div>
       <div className="flex gap-8" style={{ marginBottom:20 }}>
         <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}>
-          💌 방명록 ({messages.length})
+          방명록 ({messages.length})
         </button>
         <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={() => setTab('mypage')}>
-          🔗 친구 페이지 목록 ({mypages.length})
+          <><Mi size='sm'>link</Mi> 친구 페이지 목록 ({mypages.length})</>
         </button>
       </div>
 

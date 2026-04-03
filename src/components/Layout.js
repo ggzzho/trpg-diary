@@ -5,18 +5,17 @@ import { useAuth } from '../context/AuthContext'
 import { signOut } from '../lib/supabase'
 
 // 시나리오 아이콘: 📋 (클립보드/목록 느낌)
-export const SCENARIO_ICON = '📋'
 
 const NAV_ITEMS = [
-  { to:'/dashboard', icon:'🏠', label:'홈' },
-  { to:'/schedule', icon:'📅', label:'일정 관리' },
-  { to:'/rulebooks', icon:'📚', label:'보유 룰북' },
-  { to:'/logs', icon:'📖', label:'다녀온 기록' },
-  { to:'/availability', icon:'📋', label:'공수표 목록' },
-  { to:'/scenarios', icon:'📗', label:'시나리오 목록' },
-  { to:'/pairs', icon:'👥', label:'페어 목록' },
-  { to:'/bookmarks', icon:'🔖', label:'북마크' },
-  { to:'/guestbook', icon:'💌', label:'방명록' },
+  { to:'/dashboard', icon:'home', label:'홈' },
+  { to:'/schedule', icon:'calendar_month', label:'일정 관리' },
+  { to:'/rulebooks', icon:'menu_book', label:'보유 룰북' },
+  { to:'/logs', icon:'auto_stories', label:'다녀온 기록' },
+  { to:'/availability', icon:'event_available', label:'공수표 목록' },
+  { to:'/scenarios', icon:'description', label:'시나리오 목록' },
+  { to:'/pairs', icon:'people', label:'페어 목록' },
+  { to:'/bookmarks', icon:'bookmark', label:'북마크' },
+  { to:'/guestbook', icon:'mail', label:'방명록' },
 ]
 
 export const FOOTER_TEXT = '© 2026 TRPG Diary. Made with Claude (AI). All rights reserved.'
@@ -44,16 +43,16 @@ export function Layout({ children }) {
         <nav className="sidebar-nav">
           {NAV_ITEMS.map(item=>(
             <NavLink key={item.to} to={item.to} className={({isActive})=>`nav-item ${isActive?'active':''}`}>
-              <span className="nav-icon">{item.icon}</span>{item.label}
+              <span className="nav-icon"><span className="ms">{item.icon}</span></span>{item.label}
             </NavLink>
           ))}
           <div style={{borderTop:'1px solid var(--color-border)',margin:'12px 0'}} />
           <NavLink to="/settings" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
-            <span className="nav-icon">⚙️</span>환경설정
+            <span className="nav-icon"><span className="ms">settings</span></span>환경설정
           </NavLink>
           {profile&&(
             <a href={`/u/${profile.username}`} target="_blank" rel="noreferrer" className="nav-item">
-              <span className="nav-icon">🔗</span>내 공개 페이지
+              <span className="nav-icon"><span className="ms">open_in_new</span></span>내 공개 페이지
             </a>
           )}
         </nav>
@@ -104,9 +103,16 @@ export function StarRating({ value, onChange, readOnly }) {
 }
 
 export function EmptyState({ icon, title, description, action }) {
+  // icon이 Material Icon 이름(영문+밑줄)이면 Mi로 렌더링, 아니면 이모지
+  const isMaterialIcon = icon && /^[a-z_]+$/.test(icon)
   return (
     <div className="empty-state">
-      <div className="empty-state-icon">{icon||'📭'}</div>
+      <div className="empty-state-icon">
+        {isMaterialIcon
+          ? <span className="ms" style={{fontSize:48,color:'var(--color-accent)',opacity:0.4,fontVariationSettings:"'FILL' 0,'wght' 200,'GRAD' 0,'opsz' 48"}}>{icon}</span>
+          : icon || '📭'
+        }
+      </div>
       <h3>{title||'아직 아무것도 없어요'}</h3>
       {description&&<p>{description}</p>}
       {action&&<div style={{marginTop:20}}>{action}</div>}
