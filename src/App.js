@@ -14,6 +14,7 @@ import { RulebookPage } from './pages/RulebookPage'
 import { ScenarioPage } from './pages/ScenarioPage'
 import { PairsPage } from './pages/PairsPage'
 import { GuestbookPage } from './pages/GuestbookPage'
+import { BookmarkPage } from './pages/BookmarkPage'
 import SettingsPage from './pages/SettingsPage'
 import PublicProfilePage from './pages/PublicProfilePage'
 import './index.css'
@@ -56,6 +57,7 @@ function AppRoutes() {
       <Route path="/rulebooks" element={<PrivateLayout><RulebookPage /></PrivateLayout>} />
       <Route path="/scenarios" element={<PrivateLayout><ScenarioPage /></PrivateLayout>} />
       <Route path="/pairs" element={<PrivateLayout><PairsPage /></PrivateLayout>} />
+      <Route path="/bookmarks" element={<PrivateLayout><BookmarkPage /></PrivateLayout>} />
       <Route path="/guestbook" element={<PrivateLayout><GuestbookPage /></PrivateLayout>} />
       <Route path="/settings" element={<PrivateLayout><SettingsPage /></PrivateLayout>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
