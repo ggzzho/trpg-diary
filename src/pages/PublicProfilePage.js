@@ -204,28 +204,33 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* ── 기록 (섬네일) ── */}
+      {/* ── 기록 (넷플릭스 세로 카드) ── */}
       {activeTab==='logs' && (
-        <div className="grid-auto">
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:14}}>
           {data.logs?.length===0
-            ? <div className="card" style={{textAlign:'center',padding:36,color:'var(--color-text-light)',fontSize:'0.85rem'}}>아직 기록이 없어요</div>
+            ? <div className="card" style={{textAlign:'center',padding:36,color:'var(--color-text-light)',fontSize:'0.85rem',gridColumn:'1/-1'}}>아직 기록이 없어요</div>
             : data.logs?.map(l=>(
-              <div key={l.id} className="card" style={{padding:0,overflow:'hidden'}}>
-                <div style={{height:130,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',position:'relative'}}>
-                  {l.session_image_url ? <img src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <span style={{fontSize:'2.5rem',opacity:0.3}}>📖</span>}
-                  <div style={{position:'absolute',top:8,right:8}}>
-                    <span className={`badge ${l.role==='GM'?'badge-primary':'badge-blue'}`}>{l.role}</span>
+              <div key={l.id} style={{borderRadius:12,overflow:'hidden',background:'var(--color-surface)',border:'1px solid var(--color-border)',boxShadow:'0 2px 12px var(--color-shadow)',display:'flex',flexDirection:'column'}}>
+                {/* 이미지 + 그라데이션 + 태그 */}
+                <div style={{position:'relative', paddingTop:'133%'}}>
+                  <div style={{position:'absolute',inset:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+                    {l.session_image_url ? <img src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <span style={{fontSize:'3rem',opacity:0.2}}>📖</span>}
+                  </div>
+                  <div style={{position:'absolute',bottom:0,left:0,right:0,height:'60%',background:'linear-gradient(to top, var(--color-bg) 0%, rgba(255,255,255,0.7) 50%, transparent 100%)',pointerEvents:'none'}} />
+                  <div style={{position:'absolute',bottom:10,left:10,right:10,display:'flex',gap:4,flexWrap:'wrap'}}>
+                    {l.series_tag&&<span style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(200,169,110,0.2)',color:'#8b6f47',border:'1px solid rgba(200,169,110,0.4)'}}>{l.series_tag}</span>}
+                    <span style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(100,149,237,0.15)',color:'#2a5aaa',border:'1px solid rgba(100,149,237,0.35)'}}>{l.role}</span>
+                    {l.system_name&&<span style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(156,175,136,0.18)',color:'#4a6a30',border:'1px solid rgba(156,175,136,0.4)'}}>{l.system_name}</span>}
                   </div>
                 </div>
-                <div style={{padding:'12px 14px'}}>
-                  <div style={{fontWeight:700,fontSize:'0.9rem',marginBottom:4}}>{l.title}</div>
-                  <div className="text-xs text-light" style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:4}}>
-                    {l.played_date&&<span>📅 {format(new Date(l.played_date),'yyyy.MM.dd')}</span>}
-                    {l.system_name&&<span>🎲 {l.system_name}</span>}
-                  </div>
-                  {l.together_with&&<div className="text-xs text-light">👥 {l.together_with}</div>}
-                  {l.rating>0&&<div className="stars" style={{fontSize:'0.78rem',marginTop:4}}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}
-                  {l.scenario_link&&<a href={l.scenario_link} target="_blank" rel="noreferrer" style={{fontSize:'0.72rem',color:'var(--color-primary)',display:'block',marginTop:4}}>🔗 시나리오 링크</a>}
+                {/* 정보 */}
+                <div style={{padding:'10px 12px 12px',flex:1,display:'flex',flexDirection:'column',gap:3}}>
+                  <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3}}>{l.title}</div>
+                  {l.together_with&&<div style={{fontSize:'0.7rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:3}}>함께한 사람.</span>{l.together_with}</div>}
+                  {l.character_name&&<div style={{fontSize:'0.7rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:3}}>PC.</span>{l.character_name}</div>}
+                  {l.played_date&&<div style={{fontSize:'0.7rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:3}}>Date.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
+                  {l.rating>0&&<div className="stars" style={{fontSize:'0.78rem',marginTop:2}}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}
+                  {l.scenario_link&&<a href={l.scenario_link} target="_blank" rel="noreferrer" style={{fontSize:'0.7rem',color:'var(--color-primary)',marginTop:2}}>🔗 시나리오 링크</a>}
                 </div>
               </div>
             ))
