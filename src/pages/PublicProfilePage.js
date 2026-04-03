@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom'
 import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
-import { GuestbookPage } from './GuestbookPage'
+import { GuestbookPublicView } from './GuestbookPage'
 import { LogDetailContent } from './PlayLogPage'
 import { FOOTER_TEXT, Modal } from '../components/Layout'
 import {
@@ -36,11 +36,11 @@ function Chip({ type, label }) {
   )
 }
 
-// 유튜브 embed URL 변환
-function getEmbedUrl(url) {
+// 유튜브 영상 ID 추출
+function getYoutubeId(url) {
   if (!url) return null
   const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)
-  return m ? `https://www.youtube.com/embed/${m[1]}?autoplay=1&loop=1&playlist=${m[1]}` : null
+  return m ? m[1] : null
 }
 
 // ── 미니 캘린더 ──
@@ -121,8 +121,9 @@ export default function PublicProfilePage() {
   const [favLoading, setFavLoading] = useState(false)
   const [selectedLog, setSelectedLog] = useState(null)
   const [bgmOn, setBgmOn] = useState(false)
-  const [pairSort, setPairSort] = useState('asc') // 페어 정렬
-  const iframeRef = useRef(null)
+  const [pairSort, setPairSort] = useState('asc')
+  const playerRef = useRef(null)
+  const containerRef = useRef(null)
 
   useEffect(() => {
     const load = async () => {
@@ -156,7 +157,56 @@ export default function PublicProfilePage() {
     load()
   }, [username, user])
 
-  const toggleFav = async () => {
+  // BGM - YouTube IFrame Player API
+  useEffect(() => {
+    if (!profile || !profile.bgm_url) return
+    const videoId = getYoutubeId(profile.bgm_url)
+    if (!videoId) return
+
+    // API 로드
+    if (!window.YT) {
+      const tag = document.createElement('script')
+      tag.src = 'https://www.youtube.com/iframe_api'
+      document.head.appendChild(tag)
+    }
+
+    const initPlayer = () => {
+      if (playerRef.current) {
+        try { playerRef.current.destroy() } catch {}
+        playerRef.current = null
+      }
+      if (!containerRef.current) return
+      playerRef.current = new window.YT.Player(containerRef.current, {
+        videoId,
+        playerVars: { autoplay: 0, loop: 1, playlist: videoId, controls: 0, disablekb: 1 },
+        events: {}
+      })
+    }
+
+    if (window.YT && window.YT.Player) {
+      initPlayer()
+    } else {
+      window.onYouTubeIframeAPIReady = initPlayer
+    }
+
+    return () => {
+      if (playerRef.current) {
+        try { playerRef.current.destroy() } catch {}
+        playerRef.current = null
+      }
+    }
+  }, [profile?.bgm_url])
+
+  const toggleBgm = () => {
+    if (!playerRef.current) return
+    if (bgmOn) {
+      try { playerRef.current.pauseVideo() } catch {}
+      setBgmOn(false)
+    } else {
+      try { playerRef.current.playVideo() } catch {}
+      setBgmOn(true)
+    }
+  }
     if (!user) { alert('로그인 후 이용해주세요!'); return }
     setFavLoading(true)
     if (isFav) {
@@ -189,7 +239,7 @@ export default function PublicProfilePage() {
   )
 
   const isMyPage = user?.id === profile?.id
-  const bgmEmbedUrl = getEmbedUrl(profile.bgm_url)
+  const hasYoutube = !!getYoutubeId(profile.bgm_url)
 
   const sections = (() => {
     if (profile.profile_sections?.length > 0) return profile.profile_sections
@@ -218,17 +268,9 @@ export default function PublicProfilePage() {
 
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
-      {/* BGM iframe - 실제 재생 */}
-      {bgmOn && bgmEmbedUrl && (
-        <iframe
-          ref={iframeRef}
-          key={bgmEmbedUrl}
-          src={bgmEmbedUrl}
-          width="0" height="0"
-          style={{ position:'fixed', bottom:0, left:0, width:1, height:1, opacity:0, pointerEvents:'none' }}
-          allow="autoplay; encrypted-media"
-          title="bgm"
-        />
+      {/* BGM - YouTube IFrame API 플레이어 마운트 포인트 */}
+      {hasYoutube && (
+        <div ref={containerRef} style={{ position:'fixed', bottom:0, left:0, width:1, height:1, opacity:0, pointerEvents:'none', overflow:'hidden' }}/>
       )}
 
       {/* 프로필 카드 */}
@@ -265,9 +307,9 @@ export default function PublicProfilePage() {
                 {isFav ? '⭐ 즐겨찾기 중' : '☆ 즐겨찾기'}
               </button>
             )}
-            {bgmEmbedUrl && (
+            {hasYoutube && (
               <button className={`btn btn-sm ${bgmOn?'btn-primary':'btn-outline'}`}
-                onClick={() => setBgmOn(v => !v)}
+                onClick={toggleBgm}
                 title={bgmOn ? 'BGM 끄기' : 'BGM 켜기'}>
                 {bgmOn ? '🎵 BGM 끄기' : '🎵 BGM 켜기'}
               </button>
@@ -516,7 +558,7 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 방명록 ── */}
-      {activeTab==='guestbook' && <GuestbookPage ownerId={profile.id}/>}
+      {activeTab==='guestbook' && <GuestbookPublicView ownerId={profile.id}/>}
 
       {/* 푸터 */}
       <footer style={{ marginTop:60, paddingTop:20, paddingBottom:20, borderTop:'1px solid var(--color-border)', textAlign:'center', color:'var(--color-text-light)', fontSize:'0.72rem' }}>
