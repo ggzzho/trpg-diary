@@ -116,7 +116,7 @@ export function ScenarioPage() {
             </select>
           </div>
         </div>
-        <div className="form-group"><label className="form-label">표지 이미지 URL</label><input className="form-input" placeholder="(imgur 이미지 주소 등록 추천)" value={form.cover_image_url||''} onChange={set('cover_image_url')} /></div>
+        <div className="form-group"><label className="form-label">표지 이미지 URL</label><input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.cover_image_url||''} onChange={set('cover_image_url')} /></div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{minHeight:64}} /></div>
       </Modal>
 

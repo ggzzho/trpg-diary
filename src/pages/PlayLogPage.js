@@ -9,7 +9,7 @@ import { format } from 'date-fns'
 const BLANK = {
   title:'', played_date:'', system_name:'', role:'PL',
   character_name:'', together_with:'', rating:0, memo:'',
-  session_image_url:'', scenario_link:'', series_tag:''
+  session_image_url:'', scenario_link:'', series_tag:'', session_log_url:''
 }
 const cleanPayload = f => ({...f, played_date: f.played_date||null})
 
@@ -80,10 +80,18 @@ export function PlayLogPage() {
     return [...new Set(items.map(i=>i.series_tag).filter(Boolean))].sort()
   }, [items])
 
+  // 룰 목록 추출 (필터용)
+  const ruleList = useMemo(() => {
+    return [...new Set(items.map(i=>i.system_name).filter(Boolean))].sort()
+  }, [items])
+
+  const [ruleFilter, setRuleFilter] = useState('all')
+
   const filtered = items.filter(i => {
     const matchSearch = !search || i.title.includes(search) || i.system_name?.includes(search) || i.together_with?.includes(search) || i.series_tag?.includes(search)
     const matchSeries = seriesFilter === 'all' || i.series_tag === seriesFilter
-    return matchSearch && matchSeries
+    const matchRule = ruleFilter === 'all' || i.system_name === ruleFilter
+    return matchSearch && matchSeries && matchRule
   })
 
   const relatedItems = detail?.series_tag
@@ -101,15 +109,15 @@ export function PlayLogPage() {
         <button className="btn btn-primary" onClick={openNew}>+ 기록 추가</button>
       </div>
 
-      {/* 검색 + 시리즈 필터 */}
+      {/* 검색 + 룰 필터 */}
       <div style={{marginBottom:20}}>
-        <input className="form-input" placeholder="🔍 제목, 룰, 시리즈로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:320, marginBottom: seriesList.length>0?10:0}} />
-        {seriesList.length > 0 && (
+        <input className="form-input" placeholder="🔍 제목, 룰, 시리즈로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:320, marginBottom: ruleList.length>0?10:0}} />
+        {ruleList.length > 0 && (
           <div className="flex gap-8" style={{flexWrap:'wrap', marginTop:8}}>
-            <button className={`btn btn-sm ${seriesFilter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setSeriesFilter('all')}>전체</button>
-            {seriesList.map(s=>(
-              <button key={s} className={`btn btn-sm ${seriesFilter===s?'btn-primary':'btn-outline'}`} onClick={()=>setSeriesFilter(s)}>
-                📚 {s}
+            <button className={`btn btn-sm ${ruleFilter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setRuleFilter('all')}>전체</button>
+            {ruleList.map(r=>(
+              <button key={r} className={`btn btn-sm ${ruleFilter===r?'btn-primary':'btn-outline'}`} onClick={()=>setRuleFilter(r)}>
+                {r}
               </button>
             ))}
           </div>
@@ -119,8 +127,8 @@ export function PlayLogPage() {
       {loading ? <LoadingSpinner /> : filtered.length===0
         ? <EmptyState icon="📖" title="기록이 없어요" action={<button className="btn btn-primary" onClick={openNew}>기록 추가</button>} />
         : (
-          // ── 가로형 넷플릭스 카드 그리드 ──
-          <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:16}}>
+          // ── 가로형 카드 그리드 (15% 축소) ──
+          <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(238px, 1fr))', gap:13}}>
             {filtered.map(item=>(
               <div key={item.id}
                 style={{
@@ -158,34 +166,34 @@ export function PlayLogPage() {
                 </div>
 
                 {/* 카드 하단 정보 */}
-                <div style={{padding:'10px 12px 12px', flex:1, display:'flex', flexDirection:'column', gap:3}}>
-                  <div style={{fontWeight:700, fontSize:'0.9rem', lineHeight:1.3, color:'var(--color-text)'}}>
+                <div style={{padding:'8px 10px 10px', flex:1, display:'flex', flexDirection:'column', gap:3}}>
+                  <div style={{fontWeight:700, fontSize:'0.78rem', lineHeight:1.3, color:'var(--color-text)'}}>
                     {item.title}
                   </div>
                   {item.together_with && (
-                    <div style={{fontSize:'0.72rem', color:'var(--color-text-light)'}}>
+                    <div style={{fontSize:'0.63rem', color:'var(--color-text-light)'}}>
                       <span style={{fontWeight:600, marginRight:4}}>GM.</span>{item.together_with}
                     </div>
                   )}
                   {item.character_name && (
-                    <div style={{fontSize:'0.72rem', color:'var(--color-text-light)'}}>
+                    <div style={{fontSize:'0.63rem', color:'var(--color-text-light)'}}>
                       <span style={{fontWeight:600, marginRight:4}}>PC.</span>{item.character_name}
                     </div>
                   )}
                   {item.played_date && (
-                    <div style={{fontSize:'0.72rem', color:'var(--color-text-light)'}}>
+                    <div style={{fontSize:'0.63rem', color:'var(--color-text-light)'}}>
                       <span style={{fontWeight:600, marginRight:4}}>Date.</span>{format(new Date(item.played_date),'yyyy.MM.dd')}
                     </div>
                   )}
                   {item.rating > 0 && (
-                    <div className="stars" style={{fontSize:'0.8rem', marginTop:2}}>
+                    <div className="stars" style={{fontSize:'0.72rem', marginTop:2}}>
                       {'★'.repeat(item.rating)}{'☆'.repeat(5-item.rating)}
                     </div>
                   )}
                 </div>
 
                 {/* 액션 버튼 */}
-                <div style={{padding:'6px 12px 10px', display:'flex', gap:6, justifyContent:'flex-end'}} onClick={e=>e.stopPropagation()}>
+                <div style={{padding:'5px 10px 8px', display:'flex', gap:5, justifyContent:'flex-end'}} onClick={e=>e.stopPropagation()}>
                   <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
                   <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
                 </div>
@@ -224,7 +232,8 @@ export function PlayLogPage() {
               {detail.together_with&&<div><div className="form-label">GM</div><div className="text-sm">{detail.together_with}</div></div>}
             </div>
             {detail.rating>0&&<div style={{marginBottom:12}}><div className="form-label">평점</div><StarRating value={detail.rating} readOnly /></div>}
-            {detail.scenario_link&&<div style={{marginBottom:12}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>🔗 시나리오 링크</a></div>}
+            {detail.scenario_link&&<div style={{marginBottom:8}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>🔗 시나리오 링크</a></div>}
+            {detail.session_log_url&&<div style={{marginBottom:12}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>📝 세션 로그 백업</a></div>}
             {detail.memo&&<div style={{marginBottom:16}}><div className="form-label">메모</div><p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.memo}</p></div>}
 
             {/* 연관 기록 (같은 시리즈) */}
@@ -322,7 +331,7 @@ export function PlayLogPage() {
         <div className="form-group">
           <label className="form-label">세션카드 이미지</label>
           <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
-            <input className="form-input" placeholder="(imgur 이미지 주소 등록 추천)" value={form.session_image_url||''} onChange={set('session_image_url')} style={{flex:1}} />
+            <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.session_image_url||''} onChange={set('session_image_url')} style={{flex:1}} />
             <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>
               {imgUploading?'업로드 중...':'📁 업로드'}
               <input type="file" accept="image/*" style={{display:'none'}} onChange={handleImageUpload} disabled={imgUploading} />
@@ -339,6 +348,10 @@ export function PlayLogPage() {
         <div className="form-group">
           <label className="form-label">시나리오 링크 URL</label>
           <input className="form-input" placeholder="https://..." value={form.scenario_link||''} onChange={set('scenario_link')} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">세션 로그 백업 URL</label>
+          <input className="form-input" placeholder="https://... (세션 로그 백업 링크)" value={form.session_log_url||''} onChange={set('session_log_url')} />
         </div>
         <div className="form-group">
           <label className="form-label">메모</label>

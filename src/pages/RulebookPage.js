@@ -112,7 +112,7 @@ export function RulebookPage() {
         <div className="form-group">
           <label className="form-label">아이콘 이미지</label>
           <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
-            <input className="form-input" placeholder="(imgur 이미지 주소 등록 추천)" value={form.cover_image_url||''} onChange={set('cover_image_url')} style={{flex:1}} />
+            <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.cover_image_url||''} onChange={set('cover_image_url')} style={{flex:1}} />
             <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>
               {imgUploading?'업로드 중...':'📁 업로드'}
               <input type="file" accept="image/*" style={{display:'none'}} onChange={handleImgUpload} disabled={imgUploading} />
