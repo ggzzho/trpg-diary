@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { to: '/availability', icon: '📋', label: '공수표 리스트' },
   { to: '/logs', icon: '📖', label: '다녀온 기록' },
   { to: '/rulebooks', icon: '📚', label: '보유 룰북' },
-  { to: '/scenarios', icon: '🗺️', label: '보유 시나리오' },
+  { to: '/scenarios', icon: '🗺️', label: '시나리오 목록' },
   { to: '/pairs', icon: '👥', label: '페어 목록' },
   { to: '/guestbook', icon: '💌', label: '방명록' },
 ]

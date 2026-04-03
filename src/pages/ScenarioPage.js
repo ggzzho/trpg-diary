@@ -44,7 +44,7 @@ export function ScenarioPage() {
       <div className="page-header flex justify-between items-center">
         <div>
           <h1 className="page-title">🗺️ 시나리오 목록</h1>
-          <p className="page-subtitle">보유한 TRPG 시나리오 목록이에요 ({items.length}개)</p>
+          <p className="page-subtitle">보유/위시 TRPG 시나리오 목록이예요 ({items.length}개)</p>
         </div>
         <button className="btn btn-primary" onClick={openNew}>+ 시나리오 추가</button>
       </div>
