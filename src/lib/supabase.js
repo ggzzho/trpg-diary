@@ -110,7 +110,18 @@ export const guestbookApi = {
 }
 
 // ── Storage helpers ───────────────────────────────────────────
+const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
 export const uploadFile = async (bucket, path, file) => {
+  // 파일 형식 검증
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { url: null, error: { message: 'JPG, PNG, GIF, WebP 형식만 업로드 가능해요.' } }
+  }
+  // 파일 크기 검증 (2MB 제한)
+  if (file.size > MAX_FILE_SIZE) {
+    return { url: null, error: { message: `파일 크기가 너무 커요. 2MB 이하의 이미지를 사용해주세요. (현재: ${(file.size/1024/1024).toFixed(1)}MB)` } }
+  }
   const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
   if (error) return { url: null, error }
   const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path)

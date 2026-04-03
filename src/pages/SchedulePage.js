@@ -121,7 +121,16 @@ export default function SchedulePage() {
     )
   }
 
-  const renderYear = () => (
+  const renderYear = () => {
+    // 연 뷰도 현재 filter 상태 반영
+    const yearItems = items.filter(i => {
+      if (filter === 'upcoming') return i.scheduled_date >= today && i.status !== 'cancelled'
+      if (filter === 'past') return i.scheduled_date < today || i.status === 'completed'
+      if (filter === 'cancelled') return i.status === 'cancelled'
+      return true // 'all'
+    })
+
+    return (
     <div>
       <div className="flex justify-between items-center" style={{marginBottom:16}}>
         <button className="btn btn-ghost btn-sm" onClick={()=>setYearView(y=>y-1)}>‹ {yearView-1}년</button>
@@ -130,12 +139,16 @@ export default function SchedulePage() {
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
         {Array.from({length:12},(_,m)=>{
-          const mi=items.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===yearView&&getMonth(d)===m})
+          const mi=yearItems.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===yearView&&getMonth(d)===m})
           return (
             <div key={m} className="card card-sm" style={{cursor:'pointer'}} onClick={()=>{setCalendarDate(new Date(yearView,m,1));setViewMode('calendar')}}>
               <div style={{fontWeight:700,fontSize:'0.85rem',color:'var(--color-accent)',marginBottom:6}}>{m+1}월 <span className="text-xs text-light">({mi.length})</span></div>
               {mi.slice(0,3).map(i=>(
-                <div key={i.id} style={{fontSize:'0.62rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:i.is_gm?'var(--color-accent)':'var(--color-primary)',color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{i.title}</div>
+                <div key={i.id} style={{
+                  fontSize:'0.62rem',padding:'2px 5px',borderRadius:3,marginBottom:2,
+                  background: i.status==='cancelled' ? '#e57373' : i.is_gm ? 'var(--color-accent)' : 'var(--color-primary)',
+                  color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'
+                }}>{i.status==='cancelled'?'[취소] ':''}{i.title}</div>
               ))}
               {mi.length>3&&<div className="text-xs text-light">+{mi.length-3}개 더</div>}
             </div>
@@ -143,7 +156,8 @@ export default function SchedulePage() {
         })}
       </div>
     </div>
-  )
+    )
+  }
 
   const renderSummary = () => (
     <div>
