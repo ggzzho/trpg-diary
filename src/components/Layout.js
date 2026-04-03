@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: '/rulebooks', icon: '📚', label: '보유 룰북' },
   { to: '/scenarios', icon: '🗺️', label: '시나리오 목록' },
   { to: '/pairs', icon: '👥', label: '페어 목록' },
+  { to: '/bookmarks', icon: '🔖', label: '북마크' },
   { to: '/guestbook', icon: '💌', label: '방명록' },
 ]
 

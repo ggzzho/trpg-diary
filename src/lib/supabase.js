@@ -88,6 +88,45 @@ export const playLogsApi = makeTableApi('play_logs')
 export const rulebooksApi = makeTableApi('rulebooks')
 export const scenariosApi = makeTableApi('scenarios')
 export const pairsApi = makeTableApi('pairs')
+export const bookmarksApi = makeTableApi('bookmarks')
+
+// ── 북마크 태그 API ───────────────────────────────────────────
+export const bookmarkTagsApi = {
+  getAll: async (userId) => {
+    const { data, error } = await supabase.from('bookmark_tags').select('*').eq('user_id', userId).order('name')
+    return { data, error }
+  },
+  create: async (payload) => {
+    const { data, error } = await supabase.from('bookmark_tags').insert(payload).select().single()
+    return { data, error }
+  },
+  remove: async (id) => {
+    const { error } = await supabase.from('bookmark_tags').delete().eq('id', id)
+    return { error }
+  }
+}
+
+// ── OG 메타데이터 (allorigins 프록시) ────────────────────────
+export const fetchOgMeta = async (url) => {
+  try {
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`)
+    const json = await res.json()
+    const html = json.contents || ''
+    const getMeta = (prop) => {
+      const m = html.match(new RegExp(`<meta[^>]*(?:property|name)=["']${prop}["'][^>]*content=["']([^"']+)["']`, 'i'))
+               || html.match(new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*(?:property|name)=["']${prop}["']`, 'i'))
+      return m ? m[1] : null
+    }
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+    return {
+      title: getMeta('og:title') || (titleMatch ? titleMatch[1].trim() : '') || '',
+      description: getMeta('og:description') || getMeta('description') || '',
+      thumbnail_url: getMeta('og:image') || '',
+    }
+  } catch {
+    return { title: '', description: '', thumbnail_url: '' }
+  }
+}
 
 // ── Guestbook ─────────────────────────────────────────────────
 export const guestbookApi = {
