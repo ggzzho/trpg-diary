@@ -92,14 +92,14 @@ export default function PublicProfilePage() {
   return (
     <div style={{maxWidth:820, margin:'0 auto', padding:'20px 20px 40px'}}>
 
-      {/* ── 프로필 카드 (X 트위터 스타일 헤더 내장) ── */}
-      <div className="card" style={{marginBottom:24, overflow:'hidden', padding:0}}>
+      {/* ── 프로필 카드 (X 트위터 스타일) ── */}
+      <div className="card" style={{marginBottom:24, padding:0, overflow:'visible', position:'relative'}}>
 
-        {/* 헤더 이미지 - 카드 안 상단에 꽉 차게 */}
+        {/* 헤더 이미지 - 카드 상단에 radius 유지 */}
         <div style={{
           height: 200,
           background: 'var(--color-nav-active-bg)',
-          position: 'relative',
+          borderRadius:'var(--radius) var(--radius) 0 0',
           overflow: 'hidden',
           flexShrink: 0
         }}>
@@ -111,14 +111,15 @@ export default function PublicProfilePage() {
 
         {/* 프로필 내용 */}
         <div style={{padding:'0 24px 24px', textAlign:'center'}}>
-          {/* 아바타 - 헤더 경계에 반쯤 걸치게 */}
-          <div style={{display:'flex', justifyContent:'center', marginTop:-52, marginBottom:12}}>
+          {/* 아바타 - 헤더 경계에 반쯤 걸치게 (overflow visible 덕분에 안 잘림) */}
+          <div style={{display:'flex', justifyContent:'center', marginTop:-44, marginBottom:12}}>
             <div className="user-avatar" style={{
               width:88, height:88, fontSize:'2.2rem',
               border:'4px solid white',
-              outline:'2px solid var(--color-border)',
-              boxShadow:'0 4px 20px rgba(0,0,0,0.15)',
-              background:'var(--color-surface)'
+              boxShadow:'0 4px 20px rgba(0,0,0,0.18)',
+              background:'var(--color-surface)',
+              zIndex: 2,
+              position: 'relative'
             }}>
               {profile.avatar_url ? <img src={profile.avatar_url} alt="avatar" /> : (profile.display_name||'?')[0]}
             </div>
