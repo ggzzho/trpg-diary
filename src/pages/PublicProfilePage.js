@@ -267,7 +267,7 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* ── 페어 탭 (이미지 + D-day + 관계태그) ── */}
+      {/* ── 페어 탭 (큰 섬네일 + D+day 크게 + 관계 태그) ── */}
       {activeTab==='pairs' && (
         <div className="grid-auto">
           {data.pairs?.length===0
@@ -275,30 +275,36 @@ export default function PublicProfilePage() {
             : data.pairs?.map(p=>{
               const dday = calcDday(p.first_met_date)
               return (
-                <div key={p.id} className="card">
-                  <div style={{display:'flex',gap:12,alignItems:'flex-start',marginBottom:10}}>
-                    <div style={{width:52,height:52,borderRadius:10,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      {p.pair_image_url
-                        ? <img src={p.pair_image_url} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
-                        : <span style={{fontSize:'1.5rem',opacity:0.4}}>👤</span>
-                      }
-                    </div>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:700,fontSize:'0.92rem'}}>{p.name}</div>
-                      {p.nickname&&<div className="text-xs text-light">캐릭터: {p.nickname}</div>}
-                      {dday!==null&&<div style={{fontSize:'0.72rem',color:'var(--color-primary)',fontWeight:600,marginTop:2}}>D+{dday}</div>}
-                    </div>
+                <div key={p.id} className="card" style={{padding:0,overflow:'hidden'}}>
+                  {/* 큰 섬네일 */}
+                  <div style={{height:160,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',position:'relative'}}>
+                    {p.pair_image_url
+                      ? <img src={p.pair_image_url} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                      : <span style={{fontSize:'4rem',opacity:0.25}}>👤</span>
+                    }
+                    {/* D+day 크게 우상단 */}
+                    {dday!==null&&(
+                      <div style={{position:'absolute',top:10,right:10,background:'var(--color-primary)',color:'white',borderRadius:8,padding:'4px 10px',textAlign:'center',boxShadow:'0 2px 8px rgba(0,0,0,0.2)'}}>
+                        <div style={{fontSize:'0.6rem',opacity:0.85,letterSpacing:'0.05em'}}>함께한 지</div>
+                        <div style={{fontSize:'1.1rem',fontWeight:700,lineHeight:1.2}}>D+{dday}</div>
+                      </div>
+                    )}
                   </div>
-                  {p.relations?.length>0&&(
-                    <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:6}}>
-                      {p.relations.map(r=><span key={r} className="badge badge-primary">{r}</span>)}
+                  {/* 내용 */}
+                  <div style={{padding:'12px 14px'}}>
+                    <div style={{fontWeight:700,fontSize:'1rem',marginBottom:4}}>{p.name}</div>
+                    {p.nickname&&<div className="text-xs text-light" style={{marginBottom:6}}>캐릭터: {p.nickname}</div>}
+                    {p.relations?.length>0&&(
+                      <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:8}}>
+                        {p.relations.map(r=><span key={r} className="badge badge-primary">{r}</span>)}
+                      </div>
+                    )}
+                    <div className="text-xs text-light" style={{display:'flex',flexDirection:'column',gap:3}}>
+                      {p.first_met_date&&<span>📅 {p.first_met_date} 첫 만남</span>}
+                      {p.systems?.length>0&&<span>📌 {p.systems.join(', ')}</span>}
                     </div>
-                  )}
-                  <div className="text-xs text-light" style={{display:'flex',flexDirection:'column',gap:3}}>
-                    {p.first_met_date&&<span>📅 {p.first_met_date} 첫 만남</span>}
-                    {p.systems?.length>0&&<span>📌 {p.systems.join(', ')}</span>}
+                    {p.memo&&<p className="text-xs text-light" style={{marginTop:8,borderTop:'1px solid var(--color-border)',paddingTop:8}}>{p.memo}</p>}
                   </div>
-                  {p.memo&&<p className="text-xs text-light" style={{marginTop:8,borderTop:'1px solid var(--color-border)',paddingTop:8}}>{p.memo}</p>}
                 </div>
               )
             })
