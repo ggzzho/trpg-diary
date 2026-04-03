@@ -204,29 +204,29 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* ── 기록 (넷플릭스 세로 카드) ── */}
+      {/* ── 기록 (가로형 카드) ── */}
       {activeTab==='logs' && (
-        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:14}}>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:14}}>
           {data.logs?.length===0
             ? <div className="card" style={{textAlign:'center',padding:36,color:'var(--color-text-light)',fontSize:'0.85rem',gridColumn:'1/-1'}}>아직 기록이 없어요</div>
             : data.logs?.map(l=>(
               <div key={l.id} style={{borderRadius:12,overflow:'hidden',background:'var(--color-surface)',border:'1px solid var(--color-border)',boxShadow:'0 2px 12px var(--color-shadow)',display:'flex',flexDirection:'column'}}>
-                {/* 이미지 + 그라데이션 + 태그 */}
-                <div style={{position:'relative', paddingTop:'133%'}}>
+                {/* 이미지 + 그라데이션 + 태그 - 16:9 */}
+                <div style={{position:'relative', paddingTop:'56.25%'}}>
                   <div style={{position:'absolute',inset:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
                     {l.session_image_url ? <img src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <span style={{fontSize:'3rem',opacity:0.2}}>📖</span>}
                   </div>
-                  <div style={{position:'absolute',bottom:0,left:0,right:0,height:'60%',background:'linear-gradient(to top, var(--color-bg) 0%, rgba(255,255,255,0.7) 50%, transparent 100%)',pointerEvents:'none'}} />
+                  <div style={{position:'absolute',bottom:0,left:0,right:0,height:'65%',background:'linear-gradient(to top, var(--color-bg) 0%, rgba(255,255,255,0.6) 55%, transparent 100%)',pointerEvents:'none'}} />
                   <div style={{position:'absolute',bottom:10,left:10,right:10,display:'flex',gap:4,flexWrap:'wrap'}}>
                     {l.series_tag&&<span style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(200,169,110,0.2)',color:'#8b6f47',border:'1px solid rgba(200,169,110,0.4)'}}>{l.series_tag}</span>}
-                    <span style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(100,149,237,0.15)',color:'#2a5aaa',border:'1px solid rgba(100,149,237,0.35)'}}>{l.role}</span>
+                    <span style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background: l.role==='GM'?'rgba(155,137,196,0.18)':'rgba(100,149,237,0.15)',color: l.role==='GM'?'#5a3a9c':'#2a5aaa',border:`1px solid ${l.role==='GM'?'rgba(155,137,196,0.4)':'rgba(100,149,237,0.35)'}`}}>{l.role}</span>
                     {l.system_name&&<span style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(156,175,136,0.18)',color:'#4a6a30',border:'1px solid rgba(156,175,136,0.4)'}}>{l.system_name}</span>}
                   </div>
                 </div>
                 {/* 정보 */}
                 <div style={{padding:'10px 12px 12px',flex:1,display:'flex',flexDirection:'column',gap:3}}>
                   <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3}}>{l.title}</div>
-                  {l.together_with&&<div style={{fontSize:'0.7rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:3}}>함께한 사람.</span>{l.together_with}</div>}
+                  {l.together_with&&<div style={{fontSize:'0.7rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:3}}>GM.</span>{l.together_with}</div>}
                   {l.character_name&&<div style={{fontSize:'0.7rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:3}}>PC.</span>{l.character_name}</div>}
                   {l.played_date&&<div style={{fontSize:'0.7rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:3}}>Date.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
                   {l.rating>0&&<div className="stars" style={{fontSize:'0.78rem',marginTop:2}}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}

@@ -119,8 +119,8 @@ export function PlayLogPage() {
       {loading ? <LoadingSpinner /> : filtered.length===0
         ? <EmptyState icon="📖" title="기록이 없어요" action={<button className="btn btn-primary" onClick={openNew}>기록 추가</button>} />
         : (
-          // ── 넷플릭스 스타일 세로 카드 그리드 ──
-          <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:16}}>
+          // ── 가로형 넷플릭스 카드 그리드 ──
+          <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:16}}>
             {filtered.map(item=>(
               <div key={item.id}
                 style={{
@@ -135,21 +135,21 @@ export function PlayLogPage() {
                 onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow='0 8px 28px rgba(0,0,0,0.15)'}}
                 onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 2px 12px var(--color-shadow)'}}
               >
-                {/* 이미지 영역 + 그라데이션 오버레이 */}
-                <div style={{position:'relative', paddingTop:'133%' /* 3:4 비율 */}}>
+                {/* 이미지 영역 - 16:9 가로형 */}
+                <div style={{position:'relative', paddingTop:'56.25%'}}>
                   <div style={{position:'absolute',inset:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
                     {item.session_image_url
                       ? <img src={item.session_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} />
                       : <span style={{fontSize:'3rem',opacity:0.2}}>📖</span>
                     }
                   </div>
-                  {/* 아래서 위로 흰색 그라데이션 */}
+                  {/* 아래서 위로 그라데이션 */}
                   <div style={{
-                    position:'absolute', bottom:0, left:0, right:0, height:'60%',
-                    background:'linear-gradient(to top, var(--color-bg) 0%, rgba(255,255,255,0.7) 50%, transparent 100%)',
+                    position:'absolute', bottom:0, left:0, right:0, height:'65%',
+                    background:'linear-gradient(to top, var(--color-bg) 0%, rgba(255,255,255,0.6) 55%, transparent 100%)',
                     pointerEvents:'none'
                   }} />
-                  {/* 이미지 위 태그 칩들 */}
+                  {/* 태그 칩 */}
                   <div style={{position:'absolute', bottom:10, left:10, right:10, display:'flex', gap:4, flexWrap:'wrap'}}>
                     {item.series_tag && <TagChip type="series" label={item.series_tag} />}
                     <TagChip type="role" label={item.role} />
@@ -158,13 +158,13 @@ export function PlayLogPage() {
                 </div>
 
                 {/* 카드 하단 정보 */}
-                <div style={{padding:'10px 12px 12px', flex:1, display:'flex', flexDirection:'column', gap:4}}>
+                <div style={{padding:'10px 12px 12px', flex:1, display:'flex', flexDirection:'column', gap:3}}>
                   <div style={{fontWeight:700, fontSize:'0.9rem', lineHeight:1.3, color:'var(--color-text)'}}>
                     {item.title}
                   </div>
                   {item.together_with && (
                     <div style={{fontSize:'0.72rem', color:'var(--color-text-light)'}}>
-                      <span style={{fontWeight:600, marginRight:4}}>함께한 사람.</span>{item.together_with}
+                      <span style={{fontWeight:600, marginRight:4}}>GM.</span>{item.together_with}
                     </div>
                   )}
                   {item.character_name && (
@@ -220,8 +220,8 @@ export function PlayLogPage() {
 
             <div className="grid-2" style={{marginBottom:12}}>
               <div><div className="form-label">엔딩 날짜</div><div className="text-sm">{detail.played_date&&format(new Date(detail.played_date),'yyyy년 M월 d일')}</div></div>
-              {detail.character_name&&<div><div className="form-label">캐릭터명</div><div className="text-sm">{detail.character_name}</div></div>}
-              {detail.together_with&&<div><div className="form-label">함께한 사람</div><div className="text-sm">{detail.together_with}</div></div>}
+              {detail.character_name&&<div><div className="form-label">PC</div><div className="text-sm">{detail.character_name}</div></div>}
+              {detail.together_with&&<div><div className="form-label">GM</div><div className="text-sm">{detail.together_with}</div></div>}
             </div>
             {detail.rating>0&&<div style={{marginBottom:12}}><div className="form-label">평점</div><StarRating value={detail.rating} readOnly /></div>}
             {detail.scenario_link&&<div style={{marginBottom:12}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>🔗 시나리오 링크</a></div>}
@@ -305,11 +305,11 @@ export function PlayLogPage() {
         </div>
         <div className="grid-2">
           <div className="form-group">
-            <label className="form-label">캐릭터명</label>
+            <label className="form-label">PC명</label>
             <input className="form-input" placeholder="홍길동" value={form.character_name||''} onChange={set('character_name')} />
           </div>
           <div className="form-group">
-            <label className="form-label">함께한 사람</label>
+            <label className="form-label">GM</label>
             <input className="form-input" placeholder="닉네임..." value={form.together_with||''} onChange={set('together_with')} />
           </div>
         </div>
