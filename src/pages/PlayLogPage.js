@@ -21,53 +21,75 @@ const TAG_COLORS = {
   rule:{bg:'rgba(156,175,136,0.18)',color:'#4a6a30',border:'rgba(156,175,136,0.5)'},
 }
 function TagChip({ type, label }) {
-  const c=type==='series'?TAG_COLORS.series:type==='role'?(label==='GM'?TAG_COLORS.role_GM:TAG_COLORS.role_PL):TAG_COLORS.rule
+  const c = type==='series'?TAG_COLORS.series:type==='role'?(label==='GM'?TAG_COLORS.role_GM:TAG_COLORS.role_PL):TAG_COLORS.rule
   return <span style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:100,fontSize:'0.63rem',fontWeight:700,background:c.bg,color:c.color,border:`1px solid ${c.border}`,whiteSpace:'nowrap'}}>{label}</span>
 }
 
-export function LogDetailContent({ detail }) {
-  const [spoilerPw, setSpoilerPw] = useState('')
-  const [spoilerUnlocked, setSpoilerUnlocked] = useState(false)
-  const [spoilerErr, setSpoilerErr] = useState(false)
-  const checkSpoiler = () => {
-    if (spoilerPw === detail.spoiler_password) { setSpoilerUnlocked(true); setSpoilerErr(false) }
-    else { setSpoilerErr(true) }
+// 스포일러 표시 컴포넌트 - isOwner=true면 바로 열람
+export function SpoilerBlock({ detail, isOwner }) {
+  const [pw, setPw] = useState('')
+  const [unlocked, setUnlocked] = useState(false)
+  const [err, setErr] = useState(false)
+  const [showPw, setShowPw] = useState(false)
+
+  if (!detail.spoiler_content) return null
+
+  const check = () => {
+    if (pw === detail.spoiler_password) { setUnlocked(true); setErr(false) }
+    else { setErr(true) }
   }
+
+  return (
+    <div style={{marginTop:12,borderTop:'1px solid var(--color-border)',paddingTop:12}}>
+      <div style={{fontWeight:700,fontSize:'0.82rem',color:'#e57373',marginBottom:8}}>⚠️ 스포일러 내용</div>
+      {(isOwner || unlocked)
+        ? <div style={{padding:12,borderRadius:8,background:'rgba(229,115,115,0.08)',border:'1px solid rgba(229,115,115,0.2)'}}>
+            <p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.spoiler_content}</p>
+          </div>
+        : <div>
+            <p className="text-xs text-light" style={{marginBottom:8}}>스포일러 비밀번호를 입력하면 열람할 수 있어요.</p>
+            <div style={{display:'flex',gap:8}}>
+              <input className="form-input" type="password" placeholder="비밀번호"
+                value={pw} onChange={e=>{setPw(e.target.value);setErr(false)}}
+                onKeyDown={e=>e.key==='Enter'&&check()}
+                autoComplete="new-password" style={{flex:1}}/>
+              <button className="btn btn-outline btn-sm" onClick={check}>확인</button>
+            </div>
+            {err && <p className="text-xs" style={{color:'#e57373',marginTop:4}}>비밀번호가 틀렸어요.</p>}
+          </div>
+      }
+    </div>
+  )
+}
+
+// 상세 내용 컴포넌트 (내부 + 공개 페이지 공통)
+export function LogDetailContent({ detail, isOwner }) {
   return (
     <div>
-      {detail.session_image_url&&<img src={detail.session_image_url} alt="세션카드" style={{width:'100%',borderRadius:8,marginBottom:12,maxHeight:200,objectFit:'cover'}}/>}
+      {detail.session_image_url && (
+        <img src={detail.session_image_url} alt="세션카드" style={{width:'100%',borderRadius:8,marginBottom:12,maxHeight:200,objectFit:'cover'}}/>
+      )}
       <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:14}}>
-        {detail.series_tag&&<TagChip type="series" label={detail.series_tag}/>}
+        {detail.series_tag && <TagChip type="series" label={detail.series_tag}/>}
         <TagChip type="role" label={detail.role}/>
-        {detail.system_name&&<TagChip type="rule" label={detail.system_name}/>}
+        {detail.system_name && <TagChip type="rule" label={detail.system_name}/>}
       </div>
       <div className="grid-2" style={{marginBottom:12}}>
-        <div><div className="form-label">엔딩 날짜</div><div className="text-sm">{detail.played_date&&format(new Date(detail.played_date),'yyyy년 M월 d일')}</div></div>
-        {(detail.together_with||detail.character_name)&&(
+        <div><div className="form-label">엔딩 날짜</div><div className="text-sm">{detail.played_date && format(new Date(detail.played_date),'yyyy년 M월 d일')}</div></div>
+        {(detail.together_with||detail.character_name) && (
           <div><div className="form-label">GM / PL</div><div className="text-sm">{[detail.together_with,detail.character_name].filter(Boolean).join(' / ')}</div></div>
         )}
-        {detail.npc&&<div><div className="form-label">등장인물</div><div className="text-sm">{detail.npc}</div></div>}
+        {detail.npc && <div><div className="form-label">등장인물</div><div className="text-sm">{detail.npc}</div></div>}
       </div>
-      {detail.rating>0&&<div style={{marginBottom:12}}><div className="form-label">평점</div><StarRating value={detail.rating} readOnly/></div>}
-      {detail.memo&&<div style={{marginBottom:12}}><div className="form-label">메모</div><p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.memo}</p></div>}
-      {detail.scenario_link&&<div style={{marginBottom:6}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>🔗 시나리오 링크</a></div>}
-      {detail.session_log_url&&<div style={{marginBottom:12}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>📝 세션 로그 백업</a></div>}
-      {detail.spoiler_content&&(
-        <div style={{marginTop:12,borderTop:'1px solid var(--color-border)',paddingTop:12}}>
-          <div style={{fontWeight:700,fontSize:'0.82rem',color:'#e57373',marginBottom:8}}>⚠️ 스포일러 내용</div>
-          {spoilerUnlocked
-            ?<div style={{padding:12,borderRadius:8,background:'rgba(229,115,115,0.08)',border:'1px solid rgba(229,115,115,0.2)'}}><p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.spoiler_content}</p></div>
-            :<div>
-              <p className="text-xs text-light" style={{marginBottom:8}}>스포일러 비밀번호를 입력하면 열람할 수 있어요.</p>
-              <div style={{display:'flex',gap:8}}>
-                <input className="form-input" type="password" placeholder="비밀번호" value={spoilerPw} onChange={e=>{setSpoilerPw(e.target.value);setSpoilerErr(false)}} onKeyDown={e=>e.key==='Enter'&&checkSpoiler()} style={{flex:1}} autoComplete="off"/>
-                <button className="btn btn-outline btn-sm" onClick={checkSpoiler}>확인</button>
-              </div>
-              {spoilerErr&&<p className="text-xs" style={{color:'#e57373',marginTop:4}}>비밀번호가 틀렸어요.</p>}
-            </div>
-          }
-        </div>
+      {detail.rating > 0 && (
+        <div style={{marginBottom:12}}><div className="form-label">평점</div><StarRating value={detail.rating} readOnly/></div>
       )}
+      {detail.memo && (
+        <div style={{marginBottom:12}}><div className="form-label">메모</div><p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.memo}</p></div>
+      )}
+      {detail.scenario_link && <div style={{marginBottom:6}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>🔗 시나리오 링크</a></div>}
+      {detail.session_log_url && <div style={{marginBottom:12}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>📝 세션 로그 백업</a></div>}
+      <SpoilerBlock detail={detail} isOwner={!!isOwner}/>
     </div>
   )
 }
@@ -85,6 +107,7 @@ export function PlayLogPage() {
   const [search, setSearch] = useState('')
   const [imgUploading, setImgUploading] = useState(false)
   const [ruleFilter, setRuleFilter] = useState('all')
+  const [showSpoilerPw, setShowSpoilerPw] = useState(false)
 
   const load = async () => { const {data}=await playLogsApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
@@ -130,8 +153,12 @@ export function PlayLogPage() {
         <div><h1 className="page-title">📖 다녀온 기록</h1><p className="page-subtitle">플레이한 세션들의 소중한 기억을 남겨요</p></div>
         <button className="btn btn-primary" onClick={openNew}>+ 기록 추가</button>
       </div>
+
       <div style={{marginBottom:20}}>
-        <input className="form-input" placeholder="🔍 제목, 룰, 시리즈로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:320,marginBottom:ruleList.length>0?10:0}}/>
+        {/* 검색창 autocomplete off */}
+        <input className="form-input" placeholder="🔍 제목, 룰, 시리즈로 검색..." value={search}
+          onChange={e=>setSearch(e.target.value)} autoComplete="off"
+          style={{maxWidth:320,marginBottom:ruleList.length>0?10:0}}/>
         {ruleList.length>0&&(
           <div className="flex gap-8" style={{flexWrap:'wrap',marginTop:8}}>
             <button className={`btn btn-sm ${ruleFilter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setRuleFilter('all')}>전체</button>
@@ -139,12 +166,13 @@ export function PlayLogPage() {
           </div>
         )}
       </div>
+
       {loading?<LoadingSpinner/>:filtered.length===0
         ?<EmptyState icon="📖" title="기록이 없어요" action={<button className="btn btn-primary" onClick={openNew}>기록 추가</button>}/>
-        :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(238px, 1fr))',gap:13}}>
+        :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(238px,1fr))',gap:13}}>
           {filtered.map(item=>(
             <div key={item.id}
-              style={{borderRadius:12,overflow:'hidden',cursor:'pointer',background:'var(--color-surface)',border:'1px solid var(--color-border)',boxShadow:'0 2px 12px var(--color-shadow)',transition:'transform 0.2s, box-shadow 0.2s',display:'flex',flexDirection:'column'}}
+              style={{borderRadius:12,overflow:'hidden',cursor:'pointer',background:'var(--color-surface)',border:'1px solid var(--color-border)',boxShadow:'0 2px 12px var(--color-shadow)',transition:'transform 0.2s,box-shadow 0.2s',display:'flex',flexDirection:'column'}}
               onClick={()=>setDetail(item)}
               onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow='0 8px 28px rgba(0,0,0,0.15)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 2px 12px var(--color-shadow)'}}
@@ -153,7 +181,7 @@ export function PlayLogPage() {
                 <div style={{position:'absolute',inset:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
                   {item.session_image_url?<img src={item.session_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}>📖</span>}
                 </div>
-                <div style={{position:'absolute',bottom:0,left:0,right:0,height:'65%',background:'linear-gradient(to top, var(--color-bg) 0%, rgba(255,255,255,0.6) 55%, transparent 100%)',pointerEvents:'none'}}/>
+                <div style={{position:'absolute',bottom:0,left:0,right:0,height:'65%',background:'linear-gradient(to top,var(--color-bg) 0%,rgba(255,255,255,0.6) 55%,transparent 100%)',pointerEvents:'none'}}/>
                 <div style={{position:'absolute',bottom:10,left:10,right:10,display:'flex',gap:4,flexWrap:'wrap'}}>
                   {item.series_tag&&<TagChip type="series" label={item.series_tag}/>}
                   <TagChip type="role" label={item.role}/>
@@ -183,12 +211,14 @@ export function PlayLogPage() {
           ))}
         </div>
       }
+
+      {/* 상세 보기 - 본인이므로 isOwner=true */}
       <Modal isOpen={!!detail} onClose={()=>setDetail(null)} title={detail?.title}
         footer={<div className="flex justify-between w-full"><button className="btn btn-outline btn-sm" onClick={()=>{openEdit(detail);setDetail(null)}}>수정</button><button className="btn btn-outline btn-sm" onClick={()=>setDetail(null)}>닫기</button></div>}
       >
         {detail&&(
           <div>
-            <LogDetailContent detail={detail}/>
+            <LogDetailContent detail={detail} isOwner={true}/>
             {relatedItems.length>0&&(
               <div style={{borderTop:'1px solid var(--color-border)',paddingTop:14,marginTop:14}}>
                 <div style={{fontWeight:700,fontSize:'0.82rem',color:'var(--color-accent)',marginBottom:10}}>📚 {detail.series_tag} 시리즈의 다른 기록 ({relatedItems.length})</div>
@@ -215,11 +245,11 @@ export function PlayLogPage() {
         )}
       </Modal>
 
-      {/* 등록/수정 모달 - autocomplete="off" 폼 전체에 적용 */}
+      {/* 등록/수정 모달 */}
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'기록 수정':'기록 추가'}
         footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
-        {/* autocomplete=off를 감싸는 div로 브라우저 자동완성 차단 */}
+        {/* autocomplete=off로 자동완성 전체 차단 */}
         <div autoComplete="off">
           <div className="form-group"><label className="form-label">제목 (시나리오명) *</label><input className="form-input" autoComplete="off" value={form.title} onChange={set('title')}/></div>
           <div className="form-group"><label className="form-label">엔딩 날짜 *</label><input className="form-input" type="date" autoComplete="off" value={form.played_date||''} onChange={set('played_date')}/></div>
@@ -250,23 +280,37 @@ export function PlayLogPage() {
           <div className="form-group"><label className="form-label">세션 로그 백업 URL</label><input className="form-input" autoComplete="off" placeholder="https://..." value={form.session_log_url||''} onChange={set('session_log_url')}/></div>
           <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" autoComplete="off" value={form.memo||''} onChange={set('memo')}/></div>
 
-          {/* 스포일러 섹션 - autocomplete 완전 차단 */}
+          {/* 스포일러 섹션 */}
           <div style={{marginTop:8,padding:14,borderRadius:8,border:'1px solid rgba(229,115,115,0.3)',background:'rgba(229,115,115,0.04)'}}>
             <div style={{fontWeight:700,fontSize:'0.82rem',color:'#c62828',marginBottom:10}}>⚠️ 스포일러 내용 (선택)</div>
             <div className="form-group">
               <label className="form-label">스포일러 내용</label>
-              <textarea className="form-textarea" autoComplete="off" name="spoiler_content_field" placeholder="비밀번호를 알아야만 열람할 수 있어요." value={form.spoiler_content||''} onChange={set('spoiler_content')} style={{minHeight:80}}/>
+              <textarea className="form-textarea" autoComplete="off" name="spoiler_txt"
+                placeholder="비밀번호를 알아야만 열람할 수 있어요."
+                value={form.spoiler_content||''} onChange={set('spoiler_content')} style={{minHeight:80}}/>
             </div>
             {form.spoiler_content&&(
               <div className="form-group">
                 <label className="form-label">스포일러 비밀번호</label>
-                {/* new-password로 자동완성 완전 차단 */}
-                <input className="form-input" type="password" autoComplete="new-password" name="spoiler_pw_field" placeholder="열람용 비밀번호 설정" value={form.spoiler_password||''} onChange={set('spoiler_password')}/>
+                <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                  <input className="form-input" autoComplete="new-password" name="spl_pw"
+                    type={showSpoilerPw?'text':'password'}
+                    placeholder="열람용 비밀번호 설정"
+                    value={form.spoiler_password||''} onChange={set('spoiler_password')} style={{flex:1}}/>
+                  {/* 눈 아이콘 토글 */}
+                  <button type="button" onClick={()=>setShowSpoilerPw(v=>!v)}
+                    style={{background:'none',border:'none',cursor:'pointer',fontSize:'1.1rem',padding:'4px',color:'var(--color-text-light)',flexShrink:0}}
+                    title={showSpoilerPw?'숨기기':'보기'}>
+                    {showSpoilerPw ? '🙈' : '👁️'}
+                  </button>
+                </div>
+                {form.spoiler_password&&<div className="text-xs text-light" style={{marginTop:4}}>현재 비밀번호: {showSpoilerPw?form.spoiler_password:'•'.repeat(form.spoiler_password.length)}</div>}
               </div>
             )}
           </div>
         </div>
       </Modal>
+
       <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)}/>
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 기록을 삭제하시겠어요?"/>
     </div>

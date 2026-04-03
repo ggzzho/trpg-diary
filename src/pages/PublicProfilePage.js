@@ -1,5 +1,5 @@
 // src/pages/PublicProfilePage.js
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -120,10 +120,7 @@ export default function PublicProfilePage() {
   const [isFav, setIsFav] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
   const [selectedLog, setSelectedLog] = useState(null)
-  const [bgmOn, setBgmOn] = useState(false)
   const [pairSort, setPairSort] = useState('asc')
-  const playerRef = useRef(null)
-  const containerRef = useRef(null)
 
   useEffect(() => {
     const load = async () => {
@@ -157,56 +154,11 @@ export default function PublicProfilePage() {
     load()
   }, [username, user])
 
-  // BGM - YouTube IFrame Player API
-  useEffect(() => {
-    if (!profile || !profile.bgm_url) return
-    const videoId = getYoutubeId(profile.bgm_url)
-    if (!videoId) return
+  // BGM - 버튼 클릭 시 iframe embed 직접 삽입 (브라우저 정책 우회)
+  const bgmVideoId = getYoutubeId(profile?.bgm_url)
+  const [bgmOn, setBgmOn] = useState(false)
 
-    // API 로드
-    if (!window.YT) {
-      const tag = document.createElement('script')
-      tag.src = 'https://www.youtube.com/iframe_api'
-      document.head.appendChild(tag)
-    }
-
-    const initPlayer = () => {
-      if (playerRef.current) {
-        try { playerRef.current.destroy() } catch {}
-        playerRef.current = null
-      }
-      if (!containerRef.current) return
-      playerRef.current = new window.YT.Player(containerRef.current, {
-        videoId,
-        playerVars: { autoplay: 0, loop: 1, playlist: videoId, controls: 0, disablekb: 1 },
-        events: {}
-      })
-    }
-
-    if (window.YT && window.YT.Player) {
-      initPlayer()
-    } else {
-      window.onYouTubeIframeAPIReady = initPlayer
-    }
-
-    return () => {
-      if (playerRef.current) {
-        try { playerRef.current.destroy() } catch {}
-        playerRef.current = null
-      }
-    }
-  }, [profile?.bgm_url])
-
-  const toggleBgm = () => {
-    if (!playerRef.current) return
-    if (bgmOn) {
-      try { playerRef.current.pauseVideo() } catch {}
-      setBgmOn(false)
-    } else {
-      try { playerRef.current.playVideo() } catch {}
-      setBgmOn(true)
-    }
-  }
+  const toggleBgm = () => { setBgmOn(v => !v) }
 
   const toggleFav = async () => {
     if (!user) { alert('로그인 후 이용해주세요!'); return }
@@ -241,7 +193,6 @@ export default function PublicProfilePage() {
   )
 
   const isMyPage = user?.id === profile?.id
-  const hasYoutube = !!getYoutubeId(profile.bgm_url)
 
   const sections = (() => {
     if (profile.profile_sections?.length > 0) return profile.profile_sections
@@ -270,9 +221,14 @@ export default function PublicProfilePage() {
 
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
-      {/* BGM - YouTube IFrame API 플레이어 마운트 포인트 */}
-      {hasYoutube && (
-        <div ref={containerRef} style={{ position:'fixed', bottom:0, left:0, width:1, height:1, opacity:0, pointerEvents:'none', overflow:'hidden' }}/>
+      {/* BGM iframe embed - 켜기 버튼 클릭 시 표시 */}
+      {bgmVideoId && bgmOn && (
+        <iframe
+          src={`https://www.youtube.com/embed/${bgmVideoId}?autoplay=1&loop=1&playlist=${bgmVideoId}&controls=0`}
+          style={{ position:'fixed', bottom:0, left:0, width:1, height:1, opacity:0.01, pointerEvents:'none', border:'none' }}
+          allow="autoplay; encrypted-media"
+          title="bgm"
+        />
       )}
 
       {/* 프로필 카드 */}
@@ -309,7 +265,7 @@ export default function PublicProfilePage() {
                 {isFav ? '⭐ 즐겨찾기 중' : '☆ 즐겨찾기'}
               </button>
             )}
-            {hasYoutube && (
+            {bgmVideoId && (
               <button className={`btn btn-sm ${bgmOn?'btn-primary':'btn-outline'}`}
                 onClick={toggleBgm}
                 title={bgmOn ? 'BGM 끄기' : 'BGM 켜기'}>
@@ -344,7 +300,7 @@ export default function PublicProfilePage() {
               {sections.filter(s=>s.value).map((sec,i) => (
                 <div key={i}>
                   <div style={{ fontSize:'0.88rem', fontWeight:700, color:'var(--color-accent)', marginBottom:4 }}>{sec.label}</div>
-                  <p style={{ fontSize:'0.92rem', color:'var(--color-text-light)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>{sec.value}</p>
+                  <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>{sec.value}</p>
                 </div>
               ))}
             </div>

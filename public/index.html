@@ -8,9 +8,37 @@
     <title>TRPG Diary ✦</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- 브라우저 자동완성 전역 차단 -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // 모든 input/textarea에 autocomplete=off 강제 적용
+        function disableAutofill(root) {
+          root.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]):not([type="date"]):not([type="time"]):not([type="color"]):not([type="range"]), textarea').forEach(function(el) {
+            if (!el.getAttribute('autocomplete') || el.getAttribute('autocomplete') === 'on') {
+              el.setAttribute('autocomplete', 'off');
+            }
+          });
+        }
+        disableAutofill(document);
+        // SPA 라우트 변경 시에도 적용
+        var observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(m) {
+            m.addedNodes.forEach(function(node) {
+              if (node.nodeType === 1) disableAutofill(node);
+            });
+          });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    </script>
   </head>
   <body>
     <noscript>이 앱을 사용하려면 JavaScript를 활성화해주세요.</noscript>
+    <!-- 브라우저 자동완성 방지용 더미 필드 -->
+    <div style="display:none" aria-hidden="true">
+      <input type="text" name="prevent_autofill" tabindex="-1" />
+      <input type="password" name="prevent_autofill_pw" tabindex="-1" />
+    </div>
     <div id="root"></div>
   </body>
 </html>
