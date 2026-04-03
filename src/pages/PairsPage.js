@@ -4,11 +4,10 @@ import { useAuth } from '../context/AuthContext'
 import { pairsApi, uploadFile, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager } from '../components/Layout'
 
-const BLANK = { name:'', nickname:'', systems:[], memo:'', relations:[], first_met_date:'', pair_image_url:'' }
+const BLANK = { name:'', nickname:'', memo:'', relations:[], first_met_date:'', pair_image_url:'' }
 const cleanPayload = f => ({
   ...f,
   first_met_date: f.first_met_date||null,
-  systems: typeof f.systems==='string'?f.systems.split(',').map(s=>s.trim()).filter(Boolean):(f.systems||[]),
   relations: f.relations||[],
 })
 function calcDday(dateStr) {
@@ -27,13 +26,13 @@ export function PairsPage() {
   const [imgUploading, setImgUploading] = useState(false)
   const [relationTags, setRelationTags] = useState([])
   const [tagModal, setTagModal] = useState(false)
-  const [tagFilter, setTagFilter] = useState('all') // 태그 필터
+  const [tagFilter, setTagFilter] = useState('all')
+  const [sortOrder, setSortOrder] = useState('asc') // 'asc' | 'desc'
 
   const load = async () => {
     const {data}=await pairsApi.getAll(user.id)
-    // 날짜 오름차순 정렬
-    const sorted = (data||[]).sort((a,b)=>(a.first_met_date||'').localeCompare(b.first_met_date||''))
-    setItems(sorted); setLoading(false)
+    setItems(data||[])
+    setLoading(false)
   }
   const loadTags = async () => {
     const {data}=await supabase.from('pair_relations').select('*').eq('user_id',user.id).order('name')
@@ -44,10 +43,13 @@ export function PairsPage() {
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const toggleRelation = tag => setForm(f=>({...f,relations:f.relations?.includes(tag)?f.relations.filter(r=>r!==tag):[...(f.relations||[]),tag]}))
   const openNew = () => { setEditing(null); setForm(BLANK); setModal(true) }
-  const openEdit = item => { setEditing(item); setForm({...item,systems:item.systems||[],relations:item.relations||[]}); setModal(true) }
+  const openEdit = item => { setEditing(item); setForm({...item,relations:item.relations||[]}); setModal(true) }
   const save = async () => {
     if (!form.name) return
-    const payload = cleanPayload(form)
+    // 저장 시 존재하는 태그만 유지
+    const validTagNames = relationTags.map(t=>t.name)
+    const cleanedRelations = (form.relations||[]).filter(r=>validTagNames.includes(r))
+    const payload = cleanPayload({...form, relations:cleanedRelations})
     if (editing) await pairsApi.update(editing.id, payload)
     else await pairsApi.create({...payload,user_id:user.id})
     setModal(false); load()
@@ -64,11 +66,36 @@ export function PairsPage() {
   }
 
   const addTag = async name => { await supabase.from('pair_relations').insert({user_id:user.id,name}); loadTags() }
-  const editTag = async (id,name) => { await supabase.from('pair_relations').update({name}).eq('id',id); loadTags() }
-  const removeTag = async id => { await supabase.from('pair_relations').delete().eq('id',id); loadTags() }
+  const editTag = async (id,name) => {
+    const oldTag = relationTags.find(t=>t.id===id)?.name
+    if (oldTag) {
+      const affected = items.filter(i=>i.relations?.includes(oldTag))
+      for (const item of affected) {
+        await pairsApi.update(item.id, {...item, relations:item.relations.map(r=>r===oldTag?name:r)})
+      }
+    }
+    await supabase.from('pair_relations').update({name}).eq('id',id)
+    load(); loadTags()
+  }
+  const removeTag = async id => {
+    const tagName = relationTags.find(t=>t.id===id)?.name
+    if (tagName) {
+      const affected = items.filter(i=>i.relations?.includes(tagName))
+      for (const item of affected) {
+        await pairsApi.update(item.id, {...item, relations:item.relations.filter(r=>r!==tagName)})
+      }
+    }
+    await supabase.from('pair_relations').delete().eq('id',id)
+    load(); loadTags()
+  }
 
-  // 태그 필터 적용
-  const filtered = tagFilter==='all' ? items : items.filter(i=>i.relations?.includes(tagFilter))
+  // 정렬 + 필터
+  const filtered = items
+    .filter(i=>tagFilter==='all'||i.relations?.includes(tagFilter))
+    .sort((a,b)=>{
+      const da=a.first_met_date||'', db=b.first_met_date||''
+      return sortOrder==='asc' ? da.localeCompare(db) : db.localeCompare(da)
+    })
 
   return (
     <div className="fade-in">
@@ -80,21 +107,29 @@ export function PairsPage() {
         </div>
       </div>
 
-      {/* 태그 필터 */}
-      {relationTags.length>0&&(
-        <div className="flex gap-8" style={{marginBottom:20,flexWrap:'wrap'}}>
-          <button className={`btn btn-sm ${tagFilter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setTagFilter('all')}>전체</button>
-          {relationTags.map(t=>(
-            <button key={t.id} className={`btn btn-sm ${tagFilter===t.name?'btn-primary':'btn-outline'}`} onClick={()=>setTagFilter(t.name)}>{t.name}</button>
-          ))}
+      {/* 정렬 + 태그 필터 */}
+      <div className="flex gap-8 items-center" style={{marginBottom:20,flexWrap:'wrap'}}>
+        <div className="flex gap-6">
+          <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`} onClick={()=>setSortOrder('asc')}>↑ 오름차순</button>
+          <button className={`btn btn-sm ${sortOrder==='desc'?'btn-primary':'btn-outline'}`} onClick={()=>setSortOrder('desc')}>↓ 내림차순</button>
         </div>
-      )}
+        {relationTags.length>0&&(
+          <>
+            <div style={{width:1,height:20,background:'var(--color-border)'}}/>
+            <button className={`btn btn-sm ${tagFilter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setTagFilter('all')}>전체</button>
+            {relationTags.map(t=><button key={t.id} className={`btn btn-sm ${tagFilter===t.name?'btn-primary':'btn-outline'}`} onClick={()=>setTagFilter(t.name)}>{t.name}</button>)}
+          </>
+        )}
+      </div>
 
       {loading?<LoadingSpinner/>:filtered.length===0
         ?<EmptyState icon="👥" title="페어가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
         :<div className="grid-auto">
           {filtered.map(item=>{
             const dday=calcDday(item.first_met_date)
+            // 카드 표시 시 현재 유효한 태그만 표시
+            const validTagNames = relationTags.map(t=>t.name)
+            const displayRelations = (item.relations||[]).filter(r=>validTagNames.includes(r))
             return (
               <div key={item.id} className="card" style={{padding:0,overflow:'hidden'}}>
                 <div style={{height:160,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',position:'relative'}}>
@@ -109,7 +144,7 @@ export function PairsPage() {
                 <div style={{padding:'12px 14px'}}>
                   <div style={{fontWeight:700,fontSize:'1rem',marginBottom:4}}>{item.name}</div>
                   {item.nickname&&<div className="text-xs text-light" style={{marginBottom:6}}>페어 캐릭터: {item.nickname}</div>}
-                  {item.relations?.length>0&&<div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:6}}>{item.relations.map(r=><span key={r} className="badge badge-primary">{r}</span>)}</div>}
+                  {displayRelations.length>0&&<div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:6}}>{displayRelations.map(r=><span key={r} className="badge badge-primary">{r}</span>)}</div>}
                   {item.first_met_date&&<div className="text-xs text-light">📅 {item.first_met_date} 첫 만남</div>}
                   {item.memo&&<p className="text-xs text-light" style={{marginTop:8,borderTop:'1px solid var(--color-border)',paddingTop:8}}>{item.memo}</p>}
                 </div>
@@ -139,9 +174,7 @@ export function PairsPage() {
           {form.pair_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.pair_image_url} alt="preview" style={{width:52,height:52,objectFit:'cover',borderRadius:8,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,pair_image_url:''}))}>제거</button></div>}
         </div>
         <div className="form-group">
-          <label className="form-label">관계
-            <button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button>
-          </label>
+          <label className="form-label">관계<button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button></label>
           {relationTags.length===0
             ?<div className="text-xs text-light">관계 태그가 없어요. 태그 관리에서 추가해주세요!</div>
             :<div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{relationTags.map(tag=><button key={tag.id} type="button" className={`btn btn-sm ${form.relations?.includes(tag.name)?'btn-primary':'btn-outline'}`} onClick={()=>toggleRelation(tag.name)}>{tag.name}</button>)}</div>
@@ -154,7 +187,7 @@ export function PairsPage() {
       <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 관계 태그 관리"
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
       >
-        <TagManager tags={relationTags} onAdd={addTag} onEdit={editTag} onRemove={removeTag} placeholder="연인, 친구, 가족, 혐관, 애증..." />
+        <TagManager tags={relationTags} onAdd={addTag} onEdit={editTag} onRemove={removeTag} placeholder="연인, 친구, 가족, 혐관, 애증..."/>
       </Modal>
 
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 페어를 삭제하시겠어요?"/>

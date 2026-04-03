@@ -4,16 +4,19 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signOut } from '../lib/supabase'
 
+// 시나리오 아이콘: 📋 (클립보드/목록 느낌)
+export const SCENARIO_ICON = '📋'
+
 const NAV_ITEMS = [
-  { to: '/dashboard', icon: '🏠', label: '홈' },
-  { to: '/schedule', icon: '📅', label: '일정 관리' },
-  { to: '/rulebooks', icon: '📚', label: '보유 룰북' },
-  { to: '/logs', icon: '📖', label: '다녀온 기록' },
-  { to: '/availability', icon: '📋', label: '공수표 목록' },
-  { to: '/scenarios', icon: '🗺️', label: '시나리오 목록' },
-  { to: '/pairs', icon: '👥', label: '페어 목록' },
-  { to: '/bookmarks', icon: '🔖', label: '북마크' },
-  { to: '/guestbook', icon: '💌', label: '방명록' },
+  { to:'/dashboard', icon:'🏠', label:'홈' },
+  { to:'/schedule', icon:'📅', label:'일정 관리' },
+  { to:'/rulebooks', icon:'📚', label:'보유 룰북' },
+  { to:'/logs', icon:'📖', label:'다녀온 기록' },
+  { to:'/availability', icon:'📋', label:'공수표 목록' },
+  { to:'/scenarios', icon:'📗', label:'시나리오 목록' },
+  { to:'/pairs', icon:'👥', label:'페어 목록' },
+  { to:'/bookmarks', icon:'🔖', label:'북마크' },
+  { to:'/guestbook', icon:'💌', label:'방명록' },
 ]
 
 export const FOOTER_TEXT = '© 2026 TRPG Diary. Made with Claude (AI). All rights reserved.'
@@ -130,12 +133,10 @@ export function ConfirmDialog({ isOpen, onClose, onConfirm, message }) {
   )
 }
 
-// 태그 수정 가능한 관리 컴포넌트
 export function TagManager({ tags, onAdd, onEdit, onRemove, placeholder }) {
-  const [newTag, setNewTag] = useState('')
-  const [editingId, setEditingId] = useState(null)
-  const [editValue, setEditValue] = useState('')
-
+  const [newTag, setNewTag] = React.useState('')
+  const [editingId, setEditingId] = React.useState(null)
+  const [editValue, setEditValue] = React.useState('')
   return (
     <div>
       <div style={{display:'flex',gap:8,marginBottom:12}}>
@@ -143,26 +144,24 @@ export function TagManager({ tags, onAdd, onEdit, onRemove, placeholder }) {
         <button className="btn btn-primary btn-sm" onClick={()=>{if(newTag.trim()){onAdd(newTag.trim());setNewTag('')}}}>추가</button>
       </div>
       {tags.length===0
-        ? <div className="text-sm text-light" style={{textAlign:'center',padding:'12px 0'}}>아직 태그가 없어요</div>
-        : <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            {tags.map(tag=>(
-              <div key={tag.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 12px',borderRadius:8,background:'var(--color-nav-active-bg)',border:'1px solid var(--color-border)'}}>
+        ?<div className="text-sm text-light" style={{textAlign:'center',padding:'12px 0'}}>아직 태그가 없어요</div>
+        :<div style={{display:'flex',flexDirection:'column',gap:6}}>
+          {tags.map(tag=>(
+            <div key={tag.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 12px',borderRadius:8,background:'var(--color-nav-active-bg)',border:'1px solid var(--color-border)'}}>
+              {editingId===tag.id
+                ?<input className="form-input" value={editValue} onChange={e=>setEditValue(e.target.value)} style={{flex:1,marginRight:8,fontSize:'0.85rem'}} autoFocus onKeyDown={e=>{if(e.key==='Enter'){onEdit(tag.id,editValue);setEditingId(null)}if(e.key==='Escape')setEditingId(null)}} />
+                :<span style={{fontSize:'0.88rem',flex:1}}>{tag.name}</span>
+              }
+              <div className="flex gap-6">
                 {editingId===tag.id
-                  ? <input className="form-input" value={editValue} onChange={e=>setEditValue(e.target.value)} style={{flex:1,marginRight:8,fontSize:'0.85rem'}} autoFocus onKeyDown={e=>{if(e.key==='Enter'){onEdit(tag.id,editValue);setEditingId(null)}if(e.key==='Escape')setEditingId(null)}} />
-                  : <span style={{fontSize:'0.88rem',flex:1}}>{tag.name}</span>
+                  ?<><button className="btn btn-primary btn-sm" style={{padding:'2px 8px'}} onClick={()=>{onEdit(tag.id,editValue);setEditingId(null)}}>저장</button><button className="btn btn-ghost btn-sm" style={{padding:'2px 6px'}} onClick={()=>setEditingId(null)}>취소</button></>
+                  :<><button className="btn btn-ghost btn-sm" style={{padding:'2px 8px'}} onClick={()=>{setEditingId(tag.id);setEditValue(tag.name)}}>수정</button><button className="btn btn-ghost btn-sm" style={{color:'#e57373',padding:'2px 8px'}} onClick={()=>onRemove(tag.id)}>삭제</button></>
                 }
-                <div className="flex gap-6">
-                  {editingId===tag.id
-                    ? <><button className="btn btn-primary btn-sm" style={{padding:'2px 8px'}} onClick={()=>{onEdit(tag.id,editValue);setEditingId(null)}}>저장</button><button className="btn btn-ghost btn-sm" style={{padding:'2px 6px'}} onClick={()=>setEditingId(null)}>취소</button></>
-                    : <><button className="btn btn-ghost btn-sm" style={{padding:'2px 8px'}} onClick={()=>{setEditingId(tag.id);setEditValue(tag.name)}}>수정</button><button className="btn btn-ghost btn-sm" style={{color:'#e57373',padding:'2px 8px'}} onClick={()=>onRemove(tag.id)}>삭제</button></>
-                  }
-                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+        </div>
       }
     </div>
   )
 }
-
-

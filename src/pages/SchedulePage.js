@@ -13,8 +13,6 @@ const STATUS_MAP = {
   completed:{label:'완료',badge:'badge-gray'}, cancelled:{label:'취소',badge:'badge-red'},
 }
 const BLANK = { title:'', scheduled_date:'', scheduled_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false }
-
-// 시간 표시 HH:MM (초 제거)
 const fmtTime = t => t ? t.slice(0,5) : ''
 
 function DateBox({ dateStr }) {
@@ -51,39 +49,41 @@ export default function SchedulePage() {
   useEffect(() => { load() }, [user])
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
-  const openNew = date => { setEditing(null); setForm({...BLANK, scheduled_date:date||new Date().toISOString().split('T')[0]}); setModal(true) }
+  const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||new Date().toISOString().split('T')[0]}); setModal(true) }
   const openEdit = item => { setEditing(item); setForm({...item}); setModal(true) }
-  const openCopy = (item, e) => { e?.stopPropagation(); setCopyTarget(item); setCopyDate(item.scheduled_date); setCopyMode('copy'); setCopyModal(true) }
+  const openCopy = (item,e) => { e?.stopPropagation(); setCopyTarget(item); setCopyDate(item.scheduled_date); setCopyMode('copy'); setCopyModal(true) }
 
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
     const payload = {...form, scheduled_time:form.scheduled_time||null}
     if (editing) await schedulesApi.update(editing.id, payload)
-    else await schedulesApi.create({...payload, user_id:user.id})
+    else await schedulesApi.create({...payload,user_id:user.id})
     setModal(false); load()
   }
   const remove = async id => { await schedulesApi.remove(id); load() }
   const executeCopyMove = async () => {
     if (!copyDate||!copyTarget) return
     if (copyMode==='copy') {
-      const {id,created_at,...rest} = copyTarget
-      await schedulesApi.create({...rest, scheduled_date:copyDate, user_id:user.id})
+      const {id,created_at,...rest}=copyTarget
+      await schedulesApi.create({...rest,scheduled_date:copyDate,user_id:user.id})
     } else {
-      await schedulesApi.update(copyTarget.id, {...copyTarget, scheduled_date:copyDate})
+      await schedulesApi.update(copyTarget.id,{...copyTarget,scheduled_date:copyDate})
     }
     setCopyModal(false); setCopyTarget(null); setCopyDate(''); load()
   }
 
   const today = new Date().toISOString().split('T')[0]
+
+  // 탭별 필터 - 예정: 완료 숨김
   const filtered = items.filter(i => {
-    if (filter==='upcoming') return i.scheduled_date>=today&&i.status!=='cancelled'
-    if (filter==='past') return i.scheduled_date<today||i.status==='completed'
+    if (filter==='upcoming') return i.scheduled_date>=today && i.status!=='cancelled' && i.status!=='completed'
+    if (filter==='completed') return i.status==='completed'
     if (filter==='cancelled') return i.status==='cancelled'
     return true
   }).sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date))
 
   const summaryStats = useMemo(() => {
-    let t = items.filter(i=>i.status==='completed'||i.scheduled_date<today)
+    let t=items.filter(i=>i.status==='completed'||i.scheduled_date<today)
     if (summaryPeriod==='month') {
       const y=getYear(summaryDate),m=getMonth(summaryDate)
       t=t.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===y&&getMonth(d)===m})
@@ -103,24 +103,27 @@ export default function SchedulePage() {
         const d=new Date(day), dateStr=format(d,'yyyy-MM-dd')
         const di=items.filter(x=>x.scheduled_date===dateStr)
         week.push(
-          <div key={dateStr} className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,calendarDate)?'other-month':''}`} onClick={()=>openNew(dateStr)}>
+          <div key={dateStr} className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,calendarDate)?'other-month':''}`}
+            style={{position:'relative'}} onClick={()=>openNew(dateStr)}>
             <div className="calendar-date">{format(d,'d')}</div>
             {di.slice(0,2).map(ev=>(
-              <div key={ev.id} className={`calendar-event ${ev.is_gm?'gm':''} ${ev.status==='cancelled'?'cancelled':''} ${ev.status==='completed'?'completed':''}`}
-                onClick={e=>{e.stopPropagation();openEdit(ev)}}
-                title={ev.title}
+              <div key={ev.id}
+                className={`calendar-event ${ev.is_gm?'gm':''} ${ev.status==='cancelled'?'cancelled':''} ${ev.status==='completed'?'completed':''}`}
+                onClick={e=>{e.stopPropagation();openEdit(ev)}} title={ev.title}
               >
                 {fmtTime(ev.scheduled_time)&&<span style={{opacity:0.85,marginRight:2}}>{fmtTime(ev.scheduled_time)}</span>}
                 {ev.title}
               </div>
             ))}
-            {di.length>2&&(
-              <div style={{fontSize:'0.55rem',color:'var(--color-text-light)',paddingLeft:2}}>+{di.length-2}개 더</div>
-            )}
-            {/* 복사/이동 버튼 - 첫 번째 이벤트에만 */}
+            {di.length>2&&<div style={{fontSize:'0.55rem',color:'var(--color-text-light)',paddingLeft:2}}>+{di.length-2}개 더</div>}
+            {/* 복사/이동 버튼 - 일정 있는 모든 날에 표시 */}
             {di.length>0&&(
-              <div style={{position:'absolute',top:3,right:3}} onClick={e=>e.stopPropagation()}>
-                <button style={{fontSize:'0.6rem',background:'none',border:'none',cursor:'pointer',padding:'1px 3px',borderRadius:3,opacity:0.6}} title="복사/이동" onClick={e=>openCopy(di[0],e)}>📋</button>
+              <div style={{position:'absolute',top:2,right:2}} onClick={e=>e.stopPropagation()}>
+                <button
+                  style={{fontSize:'0.58rem',background:'rgba(255,255,255,0.8)',border:'none',cursor:'pointer',padding:'1px 3px',borderRadius:3,lineHeight:1}}
+                  title="복사/이동"
+                  onClick={e=>openCopy(di[0],e)}
+                >📋</button>
               </div>
             )}
           </div>
@@ -141,15 +144,15 @@ export default function SchedulePage() {
             <div key={d} className="calendar-day-header" style={{color:i===0?'#e57373':i===6?'#6b8cba':'var(--color-text-light)'}}>{d}</div>
           ))}
         </div>
-        <div className="calendar-grid" style={{position:'relative'}}>{rows}</div>
+        <div className="calendar-grid">{rows}</div>
       </div>
     )
   }
 
   const renderYear = () => {
-    const yearItems = items.filter(i=>{
-      if(filter==='upcoming') return i.scheduled_date>=today&&i.status!=='cancelled'
-      if(filter==='past') return i.scheduled_date<today||i.status==='completed'
+    const yearItems=items.filter(i=>{
+      if(filter==='upcoming') return i.scheduled_date>=today&&i.status!=='cancelled'&&i.status!=='completed'
+      if(filter==='completed') return i.status==='completed'
       if(filter==='cancelled') return i.status==='cancelled'
       return true
     })
@@ -166,12 +169,13 @@ export default function SchedulePage() {
             return (
               <div key={m} className="card card-sm" style={{cursor:'pointer'}} onClick={()=>{setCalendarDate(new Date(yearView,m,1));setViewMode('calendar')}}>
                 <div style={{fontWeight:700,fontSize:'0.85rem',color:'var(--color-accent)',marginBottom:6}}>{m+1}월 <span className="text-xs text-light">({mi.length})</span></div>
-                {mi.slice(0,3).map(i=>(
-                  <div key={i.id} style={{fontSize:'0.62rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:i.status==='cancelled'?'#e57373':i.is_gm?'var(--color-accent)':'var(--color-primary)',color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                {/* 모든 일정 표시 (3개 제한 없앰) + 제목+시간 */}
+                {mi.map(i=>(
+                  <div key={i.id} style={{fontSize:'0.6rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:i.status==='cancelled'?'#e57373':i.is_gm?'var(--color-accent)':'var(--color-primary)',color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    {fmtTime(i.scheduled_time)&&<span style={{opacity:0.85,marginRight:3}}>{fmtTime(i.scheduled_time)}</span>}
                     {i.status==='cancelled'?'[취소] ':''}{i.title}
                   </div>
                 ))}
-                {mi.length>3&&<div className="text-xs text-light">+{mi.length-3}개 더</div>}
               </div>
             )
           })}
@@ -188,16 +192,16 @@ export default function SchedulePage() {
           <button className={`btn btn-sm ${summaryPeriod==='year'?'btn-primary':'btn-outline'}`} onClick={()=>setSummaryPeriod('year')}>연별</button>
         </div>
         {summaryPeriod==='month'
-          ? <div className="flex gap-8 items-center">
-              <button className="btn btn-ghost btn-sm" onClick={()=>setSummaryDate(d=>subMonths(d,1))}>‹</button>
-              <span style={{fontWeight:600,fontSize:'0.88rem'}}>{format(summaryDate,'yyyy년 M월',{locale:ko})}</span>
-              <button className="btn btn-ghost btn-sm" onClick={()=>setSummaryDate(d=>addMonths(d,1))}>›</button>
-            </div>
-          : <div className="flex gap-8 items-center">
-              <button className="btn btn-ghost btn-sm" onClick={()=>setYearView(y=>y-1)}>‹</button>
-              <span style={{fontWeight:600,fontSize:'0.88rem'}}>{yearView}년</span>
-              <button className="btn btn-ghost btn-sm" onClick={()=>setYearView(y=>y+1)}>›</button>
-            </div>
+          ?<div className="flex gap-8 items-center">
+            <button className="btn btn-ghost btn-sm" onClick={()=>setSummaryDate(d=>subMonths(d,1))}>‹</button>
+            <span style={{fontWeight:600,fontSize:'0.88rem'}}>{format(summaryDate,'yyyy년 M월',{locale:ko})}</span>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setSummaryDate(d=>addMonths(d,1))}>›</button>
+          </div>
+          :<div className="flex gap-8 items-center">
+            <button className="btn btn-ghost btn-sm" onClick={()=>setYearView(y=>y-1)}>‹</button>
+            <span style={{fontWeight:600,fontSize:'0.88rem'}}>{yearView}년</span>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setYearView(y=>y+1)}>›</button>
+          </div>
         }
       </div>
       <div className="grid-3" style={{marginBottom:16}}>
@@ -215,7 +219,7 @@ export default function SchedulePage() {
             <div key={rule} style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
               <span style={{fontSize:'0.88rem'}}>{rule}</span>
               <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <div style={{height:7,borderRadius:4,background:'var(--color-primary)',width:`${(count/summaryStats.total)*100}px`,minWidth:16}} />
+                <div style={{height:7,borderRadius:4,background:'var(--color-primary)',width:`${(count/summaryStats.total)*100}px`,minWidth:16}}/>
                 <span style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-accent)',minWidth:24,textAlign:'right'}}>{count}회</span>
               </div>
             </div>
@@ -234,7 +238,12 @@ export default function SchedulePage() {
       <div className="flex justify-between items-center" style={{marginBottom:18,flexWrap:'wrap',gap:8}}>
         {viewMode!=='summary'&&(
           <div className="flex gap-8">
-            {[{k:'upcoming',l:'예정'},{k:'past',l:'지나간'},{k:'cancelled',l:'취소됨'},{k:'all',l:'전체'}].map(f=>(
+            {[
+              {k:'upcoming',l:'예정'},
+              {k:'completed',l:'완료'},
+              {k:'cancelled',l:'취소'},
+              {k:'all',l:'전체'}
+            ].map(f=>(
               <button key={f.k} className={`btn btn-sm ${filter===f.k?'btn-primary':'btn-outline'}`} onClick={()=>setFilter(f.k)}>{f.l}</button>
             ))}
           </div>

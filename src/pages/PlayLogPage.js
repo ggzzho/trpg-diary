@@ -6,7 +6,12 @@ import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, StarRating } from '..
 import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
 import { format } from 'date-fns'
 
-const BLANK = { title:'', played_date:'', system_name:'', role:'PL', character_name:'', together_with:'', npc:'', rating:0, memo:'', session_image_url:'', scenario_link:'', series_tag:'', session_log_url:'' }
+const BLANK = {
+  title:'', played_date:'', system_name:'', role:'PL',
+  character_name:'', together_with:'', npc:'', rating:0, memo:'',
+  session_image_url:'', scenario_link:'', series_tag:'', session_log_url:'',
+  spoiler_content:'', spoiler_password:''
+}
 const cleanPayload = f => ({...f, played_date:f.played_date||null})
 
 const TAG_COLORS = {
@@ -18,6 +23,66 @@ const TAG_COLORS = {
 function TagChip({ type, label }) {
   const c=type==='series'?TAG_COLORS.series:type==='role'?(label==='GM'?TAG_COLORS.role_GM:TAG_COLORS.role_PL):TAG_COLORS.rule
   return <span style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:100,fontSize:'0.63rem',fontWeight:700,background:c.bg,color:c.color,border:`1px solid ${c.border}`,whiteSpace:'nowrap'}}>{label}</span>
+}
+
+// 상세 모달 내용 컴포넌트 (내부/공개 페이지 공통 사용)
+export function LogDetailContent({ detail, onClose, onEdit }) {
+  const [spoilerPw, setSpoilerPw] = useState('')
+  const [spoilerUnlocked, setSpoilerUnlocked] = useState(false)
+  const [spoilerErr, setSpoilerErr] = useState(false)
+
+  const checkSpoiler = () => {
+    if (spoilerPw === detail.spoiler_password) {
+      setSpoilerUnlocked(true); setSpoilerErr(false)
+    } else {
+      setSpoilerErr(true)
+    }
+  }
+
+  return (
+    <div>
+      {detail.session_image_url&&<img src={detail.session_image_url} alt="세션카드" style={{width:'100%',borderRadius:8,marginBottom:12,maxHeight:200,objectFit:'cover'}}/>}
+      <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:14}}>
+        {detail.series_tag&&<TagChip type="series" label={detail.series_tag}/>}
+        <TagChip type="role" label={detail.role}/>
+        {detail.system_name&&<TagChip type="rule" label={detail.system_name}/>}
+      </div>
+      <div className="grid-2" style={{marginBottom:12}}>
+        <div><div className="form-label">엔딩 날짜</div><div className="text-sm">{detail.played_date&&format(new Date(detail.played_date),'yyyy년 M월 d일')}</div></div>
+        {(detail.together_with||detail.character_name)&&(
+          <div>
+            <div className="form-label">GM / PL</div>
+            <div className="text-sm">{[detail.together_with,detail.character_name].filter(Boolean).join(' / ')}</div>
+          </div>
+        )}
+        {detail.npc&&<div><div className="form-label">등장인물</div><div className="text-sm">{detail.npc}</div></div>}
+      </div>
+      {detail.rating>0&&<div style={{marginBottom:12}}><div className="form-label">평점</div><StarRating value={detail.rating} readOnly/></div>}
+      {detail.memo&&<div style={{marginBottom:12}}><div className="form-label">메모</div><p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.memo}</p></div>}
+      {detail.scenario_link&&<div style={{marginBottom:6}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>🔗 시나리오 링크</a></div>}
+      {detail.session_log_url&&<div style={{marginBottom:12}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>📝 세션 로그 백업</a></div>}
+
+      {/* 스포일러 */}
+      {detail.spoiler_content&&(
+        <div style={{marginTop:12,borderTop:'1px solid var(--color-border)',paddingTop:12}}>
+          <div style={{fontWeight:700,fontSize:'0.82rem',color:'#e57373',marginBottom:8}}>⚠️ 스포일러 내용</div>
+          {spoilerUnlocked
+            ?<div style={{padding:12,borderRadius:8,background:'rgba(229,115,115,0.08)',border:'1px solid rgba(229,115,115,0.2)'}}>
+              <p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.spoiler_content}</p>
+            </div>
+            :<div>
+              <p className="text-xs text-light" style={{marginBottom:8}}>스포일러 비밀번호를 입력하면 열람할 수 있어요.</p>
+              <div style={{display:'flex',gap:8}}>
+                <input className="form-input" type="password" placeholder="비밀번호" value={spoilerPw} onChange={e=>{setSpoilerPw(e.target.value);setSpoilerErr(false)}} onKeyDown={e=>e.key==='Enter'&&checkSpoiler()} style={{flex:1}}/>
+                <button className="btn btn-outline btn-sm" onClick={checkSpoiler}>확인</button>
+              </div>
+              {spoilerErr&&<p className="text-xs" style={{color:'#e57373',marginTop:4}}>비밀번호가 틀렸어요.</p>}
+            </div>
+          }
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function PlayLogPage() {
@@ -43,7 +108,7 @@ export function PlayLogPage() {
 
   const save = async () => {
     if (!form.title||!form.played_date) return
-    if (editing) await playLogsApi.update(editing.id, cleanPayload(form))
+    if (editing) await playLogsApi.update(editing.id,cleanPayload(form))
     else await playLogsApi.create({...cleanPayload(form),user_id:user.id})
     setModal(false); load()
     if (detail&&editing&&detail.id===editing.id) setDetail({...cleanPayload(form),id:editing.id})
@@ -71,10 +136,6 @@ export function PlayLogPage() {
   const relatedItems = detail?.series_tag
     ? items.filter(i=>i.series_tag===detail.series_tag&&i.id!==detail.id).sort((a,b)=>(a.played_date||'').localeCompare(b.played_date||''))
     : []
-
-  const InfoRow = ({label, value}) => value ? (
-    <div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>{label}.</span>{value}</div>
-  ) : null
 
   return (
     <div className="fade-in">
@@ -114,18 +175,22 @@ export function PlayLogPage() {
                   {item.system_name&&<TagChip type="rule" label={item.system_name}/>}
                 </div>
               </div>
-              {/* 카드 하단 - 시나리오명 크기 맞춤, Date-GM/PL 순서, 간격 */}
               <div style={{padding:'10px 12px 0',flex:1,display:'flex',flexDirection:'column'}}>
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,color:'var(--color-text)',marginBottom:8}}>{item.title}</div>
                 <div style={{display:'flex',flexDirection:'column',gap:2}}>
-                  {item.played_date&&<InfoRow label="Date" value={format(new Date(item.played_date),'yyyy.MM.dd')}/>}
-                  {item.together_with&&<InfoRow label="GM" value={item.together_with}/>}
-                  {item.character_name&&<InfoRow label="PL" value={item.character_name}/>}
-                  {item.npc&&<InfoRow label="등장인물" value={item.npc}/>}
+                  {item.played_date&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>Date.</span>{format(new Date(item.played_date),'yyyy.MM.dd')}</div>}
+                  {/* GM이랑 PL 같은 줄에 나란히 */}
+                  {(item.together_with||item.character_name)&&(
+                    <div style={{fontSize:'0.63rem',color:'var(--color-text-light)',display:'flex',gap:16}}>
+                      {item.together_with&&<span><span style={{fontWeight:600,marginRight:4}}>GM.</span>{item.together_with}</span>}
+                      {item.character_name&&<span><span style={{fontWeight:600,marginRight:4}}>PL.</span>{item.character_name}</span>}
+                    </div>
+                  )}
+                  {item.npc&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>등장인물.</span>{item.npc}</div>}
                 </div>
                 {item.rating>0&&<div className="stars" style={{fontSize:'0.72rem',marginTop:6}}>{'★'.repeat(item.rating)}{'☆'.repeat(5-item.rating)}</div>}
+                {item.spoiler_content&&<div style={{marginTop:4,fontSize:'0.62rem',color:'#e57373'}}>⚠️ 스포일러 포함</div>}
               </div>
-              {/* 구분선 + 액션 */}
               <div style={{padding:'8px 12px 10px',marginTop:8,borderTop:'1px solid var(--color-border)',display:'flex',gap:5,justifyContent:'flex-end'}} onClick={e=>e.stopPropagation()}>
                 <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
                 <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
@@ -141,24 +206,9 @@ export function PlayLogPage() {
       >
         {detail&&(
           <div>
-            {detail.session_image_url&&<img src={detail.session_image_url} alt="세션카드" style={{width:'100%',borderRadius:8,marginBottom:12,maxHeight:200,objectFit:'cover'}}/>}
-            <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:14}}>
-              {detail.series_tag&&<TagChip type="series" label={detail.series_tag}/>}
-              <TagChip type="role" label={detail.role}/>
-              {detail.system_name&&<TagChip type="rule" label={detail.system_name}/>}
-            </div>
-            <div className="grid-2" style={{marginBottom:12}}>
-              <div><div className="form-label">엔딩 날짜</div><div className="text-sm">{detail.played_date&&format(new Date(detail.played_date),'yyyy년 M월 d일')}</div></div>
-              {detail.together_with&&<div><div className="form-label">GM</div><div className="text-sm">{detail.together_with}</div></div>}
-              {detail.character_name&&<div><div className="form-label">PL</div><div className="text-sm">{detail.character_name}</div></div>}
-              {detail.npc&&<div><div className="form-label">등장인물</div><div className="text-sm">{detail.npc}</div></div>}
-            </div>
-            {detail.rating>0&&<div style={{marginBottom:12}}><div className="form-label">평점</div><StarRating value={detail.rating} readOnly/></div>}
-            {detail.memo&&<div style={{marginBottom:12}}><div className="form-label">메모</div><p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.memo}</p></div>}
-            {detail.scenario_link&&<div style={{marginBottom:6}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>🔗 시나리오 링크</a></div>}
-            {detail.session_log_url&&<div style={{marginBottom:12}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}>📝 세션 로그 백업</a></div>}
+            <LogDetailContent detail={detail}/>
             {relatedItems.length>0&&(
-              <div style={{borderTop:'1px solid var(--color-border)',paddingTop:14,marginTop:4}}>
+              <div style={{borderTop:'1px solid var(--color-border)',paddingTop:14,marginTop:14}}>
                 <div style={{fontWeight:700,fontSize:'0.82rem',color:'var(--color-accent)',marginBottom:10}}>📚 {detail.series_tag} 시리즈의 다른 기록 ({relatedItems.length})</div>
                 <div style={{display:'flex',flexDirection:'column',gap:7}}>
                   {relatedItems.map(r=>(
@@ -186,11 +236,11 @@ export function PlayLogPage() {
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'기록 수정':'기록 추가'}
         footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
-        <div className="form-group"><label className="form-label">제목 (시나리오명) *</label><input className="form-input" placeholder="어둠 속의 가면" value={form.title} onChange={set('title')}/></div>
+        <div className="form-group"><label className="form-label">제목 (시나리오명) *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
         <div className="form-group"><label className="form-label">엔딩 날짜 *</label><input className="form-input" type="date" value={form.played_date||''} onChange={set('played_date')}/></div>
         <div className="form-group">
           <label className="form-label">시리즈 / 캠페인 태그</label>
-          <input className="form-input" placeholder="예: 황혼의 왕관 캠페인..." value={form.series_tag||''} onChange={set('series_tag')}/>
+          <input className="form-input" placeholder="예: 황혼의 왕관..." value={form.series_tag||''} onChange={set('series_tag')}/>
           {seriesList.length>0&&<div style={{marginTop:6,display:'flex',gap:5,flexWrap:'wrap'}}><span className="text-xs text-light" style={{alignSelf:'center'}}>기존:</span>{seriesList.map(s=><button key={s} type="button" className="btn btn-outline btn-sm" style={{fontSize:'0.7rem',padding:'2px 8px'}} onClick={()=>setForm(f=>({...f,series_tag:s}))}>{s}</button>)}</div>}
         </div>
         <div className="grid-2">
@@ -198,7 +248,7 @@ export function PlayLogPage() {
           <div className="form-group"><label className="form-label">역할</label><select className="form-select" value={form.role} onChange={set('role')}><option value="PL">PL</option><option value="GM">GM</option></select></div>
         </div>
         <div className="grid-2">
-          <div className="form-group"><label className="form-label">PL</label><input className="form-input" placeholder="캐릭터명" value={form.character_name||''} onChange={set('character_name')}/></div>
+          <div className="form-group"><label className="form-label">PL</label><input className="form-input" placeholder="플레이어" value={form.character_name||''} onChange={set('character_name')}/></div>
           <div className="form-group"><label className="form-label">GM</label><input className="form-input" placeholder="닉네임" value={form.together_with||''} onChange={set('together_with')}/></div>
         </div>
         <div className="form-group"><label className="form-label">등장인물</label><input className="form-input" placeholder="주요 등장인물, NPC 등..." value={form.npc||''} onChange={set('npc')}/></div>
@@ -214,6 +264,15 @@ export function PlayLogPage() {
         <div className="form-group"><label className="form-label">시나리오 링크 URL</label><input className="form-input" placeholder="https://..." value={form.scenario_link||''} onChange={set('scenario_link')}/></div>
         <div className="form-group"><label className="form-label">세션 로그 백업 URL</label><input className="form-input" placeholder="https://..." value={form.session_log_url||''} onChange={set('session_log_url')}/></div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')}/></div>
+
+        {/* 스포일러 */}
+        <div style={{marginTop:8,padding:14,borderRadius:8,border:'1px solid rgba(229,115,115,0.3)',background:'rgba(229,115,115,0.04)'}}>
+          <div style={{fontWeight:700,fontSize:'0.82rem',color:'#c62828',marginBottom:10}}>⚠️ 스포일러 내용 (선택)</div>
+          <div className="form-group"><label className="form-label">스포일러 내용</label><textarea className="form-textarea" placeholder="비밀번호를 알아야만 열람할 수 있어요." value={form.spoiler_content||''} onChange={set('spoiler_content')} style={{minHeight:80}}/></div>
+          {form.spoiler_content&&(
+            <div className="form-group"><label className="form-label">스포일러 비밀번호</label><input className="form-input" type="password" placeholder="열람용 비밀번호 설정" value={form.spoiler_password||''} onChange={set('spoiler_password')}/></div>
+          )}
+        </div>
       </Modal>
 
       <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)}/>

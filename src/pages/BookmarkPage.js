@@ -1,10 +1,53 @@
 // src/pages/BookmarkPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { bookmarksApi, bookmarkTagsApi, fetchOgMeta } from '../lib/supabase'
+import { bookmarksApi, bookmarkTagsApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager } from '../components/Layout'
 
 const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[] }
+
+// OG 메타 가져오기 - 여러 프록시 시도
+async function fetchOgMetaEnhanced(url) {
+  // 방법 1: allorigins
+  try {
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, {signal: AbortSignal.timeout(8000)})
+    const json = await res.json()
+    const html = json.contents || ''
+    if (html) {
+      const meta = parseOgFromHtml(html)
+      if (meta.title || meta.thumbnail_url) return meta
+    }
+  } catch {}
+
+  // 방법 2: jsonlink (트위터/X 등에 더 잘 작동)
+  try {
+    const res = await fetch(`https://jsonlink.io/api/extract?url=${encodeURIComponent(url)}`, {signal: AbortSignal.timeout(8000)})
+    const json = await res.json()
+    if (json) {
+      return {
+        title: json.title || '',
+        description: json.description || '',
+        thumbnail_url: json.images?.[0] || '',
+      }
+    }
+  } catch {}
+
+  return { title: '', description: '', thumbnail_url: '' }
+}
+
+function parseOgFromHtml(html) {
+  const getMeta = (prop) => {
+    const m = html.match(new RegExp(`<meta[^>]*(?:property|name)=["']${prop}["'][^>]*content=["']([^"']+)["']`, 'i'))
+             || html.match(new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*(?:property|name)=["']${prop}["']`, 'i'))
+    return m ? m[1] : null
+  }
+  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+  return {
+    title: getMeta('og:title') || (titleMatch ? titleMatch[1].trim() : '') || '',
+    description: getMeta('og:description') || getMeta('description') || '',
+    thumbnail_url: getMeta('og:image') || '',
+  }
+}
 
 export function BookmarkPage() {
   const { user } = useAuth()
@@ -19,6 +62,7 @@ export function BookmarkPage() {
   const [tagFilter, setTagFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [fetching, setFetching] = useState(false)
+  const [fetchMsg, setFetchMsg] = useState('')
 
   const load = async () => { const {data}=await bookmarksApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   const loadTags = async () => { const {data}=await bookmarkTagsApi.getAll(user.id); setTags(data||[]) }
@@ -27,59 +71,52 @@ export function BookmarkPage() {
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const toggleTag = tag => setForm(f=>({...f,tags:f.tags?.includes(tag)?f.tags.filter(t=>t!==tag):[...(f.tags||[]),tag]}))
 
-  const openNew = () => { setEditing(null); setForm(BLANK); setModal(true) }
-  const openEdit = item => { setEditing(item); setForm({...item,tags:item.tags||[]}); setModal(true) }
+  const openNew = () => { setEditing(null); setForm(BLANK); setFetchMsg(''); setModal(true) }
+  const openEdit = item => { setEditing(item); setForm({...item,tags:item.tags||[]}); setFetchMsg(''); setModal(true) }
 
   const handleUrlBlur = async () => {
-    if (!form.url||editing||form.title) return
-    setFetching(true)
-    const meta = await fetchOgMeta(form.url)
-    setForm(f=>({...f, title:meta.title||f.title, description:meta.description||f.description, thumbnail_url:meta.thumbnail_url||f.thumbnail_url}))
-    setFetching(false)
+    if (!form.url||editing) return
+    doFetch()
   }
-  const refetchMeta = async () => {
+  const doFetch = async () => {
     if (!form.url) return
-    setFetching(true)
-    const meta = await fetchOgMeta(form.url)
-    setForm(f=>({...f, title:meta.title||f.title, description:meta.description||f.description, thumbnail_url:meta.thumbnail_url||f.thumbnail_url}))
+    setFetching(true); setFetchMsg('정보를 가져오는 중...')
+    const meta = await fetchOgMetaEnhanced(form.url)
+    if (meta.title||meta.thumbnail_url) {
+      setForm(f=>({...f, title:meta.title||f.title, description:meta.description||f.description, thumbnail_url:meta.thumbnail_url||f.thumbnail_url}))
+      setFetchMsg('✅ 정보를 가져왔어요!')
+    } else {
+      setFetchMsg('⚠️ 자동으로 가져오지 못했어요. 직접 입력해주세요.')
+    }
     setFetching(false)
+    setTimeout(()=>setFetchMsg(''),3000)
   }
 
   const save = async () => {
     if (!form.url) return
-    // 태그명을 저장할 때 현재 tags 목록에 없는 태그는 제거 (삭제된 태그 자동 정리)
     const validTagNames = tags.map(t=>t.name)
-    const cleanedTags = (form.tags||[]).filter(t=>validTagNames.includes(t))
-    const payload = {...form, tags:cleanedTags}
+    const payload = {...form, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
     if (editing) await bookmarksApi.update(editing.id, payload)
-    else await bookmarksApi.create({...payload, user_id:user.id})
+    else await bookmarksApi.create({...payload,user_id:user.id})
     setModal(false); load()
   }
 
   const addTag = async name => { await bookmarkTagsApi.create({user_id:user.id,name}); loadTags() }
   const editTag = async (id,name) => {
-    // 태그 이름 변경 시 해당 태그를 사용 중인 북마크도 업데이트
     const oldTag = tags.find(t=>t.id===id)?.name
     if (oldTag) {
       const affected = items.filter(i=>i.tags?.includes(oldTag))
-      for (const item of affected) {
-        const newTags = item.tags.map(t=>t===oldTag?name:t)
-        await bookmarksApi.update(item.id, {...item,tags:newTags})
-      }
+      for (const item of affected) await bookmarksApi.update(item.id,{...item,tags:item.tags.map(t=>t===oldTag?name:t)})
     }
     await bookmarkTagsApi.remove(id)
     await bookmarkTagsApi.create({user_id:user.id,name})
     load(); loadTags()
   }
   const removeTag = async id => {
-    // 태그 삭제 시 해당 태그를 사용 중인 북마크에서도 제거
     const tagName = tags.find(t=>t.id===id)?.name
     if (tagName) {
       const affected = items.filter(i=>i.tags?.includes(tagName))
-      for (const item of affected) {
-        const newTags = item.tags.filter(t=>t!==tagName)
-        await bookmarksApi.update(item.id, {...item,tags:newTags})
-      }
+      for (const item of affected) await bookmarksApi.update(item.id,{...item,tags:item.tags.filter(t=>t!==tagName)})
     }
     await bookmarkTagsApi.remove(id)
     load(); loadTags()
@@ -120,47 +157,28 @@ export function BookmarkPage() {
               onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow='0 6px 24px rgba(0,0,0,0.12)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 2px 12px var(--color-shadow)'}}
             >
-              {/* 썸네일 - 클릭하면 새 창 */}
               <div style={{height:130,background:'var(--color-nav-active-bg)',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:'pointer'}}
                 onClick={()=>window.open(item.url,'_blank','noopener,noreferrer')}
               >
-                {item.thumbnail_url
-                  ?<img src={item.thumbnail_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/>
-                  :<span style={{fontSize:'3rem',opacity:0.2}}>🔗</span>
-                }
+                {item.thumbnail_url?<img src={item.thumbnail_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}>🔗</span>}
                 {item.tags?.length>0&&(
                   <div style={{position:'absolute',bottom:8,left:8,right:8,display:'flex',gap:4,flexWrap:'wrap'}}>
-                    {item.tags.map(tag=>(
-                      <span key={tag} style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(200,169,110,0.25)',color:'#7a5c30',border:'1px solid rgba(200,169,110,0.5)',backdropFilter:'blur(4px)'}}>{tag}</span>
+                    {item.tags.filter(t=>tags.map(tg=>tg.name).includes(t)).map(tag=>(
+                      <span key={tag} style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(200,169,110,0.25)',color:'#7a5c30',border:'1px solid rgba(200,169,110,0.5)'}}>{tag}</span>
                     ))}
                   </div>
                 )}
               </div>
-
-              {/* 내용 */}
               <div style={{padding:'12px 14px',flex:1,display:'flex',flexDirection:'column',gap:4,cursor:'pointer'}}
                 onClick={()=>window.open(item.url,'_blank','noopener,noreferrer')}
               >
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>
                   {item.title||item.url}
                 </div>
-                {item.description&&(
-                  <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>
-                    {item.description}
-                  </div>
-                )}
-                <div style={{fontSize:'0.65rem',color:'var(--color-text-light)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'auto',paddingTop:4}}>
-                  🌐 {item.url}
-                </div>
-                {item.memo&&(
-                  <div style={{fontSize:'0.72rem',color:'var(--color-accent)',padding:'5px 8px',borderRadius:6,background:'var(--color-nav-active-bg)',marginTop:4,
-                    wordBreak:'break-all', overflowWrap:'break-word', whiteSpace:'pre-wrap'}}>
-                    📝 {item.memo}
-                  </div>
-                )}
+                {item.description&&<div style={{fontSize:'0.72rem',color:'var(--color-text-light)',lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.description}</div>}
+                <div style={{fontSize:'0.65rem',color:'var(--color-text-light)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'auto',paddingTop:4}}>🌐 {item.url}</div>
+                {item.memo&&<div style={{fontSize:'0.72rem',color:'var(--color-accent)',padding:'5px 8px',borderRadius:6,background:'var(--color-nav-active-bg)',marginTop:4,wordBreak:'break-all',overflowWrap:'break-word',whiteSpace:'pre-wrap'}}>📝 {item.memo}</div>}
               </div>
-
-              {/* 액션 */}
               <div style={{padding:'6px 12px 10px',display:'flex',gap:6,justifyContent:'flex-end',borderTop:'1px solid var(--color-border)'}} onClick={e=>e.stopPropagation()}>
                 <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
                 <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
@@ -170,7 +188,6 @@ export function BookmarkPage() {
         </div>
       }
 
-      {/* 북마크 추가/수정 모달 */}
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'북마크 수정':'북마크 추가'}
         footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
@@ -178,32 +195,28 @@ export function BookmarkPage() {
           <label className="form-label">URL *</label>
           <div style={{display:'flex',gap:8}}>
             <input className="form-input" placeholder="https://..." value={form.url} onChange={set('url')} onBlur={handleUrlBlur} style={{flex:1}}/>
-            <button type="button" className="btn btn-outline btn-sm" onClick={refetchMeta} disabled={fetching} style={{whiteSpace:'nowrap',flexShrink:0}}>
+            <button type="button" className="btn btn-outline btn-sm" onClick={doFetch} disabled={fetching} style={{whiteSpace:'nowrap',flexShrink:0}}>
               {fetching?'로딩...':'🔄 정보 가져오기'}
             </button>
           </div>
-          {fetching&&<div className="text-xs text-light" style={{marginTop:4}}>링크 정보를 불러오는 중...</div>}
+          {fetchMsg&&<div className="text-xs" style={{marginTop:4,color:fetchMsg.startsWith('✅')?'#558b2f':fetchMsg.startsWith('⚠️')?'#e57373':'var(--color-text-light)'}}>{fetchMsg}</div>}
         </div>
         {form.thumbnail_url&&<div style={{marginBottom:12,borderRadius:8,overflow:'hidden',height:100,background:'var(--color-nav-active-bg)'}}><img src={form.thumbnail_url} alt="thumbnail" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/></div>}
         <div className="form-group"><label className="form-label">제목</label><input className="form-input" placeholder="자동으로 가져와요" value={form.title||''} onChange={set('title')}/></div>
         <div className="form-group"><label className="form-label">썸네일 이미지 URL</label><input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.thumbnail_url||''} onChange={set('thumbnail_url')}/></div>
         <div className="form-group">
-          <label className="form-label">태그
-            <button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button>
-          </label>
-          {tags.length===0
-            ?<div className="text-xs text-light">태그가 없어요. 태그 관리에서 추가해주세요!</div>
+          <label className="form-label">태그<button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button></label>
+          {tags.length===0?<div className="text-xs text-light">태그가 없어요.</div>
             :<div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{tags.map(tag=><button key={tag.id} type="button" className={`btn btn-sm ${form.tags?.includes(tag.name)?'btn-primary':'btn-outline'}`} onClick={()=>toggleTag(tag.name)}>{tag.name}</button>)}</div>
           }
         </div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" placeholder="간단한 메모..." value={form.memo||''} onChange={set('memo')} style={{minHeight:64}}/></div>
       </Modal>
 
-      {/* 태그 관리 모달 */}
       <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 북마크 태그 관리"
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
       >
-        <TagManager tags={tags} onAdd={addTag} onEdit={editTag} onRemove={removeTag} placeholder="도토리, 배포자료, 유틸..." />
+        <TagManager tags={tags} onAdd={addTag} onEdit={editTag} onRemove={removeTag} placeholder="도토리, 배포자료, 유틸..."/>
       </Modal>
 
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>{bookmarksApi.remove(confirm);load();setConfirm(null)}} message="이 북마크를 삭제하시겠어요?"/>

@@ -1,19 +1,29 @@
 // src/pages/PublicProfilePage.js
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { GuestbookPage } from './GuestbookPage'
-import { FOOTER_TEXT } from '../components/Layout'
+import { LogDetailContent } from './PlayLogPage'
+import { FOOTER_TEXT, Modal } from '../components/Layout'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 
 const SCENARIO_STATUS = { unplayed:'미플', played:'PL완료', gm_done:'GM완료', want:'위시' }
+const SCENARIO_ICON = '📗'
 
 function calcDday(dateStr) {
   if (!dateStr) return null
   return Math.floor((new Date()-new Date(dateStr))/(1000*60*60*24))
+}
+
+// YouTube URL → embed URL 변환
+function getYoutubeEmbedUrl(url) {
+  if (!url) return null
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)
+  if (m) return `https://www.youtube.com/embed/${m[1]}?autoplay=1&loop=1&playlist=${m[1]}&mute=0`
+  return null
 }
 
 const TAG_COLORS = {
@@ -37,6 +47,8 @@ export default function PublicProfilePage() {
   const [activeTab, setActiveTab] = useState('logs')
   const [isFavorited, setIsFavorited] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
+  const [selectedLog, setSelectedLog] = useState(null) // 기록 팝업
+  const [bgmPlaying, setBgmPlaying] = useState(false)  // BGM
 
   useEffect(() => {
     const load = async () => {
@@ -111,23 +123,29 @@ export default function PublicProfilePage() {
 
   const isMyPage = user && profile && (user.id === profile.id)
 
-  // 메뉴 순서: 일정/기록/룰북/공수표/시나리오/페어/북마크는 비공개이므로 공개 페이지엔 일부만
   const TABS = [
     {key:'schedules',label:'📅 일정',count:data.schedules?.length},
     {key:'logs',label:'📖 기록',count:data.logs?.length},
     {key:'rulebooks',label:'📚 룰북',count:data.rulebooks?.length},
-    {key:'scenarios',label:'🗺️ 시나리오',count:data.scenarios?.length},
+    {key:'scenarios',label:`${SCENARIO_ICON} 시나리오`,count:data.scenarios?.length},
     {key:'pairs',label:'👥 페어',count:data.pairs?.length},
     {key:'availability',label:'📋 공수표',count:data.availability?.length},
     {key:'guestbook',label:'💌 방명록'},
   ]
 
+  const bgmEmbedUrl = getYoutubeEmbedUrl(profile.bgm_url)
+
   return (
     <div style={{maxWidth:860,margin:'0 auto',padding:'20px 20px 0'}}>
 
+      {/* BGM iframe (숨김) */}
+      {bgmPlaying && bgmEmbedUrl && (
+        <iframe src={bgmEmbedUrl} style={{display:'none'}} allow="autoplay" title="bgm"/>
+      )}
+
       {/* 프로필 카드 */}
       <div className="card" style={{marginBottom:24,overflow:'visible',padding:0,position:'relative'}}>
-        {/* 헤더 이미지 - 세로 15px 더 */}
+        {/* 헤더 이미지 */}
         <div style={{height:215,background:'var(--color-nav-active-bg)',borderRadius:'var(--radius) var(--radius) 0 0',overflow:'hidden',flexShrink:0}}>
           {profile.header_image_url
             ?<img src={profile.header_image_url} alt="header" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center top'}}/>
@@ -136,21 +154,26 @@ export default function PublicProfilePage() {
         </div>
 
         <div style={{padding:'0 24px 24px',textAlign:'center'}}>
-          {/* 아바타 - 더 크게 */}
+          {/* 아바타 */}
           <div style={{display:'flex',justifyContent:'center',marginTop:-52,marginBottom:12}}>
             <div className="user-avatar" style={{width:100,height:100,fontSize:'2.4rem',border:'4px solid white',boxShadow:'0 4px 20px rgba(0,0,0,0.18)',background:'var(--color-surface)',position:'relative',zIndex:2}}>
               {profile.avatar_url?<img src={profile.avatar_url} alt="avatar"/>:(profile.display_name||'?')[0]}
             </div>
           </div>
 
-          {/* 즐겨찾기 버튼 (내 페이지 아닐 때만) */}
-          {!isMyPage&&(
-            <div style={{display:'flex',justifyContent:'center',marginBottom:10}}>
-              <button className={`btn btn-sm ${isFavorited?'btn-primary':'btn-outline'}`} onClick={toggleFavorite} disabled={favLoading} style={{gap:5}}>
+          {/* 즐겨찾기 + BGM 버튼 */}
+          <div style={{display:'flex',justifyContent:'center',gap:8,marginBottom:10}}>
+            {!isMyPage&&(
+              <button className={`btn btn-sm ${isFavorited?'btn-primary':'btn-outline'}`} onClick={toggleFavorite} disabled={favLoading}>
                 {isFavorited?'⭐ 즐겨찾기 중':'☆ 즐겨찾기'}
               </button>
-            </div>
-          )}
+            )}
+            {bgmEmbedUrl&&(
+              <button className={`btn btn-sm ${bgmPlaying?'btn-primary':'btn-outline'}`} onClick={()=>setBgmPlaying(v=>!v)} title={bgmPlaying?'BGM 끄기':'BGM 켜기'}>
+                {bgmPlaying?'🎵 BGM 끄기':'🎵 BGM 켜기'}
+              </button>
+            )}
+          </div>
 
           <h1 style={{fontSize:'1.5rem',fontWeight:700,color:'var(--color-accent)',letterSpacing:'-0.03em',marginBottom:2}}>{profile.display_name||profile.username}</h1>
           <p className="text-sm text-light">@{profile.username}</p>
@@ -170,8 +193,8 @@ export default function PublicProfilePage() {
             <div style={{marginTop:16,textAlign:'left',display:'flex',flexDirection:'column',gap:12}}>
               {profileSections.filter(s=>s.value).map((section,i)=>(
                 <div key={i}>
-                  <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-accent)',marginBottom:4}}>{section.label}</div>
-                  <p style={{fontSize:'0.9rem',color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap'}}>{section.value}</p>
+                  <div style={{fontSize:'0.88rem',fontWeight:700,color:'var(--color-accent)',marginBottom:4}}>{section.label}</div>
+                  <p style={{fontSize:'0.92rem',color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap'}}>{section.value}</p>
                 </div>
               ))}
             </div>
@@ -229,13 +252,19 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* ── 기록 ── */}
+      {/* ── 기록 (카드 클릭 시 팝업) ── */}
       {activeTab==='logs'&&(
+        <>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(238px, 1fr))',gap:13}}>
           {!data.logs?.length
             ?<div className="card" style={{textAlign:'center',padding:36,color:'var(--color-text-light)',fontSize:'0.85rem',gridColumn:'1/-1'}}>아직 기록이 없어요</div>
             :data.logs.map(l=>(
-              <div key={l.id} style={{borderRadius:12,overflow:'hidden',background:'var(--color-surface)',border:'1px solid var(--color-border)',boxShadow:'0 2px 12px var(--color-shadow)',display:'flex',flexDirection:'column'}}>
+              <div key={l.id}
+                style={{borderRadius:12,overflow:'hidden',background:'var(--color-surface)',border:'1px solid var(--color-border)',boxShadow:'0 2px 12px var(--color-shadow)',display:'flex',flexDirection:'column',cursor:'pointer',transition:'transform 0.15s, box-shadow 0.15s'}}
+                onClick={()=>setSelectedLog(l)}
+                onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow='0 6px 24px rgba(0,0,0,0.12)'}}
+                onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 2px 12px var(--color-shadow)'}}
+              >
                 <div style={{position:'relative',paddingTop:'56.25%'}}>
                   <div style={{position:'absolute',inset:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
                     {l.session_image_url?<img src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'2.5rem',opacity:0.2}}>📖</span>}
@@ -251,16 +280,28 @@ export default function PublicProfilePage() {
                   <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,marginBottom:8}}>{l.title}</div>
                   <div style={{display:'flex',flexDirection:'column',gap:2}}>
                     {l.played_date&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>Date.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
-                    {l.together_with&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>GM.</span>{l.together_with}</div>}
-                    {l.character_name&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>PL.</span>{l.character_name}</div>}
+                    {(l.together_with||l.character_name)&&(
+                      <div style={{fontSize:'0.63rem',color:'var(--color-text-light)',display:'flex',gap:12}}>
+                        {l.together_with&&<span><span style={{fontWeight:600,marginRight:4}}>GM.</span>{l.together_with}</span>}
+                        {l.character_name&&<span><span style={{fontWeight:600,marginRight:4}}>PL.</span>{l.character_name}</span>}
+                      </div>
+                    )}
                   </div>
                   {l.rating>0&&<div className="stars" style={{fontSize:'0.72rem',marginTop:6}}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}
+                  {l.spoiler_content&&<div style={{fontSize:'0.62rem',color:'#e57373',marginTop:4}}>⚠️ 스포일러 포함</div>}
                   {l.scenario_link&&<a href={l.scenario_link} target="_blank" rel="noreferrer" style={{fontSize:'0.68rem',color:'var(--color-primary)',marginTop:4}}>🔗 시나리오 링크</a>}
                 </div>
               </div>
             ))
           }
         </div>
+        {/* 기록 상세 팝업 */}
+        <Modal isOpen={!!selectedLog} onClose={()=>setSelectedLog(null)} title={selectedLog?.title}
+          footer={<button className="btn btn-outline btn-sm" onClick={()=>setSelectedLog(null)}>닫기</button>}
+        >
+          {selectedLog&&<LogDetailContent detail={selectedLog}/>}
+        </Modal>
+        </>
       )}
 
       {/* ── 룰북 ── */}

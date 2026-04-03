@@ -6,7 +6,7 @@ import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager } from '..
 import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
 
 const BLANK = { title:'', system_name:'', cover_image_url:'', format:'physical', memo:'', tags:[] }
-const cleanPayload = f => ({...f})
+const DEFAULT_TAG_NAMES = ['GM','주력','미숙','관심','초보','입문','미입문']
 
 export function RulebookPage() {
   const { user } = useAuth()
@@ -22,20 +22,14 @@ export function RulebookPage() {
   const [availableTags, setAvailableTags] = useState([])
   const [imgUploading, setImgUploading] = useState(false)
 
-  const DEFAULT_TAG_NAMES = ['GM','주력','미숙','관심','초보','입문','미입문']
-
   const load = async () => { const {data}=await rulebooksApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   const loadTags = async () => {
-    const {data} = await supabase.from('rulebook_tags').select('*').eq('user_id',user.id).order('name')
-    if (data && data.length === 0) {
-      // 기본 태그 자동 생성
-      const inserts = DEFAULT_TAG_NAMES.map(name => ({user_id:user.id, name}))
-      await supabase.from('rulebook_tags').insert(inserts)
-      const {data:d2} = await supabase.from('rulebook_tags').select('*').eq('user_id',user.id).order('name')
+    const {data}=await supabase.from('rulebook_tags').select('*').eq('user_id',user.id).order('name')
+    if (data&&data.length===0) {
+      await supabase.from('rulebook_tags').insert(DEFAULT_TAG_NAMES.map(name=>({user_id:user.id,name})))
+      const {data:d2}=await supabase.from('rulebook_tags').select('*').eq('user_id',user.id).order('name')
       setAvailableTags(d2||[])
-    } else {
-      setAvailableTags(data||[])
-    }
+    } else setAvailableTags(data||[])
   }
   useEffect(() => { load(); loadTags() }, [user])
 
@@ -46,8 +40,8 @@ export function RulebookPage() {
 
   const save = async () => {
     if (!form.title) return
-    if (editing) await rulebooksApi.update(editing.id, cleanPayload(form))
-    else await rulebooksApi.create({...cleanPayload(form), user_id:user.id})
+    if (editing) await rulebooksApi.update(editing.id, form)
+    else await rulebooksApi.create({...form,user_id:user.id})
     setModal(false); load()
   }
   const remove = async id => { await rulebooksApi.remove(id); load() }
@@ -61,15 +55,9 @@ export function RulebookPage() {
     setImgUploading(false)
   }
 
-  const addTag = async name => {
-    await supabase.from('rulebook_tags').insert({user_id:user.id,name}); loadTags()
-  }
-  const editTag = async (id, name) => {
-    await supabase.from('rulebook_tags').update({name}).eq('id',id); loadTags()
-  }
-  const removeTagDef = async id => {
-    await supabase.from('rulebook_tags').delete().eq('id',id); loadTags()
-  }
+  const addTag = async name => { await supabase.from('rulebook_tags').insert({user_id:user.id,name}); loadTags() }
+  const editTag = async (id,name) => { await supabase.from('rulebook_tags').update({name}).eq('id',id); loadTags() }
+  const removeTagDef = async id => { await supabase.from('rulebook_tags').delete().eq('id',id); loadTags() }
 
   const filtered = items.filter(i=>!search||i.title.includes(search)||i.system_name?.includes(search))
   const FORMAT_LABEL = {physical:'실물',digital:'전자',both:'실물+전자'}
@@ -98,8 +86,9 @@ export function RulebookPage() {
               </div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontWeight:700,fontSize:'0.9rem',marginBottom:4}}>{item.title}</div>
-                <div className="text-xs text-light flex gap-10" style={{flexWrap:'wrap',marginBottom:4}}>
-                  {item.system_name&&<span>🎲 {item.system_name}</span>}
+                {/* 룰이름 · 칩 간격 추가 */}
+                <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:item.tags?.length>0?5:0}}>
+                  {item.system_name&&<span className="text-xs text-light">🎲 {item.system_name}</span>}
                   <span className="badge badge-primary" style={{fontSize:'0.62rem'}}>{FORMAT_LABEL[item.format]||item.format}</span>
                 </div>
                 {item.tags?.length>0&&(
@@ -121,23 +110,17 @@ export function RulebookPage() {
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'룰북 수정':'룰북 추가'}
         footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
-        <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" placeholder="크툴루의 부름 룰북" value={form.title} onChange={set('title')}/></div>
+        <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
         <div className="grid-2">
           <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
           <div className="form-group"><label className="form-label">형태</label><select className="form-select" value={form.format} onChange={set('format')}><option value="physical">실물</option><option value="digital">전자</option><option value="both">실물+전자</option></select></div>
         </div>
-        {/* 태그 선택 */}
         <div className="form-group">
-          <label className="form-label">태그
-            <button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button>
-          </label>
+          <label className="form-label">태그<button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button></label>
           <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-            {availableTags.map(tag=>(
-              <button key={tag.id} type="button" className={`btn btn-sm ${form.tags?.includes(tag.name)?'btn-primary':'btn-outline'}`} onClick={()=>toggleTag(tag.name)}>{tag.name}</button>
-            ))}
+            {availableTags.map(tag=><button key={tag.id} type="button" className={`btn btn-sm ${form.tags?.includes(tag.name)?'btn-primary':'btn-outline'}`} onClick={()=>toggleTag(tag.name)}>{tag.name}</button>)}
           </div>
         </div>
-        {/* 아이콘 이미지 */}
         <div className="form-group">
           <label className="form-label">아이콘 이미지</label>
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
@@ -149,11 +132,10 @@ export function RulebookPage() {
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{minHeight:64}}/></div>
       </Modal>
 
-      {/* 태그 관리 모달 */}
       <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 룰북 태그 관리"
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
       >
-        <TagManager tags={availableTags} onAdd={addTag} onEdit={editTag} onRemove={removeTagDef} placeholder="GM, 주력, 관심, 입문..." />
+        <TagManager tags={availableTags} onAdd={addTag} onEdit={editTag} onRemove={removeTagDef} placeholder="GM, 주력, 관심, 입문..."/>
       </Modal>
 
       <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)}/>

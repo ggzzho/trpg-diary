@@ -5,8 +5,7 @@ import { availabilityApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
 import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
 
-const BLANK = { title:'', role:'PL', system_name:'', preferred_days:[], preferred_time:'', description:'', together_with:'', scenario_link:'', is_active:true }
-const DAYS = ['월','화','수','목','금','토','일']
+const BLANK = { title:'', role:'PL', system_name:'', description:'', together_with:'', scenario_link:'', is_active:true }
 
 export function AvailabilityPage() {
   const { user } = useAuth()
@@ -17,19 +16,18 @@ export function AvailabilityPage() {
   const [form, setForm] = useState(BLANK)
   const [confirm, setConfirm] = useState(null)
   const [ruleManager, setRuleManager] = useState(false)
-  const [viewMode, setViewMode] = useState('card') // 'card' | 'list'
+  const [viewMode, setViewMode] = useState('card')
 
   const load = async () => { const {data}=await availabilityApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
-  const toggleDay = d => setForm(f=>({...f,preferred_days:f.preferred_days?.includes(d)?f.preferred_days.filter(x=>x!==d):[...(f.preferred_days||[]),d]}))
   const openNew = () => { setEditing(null); setForm(BLANK); setModal(true) }
   const openEdit = item => { setEditing(item); setForm({...item}); setModal(true) }
   const save = async () => {
     if (!form.title) return
     if (editing) await availabilityApi.update(editing.id, form)
-    else await availabilityApi.create({...form, user_id:user.id})
+    else await availabilityApi.create({...form,user_id:user.id})
     setModal(false); load()
   }
   const remove = async id => { await availabilityApi.remove(id); load() }
@@ -45,55 +43,57 @@ export function AvailabilityPage() {
         </div>
       </div>
 
-      {loading ? <LoadingSpinner /> : items.length===0
-        ? <EmptyState icon="📋" title="공수표가 없어요" action={<button className="btn btn-primary" onClick={openNew}>등록하기</button>}/>
-        : viewMode==='card'
-          ? <div className="grid-auto">
-              {items.map(item=>(
-                <div key={item.id} className="card">
-                  <div className="flex justify-between items-center" style={{marginBottom:10}}>
-                    <div className="flex gap-8">
-                      <span className={`badge ${item.is_active?'badge-green':'badge-gray'}`}>{item.is_active?'활성':'비활성'}</span>
-                      <span className="badge badge-primary">{item.role}</span>
-                    </div>
-                    <div className="flex gap-8">
-                      <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
-                      <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
-                    </div>
+      {loading?<LoadingSpinner/>:items.length===0
+        ?<EmptyState icon="📋" title="공수표가 없어요" action={<button className="btn btn-primary" onClick={openNew}>등록하기</button>}/>
+        :viewMode==='card'
+          ?<div className="grid-auto">
+            {items.map(item=>(
+              <div key={item.id} className="card">
+                <div className="flex justify-between items-center" style={{marginBottom:10}}>
+                  <div className="flex gap-8">
+                    <span className={`badge ${item.is_active?'badge-green':'badge-gray'}`}>{item.is_active?'활성':'비활성'}</span>
+                    <span className="badge badge-primary">{item.role}</span>
                   </div>
-                  <h3 style={{fontWeight:600,marginBottom:7,fontSize:'0.9rem'}}>{item.title}</h3>
-                  <div className="text-sm text-light" style={{display:'flex',flexDirection:'column',gap:3}}>
-                    {item.system_name&&<span>🎲 {item.system_name}</span>}
-                    {item.preferred_days?.length>0&&<span>📅 {item.preferred_days.join(', ')}요일</span>}
-                    {item.preferred_time&&<span>🕐 {item.preferred_time}</span>}
-                    {item.together_with&&<span>👥 {item.together_with}</span>}
+                  <div className="flex gap-8">
+                    <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
+                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
                   </div>
-                  {item.description&&<p className="text-sm" style={{marginTop:8,color:'var(--color-text-light)'}}>{item.description}</p>}
-                  {item.scenario_link&&<a href={item.scenario_link} target="_blank" rel="noreferrer" className="text-sm" style={{marginTop:7,display:'block',color:'var(--color-primary)'}}>🔗 시나리오 링크</a>}
                 </div>
-              ))}
-            </div>
-          : <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              {items.map(item=>(
-                <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
-                  <div className="flex gap-8" style={{flexShrink:0}}>
+                <h3 style={{fontWeight:600,marginBottom:7,fontSize:'0.9rem'}}>{item.title}</h3>
+                <div className="text-sm text-light" style={{display:'flex',flexDirection:'column',gap:3}}>
+                  {item.system_name&&<span>🎲 {item.system_name}</span>}
+                  {item.together_with&&<span>👤 {item.together_with}</span>}
+                </div>
+                {item.description&&<p className="text-sm" style={{marginTop:8,color:'var(--color-text-light)'}}>{item.description}</p>}
+                {item.scenario_link&&<a href={item.scenario_link} target="_blank" rel="noreferrer" className="text-sm" style={{marginTop:7,display:'block',color:'var(--color-primary)'}}>🔗 시나리오 링크</a>}
+              </div>
+            ))}
+          </div>
+          :<div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {items.map(item=>(
+              <div key={item.id} className="card card-sm">
+                <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
+                  <div className="flex gap-8" style={{flexShrink:0,paddingTop:2}}>
                     <span className={`badge ${item.is_active?'badge-green':'badge-gray'}`}>{item.is_active?'활성':'비활성'}</span>
                     <span className="badge badge-primary">{item.role}</span>
                   </div>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:600,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.title}</div>
-                    <div className="text-xs text-light flex gap-10">
+                    <div style={{fontWeight:600,fontSize:'0.9rem',marginBottom:5}}>{item.title}</div>
+                    <div className="text-xs text-light" style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:item.description||item.together_with?6:0}}>
                       {item.system_name&&<span>🎲 {item.system_name}</span>}
-                      {item.preferred_days?.length>0&&<span>📅 {item.preferred_days.join(', ')}요일</span>}
+                      {item.together_with&&<span>👤 {item.together_with}</span>}
                     </div>
+                    {item.description&&<p className="text-sm text-light">{item.description}</p>}
+                    {item.scenario_link&&<a href={item.scenario_link} target="_blank" rel="noreferrer" style={{fontSize:'0.78rem',color:'var(--color-primary)',marginTop:4,display:'block'}}>🔗 시나리오 링크</a>}
                   </div>
                   <div className="flex gap-8" style={{flexShrink:0}}>
                     <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
                     <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
       }
 
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'공수표 수정':'공수표 추가'}
@@ -106,14 +106,8 @@ export function AvailabilityPage() {
           </div>
           <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
         </div>
-        <div className="form-group"><label className="form-label">선호 요일</label>
-          <div className="flex gap-8" style={{flexWrap:'wrap'}}>
-            {DAYS.map(d=><button key={d} type="button" className={`btn btn-sm ${form.preferred_days?.includes(d)?'btn-primary':'btn-outline'}`} onClick={()=>toggleDay(d)} style={{minWidth:34,justifyContent:'center'}}>{d}</button>)}
-          </div>
-        </div>
-        <div className="form-group"><label className="form-label">선호 시간대</label><input className="form-input" placeholder="저녁 7시 이후..." value={form.preferred_time} onChange={set('preferred_time')}/></div>
         <div className="form-group"><label className="form-label">상세 내용</label><textarea className="form-textarea" value={form.description} onChange={set('description')} style={{minHeight:72}}/></div>
-        <div className="form-group"><label className="form-label">함께한 사람</label><input className="form-input" value={form.together_with||''} onChange={set('together_with')}/></div>
+        <div className="form-group"><label className="form-label">공수표 받은 사람</label><input className="form-input" placeholder="닉네임" value={form.together_with||''} onChange={set('together_with')}/></div>
         <div className="form-group"><label className="form-label">시나리오 링크 URL</label><input className="form-input" placeholder="https://..." value={form.scenario_link||''} onChange={set('scenario_link')}/></div>
         <div className="form-group"><label className="form-label">공개 상태</label>
           <select className="form-select" value={form.is_active?'active':'inactive'} onChange={e=>setForm(f=>({...f,is_active:e.target.value==='active'}))}>
