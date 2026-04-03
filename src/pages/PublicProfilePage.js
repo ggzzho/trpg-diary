@@ -207,6 +207,8 @@ export default function PublicProfilePage() {
       setBgmOn(true)
     }
   }
+
+  const toggleFav = async () => {
     if (!user) { alert('로그인 후 이용해주세요!'); return }
     setFavLoading(true)
     if (isFav) {
