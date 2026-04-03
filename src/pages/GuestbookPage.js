@@ -1,45 +1,55 @@
 // src/pages/GuestbookPage.js
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { guestbookApi, supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
+
+// 날짜+시간 포맷
+const fmtDT = (d) => {
+  const dt = new Date(d)
+  const date = dt.toLocaleDateString('ko-KR', { year:'2-digit', month:'numeric', day:'numeric' })
+  const time = dt.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
+  return `${date} ${time}`
+}
+
+const EMOJI_LIST = ['⭐','💖','🎲','🌙','🌸','🎭','🔮','🦋','🌟','🎪','🧩','🎵','🌈','🏆','💫']
 
 export function GuestbookPage({ ownerId }) {
   const { user, profile } = useAuth()
-  const [tab, setTab] = useState('message') // 'message' | 'mypage'
+  const [tab, setTab] = useState('message')
   const [messages, setMessages] = useState([])
   const [mypages, setMypages] = useState([])
   const [loading, setLoading] = useState(true)
-  const [msgForm, setMsgForm] = useState({ content: '', is_private: false })
+
+  // 방명록 폼
+  const [msgForm, setMsgForm] = useState({ content:'', is_private:false })
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [alreadyAdded, setAlreadyAdded] = useState(false)
 
-  const isOwner = user && ownerId && user.id === ownerId
+  // 내 페이지 남기기 폼 (방문자용)
+  const [pageForm, setPageForm] = useState({ nickname:'', url:'', avatar_url:'' })
+  const [pageSubmitting, setPageSubmitting] = useState(false)
+  const [pageSubmitted, setPageSubmitted] = useState(false)
+  const [pageFormOpen, setPageFormOpen] = useState(false)
+
+  // 오너 편집 상태
+  const [editingEmoji, setEditingEmoji] = useState(null) // mypage id
+
+  const isOwner = !!(user && ownerId && user.id === ownerId)
 
   const load = async () => {
     if (!ownerId) return
     setLoading(true)
     const { data: all } = await supabase
-      .from('guestbook')
-      .select('*')
-      .eq('owner_id', ownerId)
-      .order('created_at', { ascending: false })
-
-    const msgs = (all||[]).filter(g => g.type === 'message' || !g.type)
-    const pages = (all||[]).filter(g => g.type === 'mypage')
-    setMessages(msgs)
-    setMypages(pages)
-
-    // 이미 내 페이지 남겼는지 확인
-    if (user) {
-      const already = pages.some(p => p.author_id === user.id)
-      setAlreadyAdded(already)
-    }
+      .from('guestbook').select('*').eq('owner_id', ownerId)
+      .order('created_at', { ascending:false })
+    setMessages((all||[]).filter(g => g.type === 'message' || !g.type))
+    setMypages((all||[]).filter(g => g.type === 'mypage'))
     setLoading(false)
   }
 
   useEffect(() => { load() }, [ownerId, user])
 
+  // ── 방명록 남기기 ──
   const submitMessage = async () => {
     if (!msgForm.content.trim()) return
     setSubmitting(true)
@@ -51,29 +61,35 @@ export function GuestbookPage({ ownerId }) {
       is_private: msgForm.is_private,
       type: 'message',
     })
-    setMsgForm({ content: '', is_private: false })
-    setSubmitted(true)
-    setTimeout(() => setSubmitted(false), 2500)
-    load()
-    setSubmitting(false)
+    setMsgForm({ content:'', is_private:false })
+    setSubmitted(true); setTimeout(()=>setSubmitted(false), 2500)
+    load(); setSubmitting(false)
   }
 
+  // ── 내 페이지 남기기 (방문자가 직접 입력) ──
   const submitMyPage = async () => {
-    if (!user || !profile) { alert('로그인 후 이용해주세요!'); return }
-    if (alreadyAdded) { alert('이미 내 페이지를 남겼어요!'); return }
-    setSubmitting(true)
+    if (!pageForm.nickname.trim() || !pageForm.url.trim()) {
+      alert('닉네임과 링크(URL)는 필수예요!')
+      return
+    }
+    // URL에 /u/ 패턴 추출 or 그대로 사용
+    const usernameMatch = pageForm.url.match(/\/u\/([^/?#]+)/)
+    const authorUsername = usernameMatch ? usernameMatch[1] : null
+
+    setPageSubmitting(true)
     await supabase.from('guestbook').insert({
       owner_id: ownerId,
-      author_id: user.id,
-      author_name: profile.display_name || profile.username,
-      author_username: profile.username,
-      author_avatar_url: profile.avatar_url || null,
-      content: profile.display_name || profile.username,
+      author_id: user?.id || null,
+      author_name: pageForm.nickname.trim(),
+      author_username: authorUsername,
+      author_avatar_url: pageForm.avatar_url.trim() || null,
+      content: pageForm.url.trim(), // url을 content에 저장
       type: 'mypage',
     })
-    setAlreadyAdded(true)
-    load()
-    setSubmitting(false)
+    setPageForm({ nickname:'', url:'', avatar_url:'' })
+    setPageFormOpen(false)
+    setPageSubmitted(true); setTimeout(()=>setPageSubmitted(false), 3000)
+    load(); setPageSubmitting(false)
   }
 
   const removeEntry = async (id) => {
@@ -81,37 +97,42 @@ export function GuestbookPage({ ownerId }) {
     load()
   }
 
-  const fmtDate = (d) => new Date(d).toLocaleDateString('ko-KR', { year:'2-digit', month:'numeric', day:'numeric' })
+  // 오너가 이모지 추가
+  const addEmoji = async (id, emoji) => {
+    const item = mypages.find(p => p.id === id)
+    if (!item) return
+    const newName = item.author_name.startsWith(emoji)
+      ? item.author_name // 이미 있으면 제거
+      : `${emoji} ${item.author_name.replace(/^[\p{Emoji}\s]+/u, '').trim()}`
+    await supabase.from('guestbook').update({ author_name: newName }).eq('id', id)
+    setEditingEmoji(null); load()
+  }
 
   return (
-    <div style={{ marginTop: 0 }}>
+    <div>
       {/* 탭 */}
-      <div className="flex gap-8" style={{ marginBottom: 20 }}>
+      <div className="flex gap-8" style={{ marginBottom:20 }}>
         <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={()=>setTab('message')}>
           💌 방명록 ({messages.length})
         </button>
         <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={()=>setTab('mypage')}>
-          🔗 내 페이지 남기기 ({mypages.length})
+          🔗 페이지 목록 ({mypages.length})
         </button>
       </div>
 
-      {/* ── 방명록 ── */}
+      {/* ── 방명록 탭 ── */}
       {tab === 'message' && (
         <div>
           {/* 작성 폼 */}
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div className="form-group" style={{ marginBottom: 10 }}>
-              <textarea
-                className="form-textarea"
-                placeholder="방명록을 남겨보세요 💌"
-                value={msgForm.content}
-                onChange={e => setMsgForm(f => ({...f, content: e.target.value}))}
-                style={{ minHeight: 80 }}
+          <div className="card" style={{ marginBottom:16, padding:'16px 20px' }}>
+            <div className="form-group" style={{ marginBottom:10 }}>
+              <textarea className="form-textarea" placeholder="방명록을 남겨보세요 💌"
+                value={msgForm.content} onChange={e=>setMsgForm(f=>({...f,content:e.target.value}))} style={{ minHeight:80 }}
               />
             </div>
             <div className="flex justify-between items-center">
               <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.82rem', color:'var(--color-text-light)', cursor:'pointer' }}>
-                <input type="checkbox" checked={msgForm.is_private} onChange={e=>setMsgForm(f=>({...f,is_private:e.target.checked}))} />
+                <input type="checkbox" checked={msgForm.is_private} onChange={e=>setMsgForm(f=>({...f,is_private:e.target.checked}))}/>
                 🔒 비공개
               </label>
               <div className="flex items-center gap-10">
@@ -123,98 +144,163 @@ export function GuestbookPage({ ownerId }) {
             </div>
           </div>
 
-          {/* 목록 */}
-          {loading ? (
-            <div className="text-sm text-light" style={{textAlign:'center',padding:20}}>불러오는 중...</div>
-          ) : messages.length === 0 ? (
-            <div className="card" style={{textAlign:'center',padding:32,color:'var(--color-text-light)',fontSize:'0.85rem'}}>아직 방명록이 없어요</div>
-          ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              {messages.map(g => {
-                const isHidden = g.is_private && !isOwner && g.author_id !== user?.id
-                return (
-                  <div key={g.id} className="card card-sm">
-                    <div className="flex justify-between items-start" style={{ marginBottom: 6 }}>
-                      <div className="flex items-center gap-8">
-                        <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{g.author_name || '익명'}</span>
-                        {g.is_private && <span className="badge badge-gray" style={{fontSize:'0.62rem'}}>🔒 비공개</span>}
+          {/* 방명록 목록 */}
+          {loading
+            ? <div className="text-sm text-light" style={{textAlign:'center',padding:20}}>불러오는 중...</div>
+            : messages.length === 0
+              ? <div className="card" style={{textAlign:'center',padding:32,color:'var(--color-text-light)',fontSize:'0.85rem'}}>아직 방명록이 없어요</div>
+              : <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {messages.map(g => {
+                    const isHidden = g.is_private && !isOwner && g.author_id !== user?.id
+                    return (
+                      <div key={g.id} className="card" style={{ padding:'14px 20px' }}>
+                        <div className="flex justify-between items-start" style={{ marginBottom:8 }}>
+                          <div className="flex items-center gap-8">
+                            <span style={{ fontWeight:600, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
+                            {g.is_private && <span className="badge badge-gray" style={{fontSize:'0.62rem'}}>🔒 비공개</span>}
+                          </div>
+                          <div className="flex items-center gap-8">
+                            {/* 날짜 + 시간 */}
+                            <span className="text-xs text-light">{fmtDT(g.created_at)}</span>
+                            {(isOwner || g.author_id === user?.id) && (
+                              <button className="btn btn-ghost btn-sm" style={{color:'#e57373',padding:'1px 6px'}} onClick={()=>removeEntry(g.id)}>삭제</button>
+                            )}
+                          </div>
+                        </div>
+                        <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>
+                          {isHidden ? '🔒 비공개 메시지예요' : g.content}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-8">
-                        <span className="text-xs text-light">{fmtDate(g.created_at)}</span>
-                        {(isOwner || g.author_id === user?.id) && (
-                          <button className="btn btn-ghost btn-sm" style={{color:'#e57373',padding:'1px 6px'}} onClick={()=>removeEntry(g.id)}>삭제</button>
-                        )}
-                      </div>
-                    </div>
-                    <p style={{ fontSize:'0.85rem', color:'var(--color-text-light)', lineHeight:1.6, whiteSpace:'pre-wrap' }}>
-                      {isHidden ? '🔒 비공개 메시지예요' : g.content}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                    )
+                  })}
+                </div>
+          }
         </div>
       )}
 
-      {/* ── 내 페이지 남기기 ── */}
+      {/* ── 페이지 목록 탭 ── */}
       {tab === 'mypage' && (
         <div>
-          {/* 내 페이지 남기기 버튼 */}
-          {user && ownerId !== user.id && (
-            <div className="card" style={{ marginBottom: 16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize:'0.9rem', marginBottom: 3 }}>내 페이지 남기기</div>
-                <div className="text-xs text-light">이 페이지에 내 공개 페이지 링크를 남겨요</div>
-              </div>
-              {alreadyAdded ? (
-                <span className="text-sm" style={{color:'#558b2f'}}>✅ 이미 남겼어요</span>
-              ) : (
-                <button className="btn btn-primary btn-sm" onClick={submitMyPage} disabled={submitting}>
-                  {submitting ? '추가 중...' : '🔗 내 페이지 남기기'}
+          {/* 방문자 입력 폼 (오너 본인 제외) */}
+          {(!isOwner) && (
+            <div className="card" style={{ marginBottom:16, padding:'16px 20px' }}>
+              <div className="flex justify-between items-center" style={{ marginBottom: pageFormOpen ? 14 : 0 }}>
+                <div>
+                  <div style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:2 }}>🔗 내 페이지 남기기</div>
+                  <div className="text-xs text-light">이 페이지에 내 링크를 남겨요</div>
+                </div>
+                <button className={`btn btn-sm ${pageFormOpen ? 'btn-outline' : 'btn-primary'}`}
+                  onClick={() => setPageFormOpen(v => !v)}>
+                  {pageFormOpen ? '접기' : '+ 남기기'}
                 </button>
+              </div>
+
+              {pageFormOpen && (
+                <div style={{ borderTop:'1px solid var(--color-border)', paddingTop:14 }}>
+                  <div className="grid-2">
+                    <div className="form-group">
+                      <label className="form-label">닉네임 *</label>
+                      <input className="form-input" placeholder="표시될 이름" autoComplete="off"
+                        value={pageForm.nickname} onChange={e=>setPageForm(f=>({...f,nickname:e.target.value}))}/>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">페이지 URL *</label>
+                      <input className="form-input" placeholder="https://trpg-diary.vercel.app/u/..." autoComplete="off"
+                        value={pageForm.url} onChange={e=>setPageForm(f=>({...f,url:e.target.value}))}/>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">아바타 이미지 URL (선택)</label>
+                    <input className="form-input" placeholder="https://... (imgur 주소 등)" autoComplete="off"
+                      value={pageForm.avatar_url} onChange={e=>setPageForm(f=>({...f,avatar_url:e.target.value}))}/>
+                  </div>
+                  {pageForm.avatar_url && (
+                    <div style={{ marginBottom:10 }}>
+                      <img src={pageForm.avatar_url} alt="preview"
+                        style={{ width:40, height:40, borderRadius:'50%', objectFit:'cover', border:'2px solid var(--color-border)' }}
+                        onError={e=>{ e.target.style.display='none' }}/>
+                    </div>
+                  )}
+                  <div className="flex justify-end items-center gap-10">
+                    {pageSubmitted && <span className="text-sm" style={{color:'#558b2f'}}>✅ 남겼어요!</span>}
+                    <button className="btn btn-primary btn-sm" onClick={submitMyPage} disabled={pageSubmitting}>
+                      {pageSubmitting ? '등록 중...' : '등록하기'}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}
-          {!user && (
-            <div className="card" style={{ marginBottom: 16, textAlign:'center', padding:20, color:'var(--color-text-light)', fontSize:'0.85rem' }}>
-              로그인 후 내 페이지를 남길 수 있어요
+
+          {/* 오너: 등록된 목록 편집 안내 */}
+          {isOwner && (
+            <div style={{ marginBottom:12, padding:'8px 12px', borderRadius:8, background:'var(--color-nav-active-bg)', fontSize:'0.8rem', color:'var(--color-text-light)' }}>
+              💡 이모지 버튼으로 칩에 이모지를 추가하고, ✕로 삭제할 수 있어요
             </div>
           )}
 
-          {/* 남긴 페이지 목록 */}
-          {loading ? (
-            <div className="text-sm text-light" style={{textAlign:'center',padding:20}}>불러오는 중...</div>
-          ) : mypages.length === 0 ? (
-            <div className="card" style={{textAlign:'center',padding:32,color:'var(--color-text-light)',fontSize:'0.85rem'}}>아직 남긴 페이지가 없어요</div>
-          ) : (
-            <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
-              {mypages.map(g => (
-                <div key={g.id} style={{ position:'relative' }}>
-                  <a href={`/u/${g.author_username}`} target="_blank" rel="noreferrer"
-                    style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', borderRadius:100, background:'var(--color-nav-active-bg)', border:'1px solid var(--color-border)', textDecoration:'none', color:'var(--color-text)', transition:'all 0.15s' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background='var(--color-primary)';e.currentTarget.style.color='white';e.currentTarget.style.borderColor='var(--color-primary)'}}
-                    onMouseLeave={e=>{e.currentTarget.style.background='var(--color-nav-active-bg)';e.currentTarget.style.color='var(--color-text)';e.currentTarget.style.borderColor='var(--color-border)'}}
-                  >
-                    <div style={{ width:28, height:28, borderRadius:'50%', overflow:'hidden', background:'var(--color-primary)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.76rem', color:'white', fontWeight:700, flexShrink:0 }}>
-                      {g.author_avatar_url
-                        ? <img src={g.author_avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                        : (g.author_name||'?')[0]
-                      }
-                    </div>
-                    <span style={{ fontSize:'0.85rem', fontWeight:500 }}>{g.author_name}</span>
-                    <span style={{ fontSize:'0.72rem', opacity:0.7 }}>@{g.author_username}</span>
-                  </a>
-                  {(isOwner || g.author_id === user?.id) && (
-                    <button
-                      style={{ position:'absolute', top:-4, right:-4, width:18, height:18, borderRadius:'50%', background:'#e57373', border:'none', cursor:'pointer', fontSize:'0.6rem', color:'white', display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}
-                      onClick={()=>removeEntry(g.id)}
-                    >✕</button>
-                  )}
+          {/* 목록 */}
+          {loading
+            ? <div className="text-sm text-light" style={{textAlign:'center',padding:20}}>불러오는 중...</div>
+            : mypages.length === 0
+              ? <div className="card" style={{textAlign:'center',padding:32,color:'var(--color-text-light)',fontSize:'0.85rem'}}>아직 남긴 페이지가 없어요</div>
+              : <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
+                  {mypages.map(g => {
+                    const href = g.content?.startsWith('http') ? g.content
+                      : g.author_username ? `/u/${g.author_username}` : '#'
+                    return (
+                      <div key={g.id} style={{ position:'relative' }}>
+                        {/* 이모지 선택 팝업 (오너만) */}
+                        {isOwner && editingEmoji === g.id && (
+                          <div style={{ position:'absolute', bottom:'110%', left:0, zIndex:100, background:'var(--color-surface)', border:'1px solid var(--color-border)', borderRadius:10, padding:'8px 10px', boxShadow:'0 4px 20px rgba(0,0,0,0.15)', display:'flex', flexWrap:'wrap', gap:4, width:200 }}>
+                            {EMOJI_LIST.map(em => (
+                              <button key={em} onClick={()=>addEmoji(g.id, em)}
+                                style={{ background:'none', border:'none', cursor:'pointer', fontSize:'1.1rem', padding:'2px 4px', borderRadius:4 }}
+                                title={`이모지 추가: ${em}`}
+                              >{em}</button>
+                            ))}
+                            <button onClick={()=>setEditingEmoji(null)}
+                              style={{ marginTop:4, width:'100%', background:'none', border:'none', cursor:'pointer', fontSize:'0.72rem', color:'var(--color-text-light)' }}>닫기</button>
+                          </div>
+                        )}
+
+                        <a href={href} target="_blank" rel="noreferrer"
+                          style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', borderRadius:100, background:'var(--color-nav-active-bg)', border:'1px solid var(--color-border)', textDecoration:'none', color:'var(--color-text)', transition:'all 0.15s' }}
+                          onMouseEnter={e=>{e.currentTarget.style.background='var(--color-primary)';e.currentTarget.style.color='white';e.currentTarget.style.borderColor='var(--color-primary)'}}
+                          onMouseLeave={e=>{e.currentTarget.style.background='var(--color-nav-active-bg)';e.currentTarget.style.color='var(--color-text)';e.currentTarget.style.borderColor='var(--color-border)'}}
+                        >
+                          <div style={{ width:28, height:28, borderRadius:'50%', overflow:'hidden', background:'var(--color-primary)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.76rem', color:'white', fontWeight:700, flexShrink:0 }}>
+                            {g.author_avatar_url
+                              ? <img src={g.author_avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}
+                                  onError={e=>{e.target.style.display='none'}}/>
+                              : (g.author_name||'?').replace(/^[\p{Emoji}\s]+/u,'')[0] || '?'
+                            }
+                          </div>
+                          <span style={{ fontSize:'0.85rem', fontWeight:500 }}>{g.author_name}</span>
+                          {g.author_username && <span style={{ fontSize:'0.72rem', opacity:0.7 }}>@{g.author_username}</span>}
+                        </a>
+
+                        {/* 오너 편집 버튼들 */}
+                        {isOwner && (
+                          <div style={{ position:'absolute', top:-6, right:-6, display:'flex', gap:2 }}>
+                            <button onClick={()=>setEditingEmoji(editingEmoji===g.id?null:g.id)}
+                              style={{ width:18, height:18, borderRadius:'50%', background:'var(--color-accent)', border:'none', cursor:'pointer', fontSize:'0.58rem', color:'white', display:'flex', alignItems:'center', justifyContent:'center' }}
+                              title="이모지 추가">✦</button>
+                            <button onClick={()=>removeEntry(g.id)}
+                              style={{ width:18, height:18, borderRadius:'50%', background:'#e57373', border:'none', cursor:'pointer', fontSize:'0.6rem', color:'white', display:'flex', alignItems:'center', justifyContent:'center' }}
+                              title="삭제">✕</button>
+                          </div>
+                        )}
+                        {/* 본인이 남긴 경우 삭제 버튼 */}
+                        {!isOwner && g.author_id && g.author_id === user?.id && (
+                          <button onClick={()=>removeEntry(g.id)}
+                            style={{ position:'absolute', top:-4, right:-4, width:18, height:18, borderRadius:'50%', background:'#e57373', border:'none', cursor:'pointer', fontSize:'0.6rem', color:'white', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
-              ))}
-            </div>
-          )}
+          }
         </div>
       )}
     </div>
