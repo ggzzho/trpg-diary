@@ -68,8 +68,15 @@ export default function SchedulePage() {
   const saveBlocked = async () => {
     if (!blockedForm.scheduled_date) return
     const payload = { ...blockedForm, entry_type:'blocked', blocked_from:blockedForm.blocked_from||null, blocked_until:blockedForm.blocked_until||null }
-    if (editingBlocked) await schedulesApi.update(editingBlocked.id, payload)
-    else await schedulesApi.create({...payload, user_id:user.id})
+    let error
+    if (editingBlocked) {
+      const res = await schedulesApi.update(editingBlocked.id, payload)
+      error = res.error
+    } else {
+      const res = await schedulesApi.create({...payload, user_id:user.id})
+      error = res.error
+    }
+    if (error) { alert('저장 실패: ' + error.message); return }
     setBlockedModal(false); load()
   }
   const removeBlocked = async id => { await schedulesApi.remove(id); load() }
