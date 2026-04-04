@@ -109,7 +109,7 @@ function PublicCalendar({ schedules, blocked = [] }) {
 // ── 메인 컴포넌트 ──
 export default function PublicProfilePage() {
   const { username } = useParams()
-  const { user, profile: myProfile } = useAuth()
+  const { user, profile: myProfile, loading: authLoading } = useAuth()
   const [profile, setProfile] = useState(null)
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(true)
@@ -198,7 +198,8 @@ export default function PublicProfilePage() {
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
 
-      {/* 로그인 상태 표시 배지 */}
+      {/* 로그인 상태 표시 배지 - auth 로딩 완료 후 표시 */}
+      {!authLoading && (
       <div style={{
         position:'fixed', bottom:20, right:20, zIndex:9999,
         display:'flex', alignItems:'center', gap:8,
@@ -226,6 +227,7 @@ export default function PublicProfilePage() {
           </>
         )}
       </div>
+      )}
 
       {/* 프로필 카드 */}
       <div className="card" style={{ marginBottom:24, overflow:'visible', padding:0 }}>

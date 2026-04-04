@@ -149,7 +149,7 @@ export function GuestbookPublicView({ ownerId }) {
   const [myPage, setMyPage] = useState(1)
   const [myPerPage, setMyPerPage] = useState(10)
 
-  const [msgForm, setMsgForm] = useState({ content:'', is_private:false })
+  const [msgForm, setMsgForm] = useState({ nickname:'', content:'', is_private:false })
   const [msgSubmitting, setMsgSubmitting] = useState(false)
   const [msgDone, setMsgDone] = useState(false)
 
@@ -178,13 +178,14 @@ export function GuestbookPublicView({ ownerId }) {
 
   const submitMsg = async () => {
     if (!msgForm.content.trim()) return
+    const authorName = msgForm.nickname.trim() || profile?.display_name || profile?.username || '익명'
     setMsgSubmitting(true)
     await supabase.from('guestbook').insert({
       owner_id:ownerId, author_id:user?.id||null,
-      author_name: profile?.display_name || profile?.username || '익명',
+      author_name: authorName,
       content:msgForm.content.trim(), is_private:msgForm.is_private, type:'message',
     })
-    setMsgForm({ content:'', is_private:false })
+    setMsgForm({ nickname:'', content:'', is_private:false })
     setMsgDone(true); setTimeout(() => setMsgDone(false), 2500)
     load(); setMsgSubmitting(false)
   }
@@ -276,17 +277,25 @@ export function GuestbookPublicView({ ownerId }) {
       {tab === 'message' && (
         <div>
           <div className="card" style={{ marginBottom:16, padding:'16px 20px' }}>
+            <div style={{ marginBottom:8 }}>
+              <label className="form-label">닉네임 {!user && <span style={{color:'#e57373'}}>*</span>}</label>
+              <input className="form-input" autoComplete="off"
+                placeholder={user ? '비워두면 내 닉네임으로 등록돼요' : '닉네임을 입력해주세요 (필수)'}
+                value={msgForm.nickname}
+                onChange={e => setMsgForm(f => ({...f, nickname:e.target.value}))}/>
+            </div>
             <textarea className="form-textarea" placeholder="방명록을 남겨보세요 💌" autoComplete="off"
               value={msgForm.content} onChange={e => setMsgForm(f => ({...f, content:e.target.value}))}
               style={{ minHeight:80, marginBottom:10 }}/>
             <div className="flex justify-between items-center">
               <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.82rem', color:'var(--color-text-light)', cursor:'pointer' }}>
                 <input type="checkbox" checked={msgForm.is_private} onChange={e => setMsgForm(f => ({...f, is_private:e.target.checked}))}/>
-                🔒 비공개
+                🔒 비공개 (페이지 주인만 볼 수 있어요)
               </label>
               <div className="flex items-center gap-10">
                 {msgDone && <span className="text-sm" style={{ color:'#558b2f' }}>✅ 남겼어요!</span>}
-                <button className="btn btn-primary btn-sm" onClick={submitMsg} disabled={msgSubmitting || !msgForm.content.trim()}>
+                <button className="btn btn-primary btn-sm" onClick={submitMsg}
+                  disabled={msgSubmitting || !msgForm.content.trim() || (!user && !msgForm.nickname.trim())}>
                   {msgSubmitting ? '저장 중...' : '방명록 남기기'}
                 </button>
               </div>
