@@ -328,12 +328,13 @@ export function GuestbookPublicView({ ownerId }) {
     if (!form.content.trim()) return
     const authorName = form.nickname.trim() || profile?.display_name || profile?.username || '익명'
     setReplySubmitting(true)
-    await supabase.from('guestbook').insert({
+    const { error } = await supabase.from('guestbook').insert({
       owner_id:ownerId, author_id:user?.id||null,
       author_name: authorName,
       content: form.content.trim(), is_private: form.is_private,
       type:'message', parent_id: parentId,
     })
+    if (error) { alert('댓글 저장 실패: ' + error.message); setReplySubmitting(false); return }
     setReplyForms(f => ({...f, [parentId]: {nickname:'',content:'',is_private:false}}))
     setReplySubmitting(false); loadAll()
   }
@@ -608,12 +609,13 @@ function GuestbookOwnerView({ user }) {
     const form = getReplyForm(parentId)
     if (!form.content.trim()) return
     setReplySubmitting(true)
-    await supabase.from('guestbook').insert({
+    const { error } = await supabase.from('guestbook').insert({
       owner_id: user.id, author_id: user.id,
       author_name: form.nickname.trim() || '나',
       content: form.content.trim(), is_private: form.is_private,
       type:'message', parent_id: parentId,
     })
+    if (error) { alert('댓글 저장 실패: ' + error.message); setReplySubmitting(false); return }
     setReplyForms(f => ({...f, [parentId]: {nickname:'',content:'',is_private:false}}))
     setReplySubmitting(false); loadAll()
   }
