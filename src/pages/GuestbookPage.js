@@ -755,3 +755,235 @@ export function GuestbookPage({ ownerId }) {
   if (ownerId) return <GuestbookPublicView ownerId={ownerId}/>
   return <GuestbookOwnerView user={user}/>
 }
+
+// ── 문의/피드백 (관리자 전용) ──
+export function FeedbackPublicView({ ownerId }) {
+  const { user, profile, loading: authLoading } = useAuth()
+  const [items, setItems] = useState([])
+  const [allReplies, setAllReplies] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [form, setForm] = useState({ nickname:'', email:'', content:'', is_private:true })
+  const [submitting, setSubmitting] = useState(false)
+  const [done, setDone] = useState(false)
+  const [openReplies, setOpenReplies] = useState({})
+  const [replyForms, setReplyForms] = useState({})
+  const [replySubmitting, setReplySubmitting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
+
+  const isOwner = !!(user && ownerId && user.id === ownerId)
+
+  const loadAll = async () => {
+    if (!ownerId) return
+    const { data } = await supabase.from('guestbook').select('*')
+      .eq('owner_id', ownerId).eq('type', 'feedback').order('created_at', { ascending: false })
+    const all = data || []
+    setItems(all.filter(g => !g.parent_id))
+    setAllReplies(all.filter(g => !!g.parent_id))
+    setLoading(false)
+  }
+  useEffect(() => { loadAll() }, [ownerId, user])
+
+  const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId)
+
+  const submit = async () => {
+    if (!form.content.trim()) return
+    if (!authLoading && !user && !form.nickname.trim()) return
+    const authorName = form.nickname.trim() || profile?.display_name || profile?.username || '익명'
+    setSubmitting(true)
+    const { error } = await supabase.from('guestbook').insert({
+      owner_id: ownerId, author_id: user?.id || null,
+      author_name: authorName,
+      content: form.email.trim() ? `${form.content.trim()}\n\n📧 ${form.email.trim()}` : form.content.trim(),
+      is_private: form.is_private, type: 'feedback',
+    })
+    if (error) { alert('전송 실패: ' + error.message); setSubmitting(false); return }
+    setForm({ nickname:'', email:'', content:'', is_private:true })
+    setDone(true); setTimeout(() => setDone(false), 3000)
+    loadAll(); setSubmitting(false)
+  }
+
+  const removeEntry = async (id) => {
+    await supabase.from('guestbook').delete().eq('id', id)
+    loadAll()
+  }
+
+  const toggleReply = (id) => setOpenReplies(o => ({...o, [id]:!o[id]}))
+  const getReplyForm = (id) => replyForms[id] || { nickname:'', content:'', is_private:true }
+  const setReplyForm = (id, updater) => setReplyForms(f => ({...f, [id]: typeof updater==='function' ? updater(f[id]||{nickname:'',content:'',is_private:true}) : updater}))
+
+  const submitReply = async (parentId) => {
+    const rf = getReplyForm(parentId)
+    if (!rf.content.trim()) return
+    const authorName = rf.nickname.trim() || profile?.display_name || profile?.username || '익명'
+    setReplySubmitting(true)
+    const { error } = await supabase.from('guestbook').insert({
+      owner_id: ownerId, author_id: user?.id || null,
+      author_name: authorName,
+      content: rf.content.trim(), is_private: rf.is_private,
+      type: 'feedback', parent_id: parentId,
+    })
+    if (error) { alert('저장 실패: ' + error.message); setReplySubmitting(false); return }
+    setReplyForms(f => ({...f, [parentId]: {nickname:'',content:'',is_private:true}}))
+    setReplySubmitting(false); loadAll()
+  }
+
+  const paged = items.slice((page-1)*perPage, page*perPage)
+
+  return (
+    <div>
+      {/* 안내 배너 */}
+      <div style={{ padding:'14px 18px', borderRadius:10, background:'rgba(200,169,110,0.08)',
+        border:'1px solid var(--color-border)', marginBottom:20 }}>
+        <div style={{ fontWeight:700, fontSize:'0.9rem', marginBottom:4, display:'flex', alignItems:'center', gap:6 }}>
+          <Mi size="sm">support_agent</Mi> 문의/피드백 안내
+        </div>
+        <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)', lineHeight:1.7, margin:0 }}>
+          사이트 오류, 버그, 기능 개선 요청 등을 남겨주세요.<br/>
+          답장을 원하신다면 이메일 주소를 함께 남겨주시면 연락드릴게요.<br/>
+          <strong>문의는 기본 비공개로 처리됩니다.</strong>
+        </p>
+      </div>
+
+      {/* 입력 폼 */}
+      <div className="card" style={{ marginBottom:20, padding:'18px 20px' }}>
+        <div className="grid-2" style={{ marginBottom:8 }}>
+          <div className="form-group" style={{ margin:0 }}>
+            <label className="form-label">닉네임 {(!authLoading && !user) && <span style={{color:'#e57373'}}>*</span>}</label>
+            <input className="form-input" autoComplete="off"
+              placeholder={authLoading ? '로딩 중...' : user ? '비워두면 내 닉네임으로 등록돼요' : '닉네임 (필수)'}
+              value={form.nickname} onChange={e => setForm(f => ({...f, nickname:e.target.value}))}/>
+          </div>
+          <div className="form-group" style={{ margin:0 }}>
+            <label className="form-label">이메일 <span style={{ fontWeight:400, color:'var(--color-text-light)', fontSize:'0.78rem' }}>(선택 · 답장 원할 때)</span></label>
+            <input className="form-input" type="email" autoComplete="off"
+              placeholder="example@email.com"
+              value={form.email} onChange={e => setForm(f => ({...f, email:e.target.value}))}/>
+          </div>
+        </div>
+        <textarea className="form-textarea" placeholder="문의 내용을 입력해주세요..."
+          value={form.content} onChange={e => setForm(f => ({...f, content:e.target.value}))}
+          style={{ minHeight:100, marginBottom:10 }}/>
+        <div className="flex justify-between items-center">
+          <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.82rem', color:'var(--color-text-light)', cursor:'pointer' }}>
+            <input type="checkbox" checked={form.is_private} onChange={e => setForm(f => ({...f, is_private:e.target.checked}))}/>
+            <Mi size="sm" color="light">lock</Mi> 비공개 (기본값)
+          </label>
+          <div className="flex items-center gap-10">
+            {done && <span className="text-sm" style={{ color:'#558b2f' }}>✅ 문의가 접수됐어요!</span>}
+            <button className="btn btn-primary btn-sm" onClick={submit}
+              disabled={submitting || !form.content.trim() || (!authLoading && !user && !form.nickname.trim())}>
+              {submitting ? '전송 중...' : '문의 보내기'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 문의 목록 (비공개면 본인+주인만 보임) */}
+      {loading
+        ? <div className="text-sm text-light" style={{ textAlign:'center', padding:20 }}>불러오는 중...</div>
+        : items.length === 0
+          ? <div className="card" style={{ textAlign:'center', padding:32, color:'var(--color-text-light)', fontSize:'0.85rem' }}>
+              아직 접수된 문의가 없어요
+            </div>
+          : <>
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                {paged.map(g => {
+                  const hidden = g.is_private && !isOwner && g.author_id !== user?.id
+                  if (hidden) return null
+                  const replies = getReplies(g.id)
+                  const replyOpen = !!openReplies[g.id]
+                  const rf = getReplyForm(g.id)
+                  return (
+                    <div key={g.id} className="card" style={{ padding:'16px 20px' }}>
+                      <div className="flex justify-between items-center" style={{ marginBottom:10 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                          <div style={{ width:34, height:34, borderRadius:'50%', background:'var(--color-nav-active-bg)',
+                            display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700,
+                            fontSize:'0.85rem', color:'var(--color-accent)', flexShrink:0, border:'1px solid var(--color-border)' }}>
+                            {(g.author_name||'?')[0]}
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <span style={{ fontWeight:700, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
+                            {g.is_private && <Mi size="sm" color="light">lock</Mi>}
+                            <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>{new Date(g.created_at).toLocaleDateString('ko-KR', {year:'2-digit',month:'numeric',day:'numeric'}) + ' ' + new Date(g.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}</span>
+                          </div>
+                        </div>
+                        {(isOwner || g.author_id === user?.id) && (
+                          <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'2px 8px', fontSize:'0.75rem' }}
+                            onClick={() => setDeleteConfirm(g.id)}>삭제</button>
+                        )}
+                      </div>
+                      <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.75, whiteSpace:'pre-wrap', marginBottom:12, paddingLeft:44 }}>
+                        {g.content}
+                      </p>
+                      {/* 댓글 토글 */}
+                      <div style={{ paddingLeft:44 }}>
+                        <button style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none',
+                          cursor:'pointer', color:'var(--color-text-light)', fontSize:'0.78rem', padding:0 }}
+                          onClick={() => toggleReply(g.id)}>
+                          <Mi size="sm" color="light">chat_bubble_outline</Mi>
+                          {replies.length > 0 && <span>{replies.length}</span>}
+                        </button>
+                      </div>
+                      {/* 댓글 영역 */}
+                      {replyOpen && (
+                        <div style={{ marginTop:14, paddingLeft:16, borderLeft:'2px solid var(--color-border)' }}>
+                          {replies.map(r => (
+                            <div key={r.id} style={{ padding:'10px 0', borderBottom:'1px solid var(--color-border)' }}>
+                              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                  <div style={{ width:26, height:26, borderRadius:'50%', background:'var(--color-nav-active-bg)',
+                                    display:'flex', alignItems:'center', justifyContent:'center',
+                                    fontSize:'0.68rem', fontWeight:700, color:'var(--color-accent)', flexShrink:0,
+                                    border:'1px solid var(--color-border)' }}>
+                                    {(r.author_name||'?')[0]}
+                                  </div>
+                                  <span style={{ fontWeight:700, fontSize:'0.82rem' }}>{r.author_name || '익명'}</span>
+                                  {r.is_private && <Mi size="sm" color="light">lock</Mi>}
+                                  <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)' }}>{new Date(r.created_at).toLocaleDateString('ko-KR',{year:'2-digit',month:'numeric',day:'numeric'})}</span>
+                                </div>
+                                {(isOwner || r.author_id === user?.id) && (
+                                  <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px', fontSize:'0.72rem' }}
+                                    onClick={() => setDeleteConfirm(r.id)}>삭제</button>
+                                )}
+                              </div>
+                              <p style={{ fontSize:'0.84rem', color:'var(--color-text-light)', lineHeight:1.65, whiteSpace:'pre-wrap', paddingLeft:34 }}>{r.content}</p>
+                            </div>
+                          ))}
+                          <div style={{ marginTop:12 }}>
+                            <input className="form-input" autoComplete="off"
+                              placeholder={user ? '비워두면 내 닉네임으로 등록돼요' : '닉네임 (필수)'}
+                              value={rf.nickname} onChange={e => setReplyForm(g.id, f => ({...f, nickname:e.target.value}))}
+                              style={{ fontSize:'0.82rem', marginBottom:6 }}/>
+                            <textarea className="form-textarea" placeholder="답변을 남겨보세요..."
+                              value={rf.content} onChange={e => setReplyForm(g.id, f => ({...f, content:e.target.value}))}
+                              style={{ minHeight:52, fontSize:'0.84rem', marginBottom:8 }}/>
+                            <div className="flex justify-between items-center">
+                              <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.78rem', color:'var(--color-text-light)', cursor:'pointer' }}>
+                                <input type="checkbox" checked={rf.is_private} onChange={e => setReplyForm(g.id, f => ({...f, is_private:e.target.checked}))}/>
+                                <Mi size="sm" color="light">lock</Mi> 비공개
+                              </label>
+                              <button className="btn btn-primary btn-sm" style={{ fontSize:'0.78rem' }}
+                                onClick={() => submitReply(g.id)}
+                                disabled={replySubmitting || !rf.content.trim()}>
+                                {replySubmitting ? '등록 중...' : '답변 등록'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <Pagination total={items.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+            </>
+      }
+
+      <DeleteConfirm isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => removeEntry(deleteConfirm)} message="이 항목을 삭제하시겠어요?"/>
+    </div>
+  )
+}

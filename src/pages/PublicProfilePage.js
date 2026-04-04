@@ -1,10 +1,10 @@
 // src/pages/PublicProfilePage.js
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
-import { GuestbookPublicView } from './GuestbookPage'
+import { GuestbookPublicView, FeedbackPublicView } from './GuestbookPage'
 import { LogDetailContent } from './PlayLogPage'
 import { FOOTER_TEXT, Modal } from '../components/Layout'
 import { Mi } from '../components/Mi'
@@ -109,12 +109,13 @@ function PublicCalendar({ schedules, blocked = [] }) {
 // ── 메인 컴포넌트 ──
 export default function PublicProfilePage() {
   const { username } = useParams()
+  const [searchParams] = useSearchParams()
   const { user, profile: myProfile, loading: authLoading } = useAuth()
   const [profile, setProfile] = useState(null)
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [activeTab, setActiveTab] = useState('schedules')
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'schedules')
   const [selectedLog, setSelectedLog] = useState(null)
   const [pairSort, setPairSort] = useState('asc')
   const [rulebookExpanded, setRulebookExpanded] = useState({})
@@ -188,6 +189,7 @@ export default function PublicProfilePage() {
     { key:'scenarios', label:'시나리오', icon:'description', count:data.scenarios?.length },
     { key:'pairs', label:'페어', icon:'people', count:data.pairs?.length },
     { key:'guestbook', label:'방명록', icon:'mail' },
+    ...(profile?.is_admin ? [{ key:'feedback', label:'문의/피드백', icon:'support_agent' }] : []),
   ]
 
   const sortedPairs = [...(data.pairs||[])].sort((a,b) => {
@@ -524,6 +526,9 @@ export default function PublicProfilePage() {
 
       {/* ── 방명록 ── */}
       {activeTab==='guestbook' && <GuestbookPublicView ownerId={profile.id}/>}
+
+      {/* ── 문의/피드백 (관리자 페이지만) ── */}
+      {activeTab==='feedback' && profile?.is_admin && <FeedbackPublicView ownerId={profile.id}/>}
 
       {/* 푸터 */}
       <footer style={{ marginTop:60, paddingTop:20, paddingBottom:20, borderTop:'1px solid var(--color-border)', textAlign:'center', color:'var(--color-text-light)', fontSize:'0.72rem' }}>

@@ -55,6 +55,10 @@ export function Layout({ children }) {
               <span className="nav-icon"><span className="ms">open_in_new</span></span>내 공개 페이지
             </a>
           )}
+          <a href="https://trpg-diary.co.kr/u/trpg00_Z?tab=feedback" target="_blank" rel="noreferrer" className="nav-item"
+            style={{ marginTop:4 }}>
+            <span className="nav-icon"><span className="ms">support_agent</span></span>문의하기
+          </a>
         </nav>
         <div className="sidebar-user">
           <div className="sidebar-user-info">
