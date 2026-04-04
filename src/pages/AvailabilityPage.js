@@ -107,7 +107,7 @@ export function AvailabilityPage() {
           <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
         </div>
         <div className="form-group"><label className="form-label">상세 내용</label><textarea className="form-textarea" value={form.description} onChange={set('description')} style={{minHeight:72}}/></div>
-        <div className="form-group"><label className="form-label">공수표 받은 사람</label><input className="form-input" placeholder="닉네임" value={form.together_with||''} onChange={set('together_with')}/></div>
+        <div className="form-group"><label className="form-label">받는 사람</label><input className="form-input" placeholder="닉네임" value={form.together_with||''} onChange={set('together_with')}/></div>
         <div className="form-group"><label className="form-label">시나리오 링크 URL</label><input className="form-input" placeholder="https://..." value={form.scenario_link||''} onChange={set('scenario_link')}/></div>
         <div className="form-group"><label className="form-label">공개 상태</label>
           <select className="form-select" value={form.is_active?'active':'inactive'} onChange={e=>setForm(f=>({...f,is_active:e.target.value==='active'}))}>

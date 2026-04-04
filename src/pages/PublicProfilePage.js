@@ -53,35 +53,39 @@ function PublicCalendar({ schedules }) {
     const today = isToday(d)
     rows.push(
       <div key={dStr} style={{
-        minHeight:64, padding:'4px 5px', borderRadius:7,
+        minHeight:54, padding:'3px 4px', borderRadius:6,
         background: today ? 'var(--color-primary)' : inMonth ? 'var(--color-surface)' : 'transparent',
         border: today ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
-        opacity: inMonth ? 1 : 0.35,
+        opacity: inMonth ? 1 : 0.3,
       }}>
-        <div style={{ fontSize:'0.68rem', fontWeight: today?700:500, color: today?'white':'var(--color-text-light)', marginBottom:3 }}>{format(d,'d')}</div>
+        <div style={{ fontSize:'0.65rem', fontWeight: today?700:500, color: today?'white':'var(--color-text-light)', marginBottom:2 }}>{format(d,'d')}</div>
         {dayScheds.map((s,i)=>(
-          <div key={i} style={{ fontSize:'0.6rem', background:'var(--color-accent)', color:'white', borderRadius:3, padding:'1px 4px', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.title}</div>
+          <div key={i} style={{ fontSize:'0.55rem', background:'var(--color-accent)', color:'white', borderRadius:3, padding:'1px 3px', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {s.scheduled_time ? `${s.scheduled_time.slice(0,5)} ` : ''}{s.title}
+          </div>
         ))}
       </div>
     )
     day = addDays(day,1)
   }
   return (
-    <div className="card">
-      <div className="flex justify-between items-center" style={{ marginBottom:14 }}>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setCal(subMonths(cal,1))}><Mi size="sm">chevron_left</Mi></button>
-        <span className="text-serif" style={{ fontWeight:700, color:'var(--color-accent)' }}>{format(cal,'yyyy년 M월',{locale:ko})}</span>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}><Mi size="sm">chevron_right</Mi></button>
+    <div className="card" style={{ overflowX:'auto' }}>
+      <div style={{ minWidth:280 }}>
+        <div className="flex justify-between items-center" style={{ marginBottom:12 }}>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setCal(subMonths(cal,1))}><Mi size="sm">chevron_left</Mi></button>
+          <span className="text-serif" style={{ fontWeight:700, color:'var(--color-accent)', fontSize:'0.95rem' }}>{format(cal,'yyyy년 M월',{locale:ko})}</span>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}><Mi size="sm">chevron_right</Mi></button>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:4 }}>
+          {['일','월','화','수','목','금','토'].map((d,i) => (
+            <div key={d} style={{
+              textAlign:'center', fontSize:'0.62rem', fontWeight:600,
+              color: i===0 ? '#e57373' : i===6 ? '#6b8cba' : 'var(--color-text-light)', padding:'2px 0'
+            }}>{d}</div>
+          ))}
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2 }}>{rows}</div>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:6 }}>
-        {['일','월','화','수','목','금','토'].map((d,i) => (
-          <div key={d} style={{
-            textAlign:'center', fontSize:'0.65rem', fontWeight:600,
-            color: i===0 ? '#e57373' : i===6 ? '#6b8cba' : 'var(--color-text-light)', padding:'3px 0'
-          }}>{d}</div>
-        ))}
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2 }}>{rows}</div>
     </div>
   )
 }

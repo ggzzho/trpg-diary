@@ -1,5 +1,5 @@
 // src/pages/GuestbookPage.js
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Mi } from '../components/Mi'
 import { supabase } from '../lib/supabase'
@@ -19,6 +19,50 @@ const parseEntry = (g) => {
     return { url: raw.slice(0, idx), memo: raw.slice(idx + 3) }
   }
   return { url: raw, memo: '' }
+}
+
+// ── 페이지네이션 컴포넌트 ──
+function Pagination({ total, perPage, page, onPage, onPerPage }) {
+  const totalPages = Math.ceil(total / perPage)
+  if (total === 0) return null
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, marginTop:14 }}>
+      {/* 개수 필터 */}
+      <div style={{ display:'flex', gap:5 }}>
+        {[10, 20, 30].map(n => (
+          <button key={n} className={`btn btn-sm ${perPage===n?'btn-primary':'btn-outline'}`}
+            onClick={() => { onPerPage(n); onPage(1) }}
+            style={{ fontSize:'0.72rem', padding:'3px 10px' }}>
+            {n}개
+          </button>
+        ))}
+      </div>
+      {/* 페이지 번호 */}
+      {totalPages > 1 && (
+        <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => onPage(p => Math.max(1,p-1))} disabled={page===1}>
+            <Mi size="sm">chevron_left</Mi>
+          </button>
+          {Array.from({ length: totalPages }, (_,i) => i+1)
+            .filter(n => n===1 || n===totalPages || Math.abs(n-page)<=1)
+            .reduce((acc,n,i,arr) => {
+              if (i>0 && n-arr[i-1]>1) acc.push('...')
+              acc.push(n)
+              return acc
+            }, [])
+            .map((n,i) => n==='...'
+              ? <span key={`e${i}`} style={{ padding:'0 4px', color:'var(--color-text-light)', fontSize:'0.8rem' }}>…</span>
+              : <button key={n} className={`btn btn-sm ${page===n?'btn-primary':'btn-outline'}`}
+                  onClick={() => onPage(n)} style={{ minWidth:30, padding:'3px 6px', fontSize:'0.78rem' }}>{n}</button>
+            )
+          }
+          <button className="btn btn-ghost btn-sm" onClick={() => onPage(p => Math.min(totalPages,p+1))} disabled={page===totalPages}>
+            <Mi size="sm">chevron_right</Mi>
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // 친구 페이지 칩 컴포넌트
@@ -100,6 +144,10 @@ export function GuestbookPublicView({ ownerId }) {
   const [messages, setMessages] = useState([])
   const [mypages, setMypages] = useState([])
   const [loading, setLoading] = useState(true)
+  const [msgPage, setMsgPage] = useState(1)
+  const [msgPerPage, setMsgPerPage] = useState(10)
+  const [myPage, setMyPage] = useState(1)
+  const [myPerPage, setMyPerPage] = useState(10)
 
   const [msgForm, setMsgForm] = useState({ content:'', is_private:false })
   const [msgSubmitting, setMsgSubmitting] = useState(false)
@@ -248,31 +296,39 @@ export function GuestbookPublicView({ ownerId }) {
             ? <div className="text-sm text-light" style={{ textAlign:'center', padding:20 }}>불러오는 중...</div>
             : messages.length === 0
               ? <div className="card" style={{ textAlign:'center', padding:32, color:'var(--color-text-light)', fontSize:'0.85rem' }}>아직 방명록이 없어요</div>
-              : <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                  {messages.map(g => {
-                    const hidden = g.is_private && !isOwner && g.author_id !== user?.id
-                    return (
-                      <div key={g.id} className="card" style={{ padding:'14px 20px' }}>
-                        <div className="flex justify-between items-start" style={{ marginBottom:8 }}>
-                          <div className="flex items-center gap-8">
-                            <span style={{ fontWeight:600, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
-                            {g.is_private && <span className="badge badge-gray" style={{ fontSize:'0.62rem' }}>🔒 비공개</span>}
-                          </div>
-                          <div className="flex items-center gap-8">
-                            <span className="text-xs text-light">{fmtDT(g.created_at)}</span>
-                            {(isOwner || g.author_id === user?.id) && (
-                              <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px' }}
-                                onClick={() => removeEntry(g.id)}>삭제</button>
-                            )}
-                          </div>
-                        </div>
-                        <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>
-                          {hidden ? '🔒 비공개 메시지예요' : g.content}
-                        </p>
+              : (() => {
+                  const pagedMsgs = messages.slice((msgPage-1)*msgPerPage, msgPage*msgPerPage)
+                  return (
+                    <>
+                      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                        {pagedMsgs.map(g => {
+                          const hidden = g.is_private && !isOwner && g.author_id !== user?.id
+                          return (
+                            <div key={g.id} className="card" style={{ padding:'14px 20px' }}>
+                              <div className="flex justify-between items-start" style={{ marginBottom:8 }}>
+                                <div className="flex items-center gap-8">
+                                  <span style={{ fontWeight:600, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
+                                  {g.is_private && <span className="badge badge-gray" style={{ fontSize:'0.62rem' }}>🔒 비공개</span>}
+                                </div>
+                                <div className="flex items-center gap-8">
+                                  <span className="text-xs text-light">{fmtDT(g.created_at)}</span>
+                                  {(isOwner || g.author_id === user?.id) && (
+                                    <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px' }}
+                                      onClick={() => removeEntry(g.id)}>삭제</button>
+                                  )}
+                                </div>
+                              </div>
+                              <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>
+                                {hidden ? '🔒 비공개 메시지예요' : g.content}
+                              </p>
+                            </div>
+                          )
+                        })}
                       </div>
-                    )
-                  })}
-                </div>
+                      <Pagination total={messages.length} perPage={msgPerPage} page={msgPage} onPage={setMsgPage} onPerPage={setMsgPerPage}/>
+                    </>
+                  )
+                })()
           }
         </div>
       )}
@@ -343,12 +399,20 @@ export function GuestbookPublicView({ ownerId }) {
             ? <div className="text-sm text-light" style={{ textAlign:'center', padding:20 }}>불러오는 중...</div>
             : mypages.length === 0
               ? <div className="card" style={{ textAlign:'center', padding:32, color:'var(--color-text-light)', fontSize:'0.85rem' }}>아직 남긴 페이지가 없어요</div>
-              : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:8 }}>
-                  {mypages.map(g => (
-                    <FriendChip key={g.id} g={g} isOwner={isOwner} userId={user?.id}
-                      onEdit={openEdit} onRemove={removeEntry}/>
-                  ))}
-                </div>
+              : (() => {
+                  const pagedMy = mypages.slice((myPage-1)*myPerPage, myPage*myPerPage)
+                  return (
+                    <>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:8 }}>
+                        {pagedMy.map(g => (
+                          <FriendChip key={g.id} g={g} isOwner={isOwner} userId={user?.id}
+                            onEdit={openEdit} onRemove={removeEntry}/>
+                        ))}
+                      </div>
+                      <Pagination total={mypages.length} perPage={myPerPage} page={myPage} onPage={setMyPage} onPerPage={setMyPerPage}/>
+                    </>
+                  )
+                })()
           }
         </div>
       )}
@@ -367,6 +431,10 @@ function GuestbookOwnerView({ user }) {
   const [tab, setTab] = useState('message')
   const [editingItem, setEditingItem] = useState(null)
   const [editForm, setEditForm] = useState({ nickname:'', memo:'' })
+  const [msgPage, setMsgPage] = useState(1)
+  const [msgPerPage, setMsgPerPage] = useState(10)
+  const [myPage, setMyPage] = useState(1)
+  const [myPerPage, setMyPerPage] = useState(10)
 
   const load = async () => {
     if (!user?.id) return
@@ -451,6 +519,7 @@ function GuestbookOwnerView({ user }) {
         </button>
       </div>
 
+
       {tab === 'message' && (
         loading
           ? <div className="text-sm text-light" style={{ textAlign:'center', padding:40 }}>불러오는 중...</div>
@@ -458,26 +527,34 @@ function GuestbookOwnerView({ user }) {
             ? <div className="card" style={{ textAlign:'center', padding:40, color:'var(--color-text-light)', fontSize:'0.85rem' }}>
                 아직 방명록이 없어요.<br/><span style={{ fontSize:'0.8rem' }}>공개 페이지 링크를 공유하면 방문자들이 남길 수 있어요!</span>
               </div>
-            : <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                {messages.map(g => (
-                  <div key={g.id} className="card" style={{ padding:'14px 20px' }}>
-                    <div className="flex justify-between items-start" style={{ marginBottom:8 }}>
-                      <div className="flex items-center gap-8">
-                        <span style={{ fontWeight:600, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
-                        {g.is_private && <span className="badge badge-gray" style={{ fontSize:'0.62rem' }}>🔒 비공개</span>}
-                      </div>
-                      <div className="flex items-center gap-8">
-                        <span className="text-xs text-light">{fmtDT(g.created_at)}</span>
-                        <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px' }}
-                          onClick={() => removeEntry(g.id)}>삭제</button>
-                      </div>
+            : (() => {
+                const pagedMsgs = messages.slice((msgPage-1)*msgPerPage, msgPage*msgPerPage)
+                return (
+                  <>
+                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                      {pagedMsgs.map(g => (
+                        <div key={g.id} className="card" style={{ padding:'14px 20px' }}>
+                          <div className="flex justify-between items-start" style={{ marginBottom:8 }}>
+                            <div className="flex items-center gap-8">
+                              <span style={{ fontWeight:600, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
+                              {g.is_private && <span className="badge badge-gray" style={{ fontSize:'0.62rem' }}>🔒 비공개</span>}
+                            </div>
+                            <div className="flex items-center gap-8">
+                              <span className="text-xs text-light">{fmtDT(g.created_at)}</span>
+                              <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px' }}
+                                onClick={() => removeEntry(g.id)}>삭제</button>
+                            </div>
+                          </div>
+                          <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>
+                            {g.is_private ? '🔒 비공개 메시지' : g.content}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                    <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>
-                      {g.is_private ? '🔒 비공개 메시지' : g.content}
-                    </p>
-                  </div>
-                ))}
-              </div>
+                    <Pagination total={messages.length} perPage={msgPerPage} page={msgPage} onPage={setMsgPage} onPerPage={setMsgPerPage}/>
+                  </>
+                )
+              })()
       )}
 
       {tab === 'mypage' && (
@@ -494,12 +571,20 @@ function GuestbookOwnerView({ user }) {
               ? <div className="card" style={{ textAlign:'center', padding:40, color:'var(--color-text-light)', fontSize:'0.85rem' }}>
                   아직 남긴 페이지가 없어요.<br/><span style={{ fontSize:'0.8rem' }}>방문자들이 공개 페이지에서 링크를 남길 수 있어요!</span>
                 </div>
-              : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:8 }}>
-                  {mypages.map(g => (
-                    <FriendChip key={g.id} g={g} isOwner={true} userId={user?.id}
-                      onEdit={openEdit} onRemove={removeEntry}/>
-                  ))}
-                </div>
+              : (() => {
+                  const pagedMy = mypages.slice((myPage-1)*myPerPage, myPage*myPerPage)
+                  return (
+                    <>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:8 }}>
+                        {pagedMy.map(g => (
+                          <FriendChip key={g.id} g={g} isOwner={true} userId={user?.id}
+                            onEdit={openEdit} onRemove={removeEntry}/>
+                        ))}
+                      </div>
+                      <Pagination total={mypages.length} perPage={myPerPage} page={myPage} onPage={setMyPage} onPerPage={setMyPerPage}/>
+                    </>
+                  )
+                })()
           }
         </div>
       )}
@@ -507,8 +592,6 @@ function GuestbookOwnerView({ user }) {
   )
 }
 
-// GuestbookPage: ownerId 있으면 공개뷰, 없으면 오너뷰 — Hook 규칙 준수
-export function GuestbookPage({ ownerId }) {
   const { user } = useAuth()
   if (ownerId) return <GuestbookPublicView ownerId={ownerId}/>
   return <GuestbookOwnerView user={user}/>
