@@ -343,7 +343,7 @@ export function GuestbookPublicView({ ownerId }) {
             ? <div className="text-sm text-light" style={{ textAlign:'center', padding:20 }}>불러오는 중...</div>
             : mypages.length === 0
               ? <div className="card" style={{ textAlign:'center', padding:32, color:'var(--color-text-light)', fontSize:'0.85rem' }}>아직 남긴 페이지가 없어요</div>
-              : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:8 }}>
                   {mypages.map(g => (
                     <FriendChip key={g.id} g={g} isOwner={isOwner} userId={user?.id}
                       onEdit={openEdit} onRemove={removeEntry}/>
@@ -494,7 +494,7 @@ function GuestbookOwnerView({ user }) {
               ? <div className="card" style={{ textAlign:'center', padding:40, color:'var(--color-text-light)', fontSize:'0.85rem' }}>
                   아직 남긴 페이지가 없어요.<br/><span style={{ fontSize:'0.8rem' }}>방문자들이 공개 페이지에서 링크를 남길 수 있어요!</span>
                 </div>
-              : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:8 }}>
                   {mypages.map(g => (
                     <FriendChip key={g.id} g={g} isOwner={true} userId={user?.id}
                       onEdit={openEdit} onRemove={removeEntry}/>

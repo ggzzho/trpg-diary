@@ -45,6 +45,7 @@ export default function SchedulePage() {
   const [copyTarget, setCopyTarget] = useState(null)
   const [copyMode, setCopyMode] = useState('copy')
   const [copyDate, setCopyDate] = useState('')
+  const [search, setSearch] = useState('')
 
   const load = async () => { const {data}=await schedulesApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
@@ -77,10 +78,12 @@ export default function SchedulePage() {
 
   // 탭별 필터 - 예정: 완료 숨김
   const filtered = items.filter(i => {
-    if (filter==='upcoming') return i.scheduled_date>=today && i.status!=='cancelled' && i.status!=='completed'
-    if (filter==='completed') return i.status==='completed'
-    if (filter==='cancelled') return i.status==='cancelled'
-    return true
+    const matchTab = filter==='upcoming' ? (i.scheduled_date>=today && i.status!=='cancelled' && i.status!=='completed')
+      : filter==='completed' ? i.status==='completed'
+      : filter==='cancelled' ? i.status==='cancelled'
+      : true
+    const matchSearch = !search || i.title?.includes(search) || i.system_name?.includes(search) || i.location?.includes(search)
+    return matchTab && matchSearch
   }).sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date))
 
   const summaryStats = useMemo(() => {
@@ -235,6 +238,10 @@ export default function SchedulePage() {
       <div className="page-header flex justify-between items-center">
         <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>calendar_month</Mi>일정 관리</h1><p className="page-subtitle">예정된 세션과 지나간 플레이 일정을 관리해요</p></div>
         <button className="btn btn-primary" onClick={()=>openNew()}><Mi size='sm' color='white'>add</Mi> 일정 추가</button>
+      </div>
+      <div style={{marginBottom:12}}>
+        <input className="form-input" placeholder="🔍 제목, 룰, 장소로 검색..." value={search}
+          onChange={e=>setSearch(e.target.value)} autoComplete="off" style={{maxWidth:320}}/>
       </div>
       <div className="flex justify-between items-center" style={{marginBottom:18,flexWrap:'wrap',gap:8}}>
         {viewMode!=='summary'&&(

@@ -49,19 +49,24 @@ function getYoutubeInfo(url) {
   return null
 }
 
-// ── BGM 플레이어 컴포넌트 (YouTube IFrame API 방식) ──
-// YouTube IFrame API를 안전하게 로드하는 전역 유틸
-function loadYouTubeAPI(callback) {
+// ── BGM: 라공 에디션과 동일한 전역 방식 ──
+// React 컴포넌트 외부에 전역으로 선언 (클로저 이슈 방지)
+let _bgmPlayer = null
+let _bgmPlayerReady = false
+let _bgmReadyCallbacks = []
+
+// YT API 로드 완료 시 전역 콜백 (라공 에디션과 동일)
+window.onYouTubeIframeAPIReady = function() {
+  _bgmReadyCallbacks.forEach(cb => { try { cb() } catch(e) {} })
+  _bgmReadyCallbacks = []
+}
+
+function ensureYouTubeAPI(callback) {
   if (window.YT && window.YT.Player) {
     callback()
     return
   }
-  // 이미 다른 콜백이 등록돼 있으면 체이닝
-  const prev = window.onYouTubeIframeAPIReady
-  window.onYouTubeIframeAPIReady = () => {
-    if (prev) prev()
-    callback()
-  }
+  _bgmReadyCallbacks.push(callback)
   if (!document.getElementById('yt-iframe-api')) {
     const script = document.createElement('script')
     script.id = 'yt-iframe-api'
@@ -75,46 +80,63 @@ function BgmPlayer({ bgmUrl }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [userInteracted, setUserInteracted] = useState(false)
   const [showNotice, setShowNotice] = useState(false)
-  const playerRef = useRef(null)
-  const divIdRef = useRef(`bgm-yt-${Date.now()}`)
+  const setReadyRef = useRef(setPlayerReady)
+  const setPlayingRef = useRef(setIsPlaying)
+  const setNoticeRef = useRef(setShowNotice)
   const info = getYoutubeInfo(bgmUrl)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    setReadyRef.current = setPlayerReady
+    setPlayingRef.current = setIsPlaying
+    setNoticeRef.current = setShowNotice
+  })
 
   useEffect(() => {
     if (!info) return
+    mountedRef.current = true
 
-    // 숨겨진 div 생성
-    let div = document.getElementById(divIdRef.current)
+    // 기존 플레이어 제거
+    if (_bgmPlayer) { try { _bgmPlayer.destroy() } catch {} _bgmPlayer = null }
+    _bgmPlayerReady = false
+
+    // 플레이어 div 생성
+    const divId = 'bgm-yt-player'
+    let div = document.getElementById(divId)
     if (!div) {
       div = document.createElement('div')
-      div.id = divIdRef.current
-      div.style.cssText = 'position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;'
+      div.id = divId
+      div.style.cssText = 'display:none;'
       document.body.appendChild(div)
     }
 
     const playerVars = {
       autoplay: 0, controls: 0, showinfo: 0, rel: 0,
       iv_load_policy: 3, enablejsapi: 1, modestbranding: 1, fs: 0,
+      cc_load_policy: 0, disablekb: 1,
       origin: window.location.origin,
     }
 
     const initPlayer = () => {
-      if (playerRef.current) { try { playerRef.current.destroy() } catch {} }
-
+      if (!mountedRef.current) return
       const config = {
-        height: '1', width: '1',
+        height: '0', width: '0',
         playerVars: info.type === 'playlist'
           ? { ...playerVars, listType:'playlist', list:info.listId }
           : playerVars,
         events: {
           onReady: (e) => {
-            playerRef.current = e.target
+            if (!mountedRef.current) return
+            _bgmPlayer = e.target
+            _bgmPlayerReady = true
             try { e.target.setVolume(30) } catch {}
-            setPlayerReady(true)
-            setShowNotice(true)
+            setReadyRef.current(true)
+            setNoticeRef.current(true)
           },
           onStateChange: (e) => {
-            if (!window.YT) return
-            setIsPlaying(e.data === window.YT.PlayerState.PLAYING)
+            if (!mountedRef.current || !window.YT) return
+            setPlayingRef.current(e.data === window.YT.PlayerState.PLAYING)
+            // 단일곡 반복
             if (e.data === window.YT.PlayerState.ENDED && info.type !== 'playlist') {
               try { e.target.seekTo(0); e.target.playVideo() } catch {}
             }
@@ -123,27 +145,24 @@ function BgmPlayer({ bgmUrl }) {
         }
       }
       if (info.type !== 'playlist') config.videoId = info.videoId
-
-      new window.YT.Player(divIdRef.current, config)
+      try { _bgmPlayer = new window.YT.Player(divId, config) } catch(e) { console.warn('YT.Player init error:', e) }
     }
 
-    loadYouTubeAPI(initPlayer)
+    ensureYouTubeAPI(initPlayer)
 
     return () => {
-      if (playerRef.current) { try { playerRef.current.destroy(); playerRef.current = null } catch {} }
-      const el = document.getElementById(divIdRef.current)
-      if (el) el.remove()
+      mountedRef.current = false
     }
   }, [bgmUrl])
 
-  // 첫 사용자 인터랙션 감지 → 자동 재생
+  // 첫 인터랙션 → 자동 재생
   useEffect(() => {
     if (!playerReady || userInteracted) return
     const events = ['click', 'touchstart', 'keydown', 'scroll']
     const handler = () => {
       if (!userInteracted) {
         setUserInteracted(true)
-        try { playerRef.current?.playVideo() } catch {}
+        try { _bgmPlayer?.playVideo() } catch {}
         setShowNotice(false)
         events.forEach(ev => document.removeEventListener(ev, handler, true))
       }
@@ -153,11 +172,11 @@ function BgmPlayer({ bgmUrl }) {
   }, [playerReady, userInteracted])
 
   const togglePlay = () => {
-    if (!playerReady || !playerRef.current) return
+    if (!_bgmPlayerReady || !_bgmPlayer) return
     try {
-      if (isPlaying) { playerRef.current.pauseVideo() }
-      else { playerRef.current.playVideo() }
-    } catch (e) { console.warn('togglePlay error:', e) }
+      if (isPlaying) { _bgmPlayer.pauseVideo() }
+      else { _bgmPlayer.playVideo() }
+    } catch(e) { console.warn('togglePlay error:', e) }
     if (!userInteracted) setUserInteracted(true)
     if (showNotice) setShowNotice(false)
   }
@@ -166,31 +185,27 @@ function BgmPlayer({ bgmUrl }) {
 
   return (
     <>
-      {/* BGM 버튼 */}
       <button
         className={`btn btn-sm ${isPlaying ? 'btn-primary' : 'btn-outline'}`}
         onClick={togglePlay}
-        disabled={!playerReady}
-        style={{ display:'flex', alignItems:'center', gap:4, opacity: playerReady ? 1 : 0.5 }}
+        style={{ display:'flex', alignItems:'center', gap:4 }}
         title={!playerReady ? 'BGM 로딩 중...' : isPlaying ? 'BGM 끄기' : 'BGM 켜기'}
       >
         <Mi size="sm" color={isPlaying ? 'white' : 'accent'}>
-          {!playerReady ? 'hourglass_empty' : isPlaying ? 'volume_up' : 'volume_off'}
+          {isPlaying ? 'volume_up' : 'volume_off'}
         </Mi>
         {!playerReady ? 'BGM 로딩 중...' : isPlaying ? 'BGM 끄기' : 'BGM 켜기'}
       </button>
 
-      {/* 첫 클릭 안내 토스트 */}
       {showNotice && !userInteracted && (
         <div style={{
           position:'fixed', bottom:20, left:20, zIndex:9999,
           background:'rgba(0,0,0,0.85)', color:'white',
           padding:'10px 16px', borderRadius:8, fontSize:'0.82rem',
           boxShadow:'0 4px 16px rgba(0,0,0,0.3)', backdropFilter:'blur(8px)',
-          animation:'slideUp 0.3s ease', cursor:'pointer',
-          display:'flex', alignItems:'center', gap:8
+          cursor:'pointer', display:'flex', alignItems:'center', gap:8
         }} onClick={() => { setShowNotice(false); togglePlay() }}>
-        <Mi size="sm" color="white">music_note</Mi>
+          <Mi size="sm" color="white">music_note</Mi>
           페이지를 클릭하면 BGM이 재생돼요
         </div>
       )}
@@ -450,15 +465,15 @@ export default function PublicProfilePage() {
                   </div>
                   <div style={{ padding:'10px 12px 12px', flex:1, display:'flex', flexDirection:'column' }}>
                     <div style={{ fontWeight:700, fontSize:'1rem', lineHeight:1.3, marginBottom:8 }}>{l.title}</div>
-                    <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
-                      {l.start_date && <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>Start.</span>{format(new Date(l.start_date),'yyyy.MM.dd')}</div>}
-                      {l.played_date && <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>End.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
+                    <div style={{ display:'flex', flexDirection:'column', gap:1 }}>
                       {(l.together_with||l.character_name) && (
                         <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)', display:'flex', gap:12, flexWrap:'wrap' }}>
                           {l.together_with && <span><span style={{ fontWeight:600, marginRight:4 }}>GM.</span>{l.together_with}</span>}
                           {l.character_name && <span><span style={{ fontWeight:600, marginRight:4 }}>PL.</span>{l.character_name}</span>}
                         </div>
                       )}
+                      {l.start_date && <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>Start.</span>{format(new Date(l.start_date),'yyyy.MM.dd')}</div>}
+                      {l.played_date && <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>End.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
                     </div>
                     {l.rating > 0 && <div className="stars" style={{ fontSize:'0.82rem', marginTop:6 }}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}
                     {l.spoiler_content && <div style={{ fontSize:'0.75rem', color:'#e57373', marginTop:4 }}>⚠️ 스포일러 포함</div>}
