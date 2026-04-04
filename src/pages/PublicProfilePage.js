@@ -121,6 +121,12 @@ export default function PublicProfilePage() {
   const [pairSort, setPairSort] = useState('asc')
   const [rulebookExpanded, setRulebookExpanded] = useState({})
 
+  // 페이지네이션 - Hook이므로 early return 전에 선언 필수
+  const logsPagination = usePagination(data.logs||[], 20)
+  const scenariosPagination = usePagination(data.scenarios||[], 20)
+  const availabilityPagination = usePagination(data.availability||[], 20)
+  const pairsPagination = usePagination(data.pairs||[], 20)
+
   useEffect(() => {
     const load = async () => {
       const { data:p, error } = await getProfile(username)
@@ -199,10 +205,12 @@ export default function PublicProfilePage() {
   })
 
   // 각 탭 페이지네이션
-  const logsPagination = usePagination(data.logs||[], 20)
-  const scenariosPagination = usePagination(data.scenarios||[], 20)
-  const pairsPagination = usePagination(sortedPairs, 20)
-  const availabilityPagination = usePagination(data.availability||[], 20)
+  const sortedPairs = [...(data.pairs||[])].sort((a,b) => {
+    const da = a.first_met_date||'', db = b.first_met_date||''
+    return pairSort === 'asc' ? da.localeCompare(db) : db.localeCompare(da)
+  })
+  // pairsPagination items를 sortedPairs로 업데이트 (Hook 규칙상 위에서 선언, 여기서 paged 재계산)
+  const pagedPairs = sortedPairs.slice((pairsPagination.page-1)*pairsPagination.perPage, pairsPagination.page*pairsPagination.perPage)
 
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
@@ -476,7 +484,7 @@ export default function PublicProfilePage() {
           <div className="grid-auto">
             {!sortedPairs.length
               ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>페어 목록이 없어요</div>
-              : pairsPagination.paged.map(p => {
+              : pagedPairs.map(p => {
                 const dday = calcDday(p.first_met_date)
                 return (
                   <div key={p.id} className="card" style={{ padding:0, overflow:'hidden' }}>
