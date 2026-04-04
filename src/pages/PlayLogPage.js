@@ -8,30 +8,30 @@ import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
 import { format } from 'date-fns'
 
 const BLANK = {
-  title:'', played_date:'', system_name:'', role:'PL',
+  title:'', start_date:'', played_date:'', system_name:'', role:'PL',
   character_name:'', together_with:'', npc:'', rating:0, memo:'',
   session_image_url:'', scenario_link:'', series_tag:'', session_log_url:'',
   spoiler_content:'', spoiler_password:''
 }
-const cleanPayload = f => ({...f, played_date:f.played_date||null})
+const cleanPayload = f => ({...f, played_date:f.played_date||null, start_date:f.start_date||null})
 
+// ── 태그칩: 완전 불투명 ──
 const TAG_COLORS = {
-  series:{bg:'rgba(200,169,110,0.18)',color:'#8b6f47',border:'rgba(200,169,110,0.5)'},
-  role_PL:{bg:'rgba(100,149,237,0.15)',color:'#2a5aaa',border:'rgba(100,149,237,0.4)'},
-  role_GM:{bg:'rgba(155,137,196,0.15)',color:'#5a3a9c',border:'rgba(155,137,196,0.4)'},
-  rule:{bg:'rgba(156,175,136,0.18)',color:'#4a6a30',border:'rgba(156,175,136,0.5)'},
+  series:{bg:'#c8a96e',color:'#fff',border:'#b8944e'},
+  role_PL:{bg:'#4a7ad4',color:'#fff',border:'#3a6ac4'},
+  role_GM:{bg:'#7a5ab8',color:'#fff',border:'#6a4aa8'},
+  rule:{bg:'#5a8a40',color:'#fff',border:'#4a7a30'},
 }
 function TagChip({ type, label }) {
   const c = type==='series'?TAG_COLORS.series:type==='role'?(label==='GM'?TAG_COLORS.role_GM:TAG_COLORS.role_PL):TAG_COLORS.rule
   return <span style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:100,fontSize:'0.63rem',fontWeight:700,background:c.bg,color:c.color,border:`1px solid ${c.border}`,whiteSpace:'nowrap'}}>{label}</span>
 }
 
-// 스포일러 표시 컴포넌트 - isOwner=true면 바로 열람
+// 스포일러 표시 컴포넌트
 export function SpoilerBlock({ detail, isOwner }) {
   const [pw, setPw] = useState('')
   const [unlocked, setUnlocked] = useState(false)
   const [err, setErr] = useState(false)
-  const [showPw, setShowPw] = useState(false)
 
   if (!detail.spoiler_content) return null
 
@@ -76,6 +76,9 @@ export function LogDetailContent({ detail, isOwner }) {
         {detail.system_name && <TagChip type="rule" label={detail.system_name}/>}
       </div>
       <div className="grid-2" style={{marginBottom:12}}>
+        {detail.start_date && (
+          <div><div className="form-label">시작 날짜</div><div className="text-sm">{format(new Date(detail.start_date),'yyyy년 M월 d일')}</div></div>
+        )}
         <div><div className="form-label">엔딩 날짜</div><div className="text-sm">{detail.played_date && format(new Date(detail.played_date),'yyyy년 M월 d일')}</div></div>
         {(detail.together_with||detail.character_name) && (
           <div><div className="form-label">GM / PL</div><div className="text-sm">{[detail.together_with,detail.character_name].filter(Boolean).join(' / ')}</div></div>
@@ -156,7 +159,6 @@ export function PlayLogPage() {
       </div>
 
       <div style={{marginBottom:20}}>
-        {/* 검색창 autocomplete off */}
         <input className="form-input" placeholder="🔍 제목, 룰, 시리즈로 검색..." value={search}
           onChange={e=>setSearch(e.target.value)} autoComplete="off"
           style={{maxWidth:320,marginBottom:ruleList.length>0?10:0}}/>
@@ -182,8 +184,10 @@ export function PlayLogPage() {
                 <div style={{position:'absolute',inset:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
                   {item.session_image_url?<img src={item.session_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}><Mi size="lg" color="light">auto_stories</Mi></span>}
                 </div>
-                <div style={{position:'absolute',bottom:0,left:0,right:0,height:'65%',background:'linear-gradient(to top,var(--color-bg) 0%,rgba(255,255,255,0.6) 55%,transparent 100%)',pointerEvents:'none'}}/>
-                <div style={{position:'absolute',bottom:10,left:10,right:10,display:'flex',gap:4,flexWrap:'wrap'}}>
+                {/* 그라디언트 오버레이 */}
+                <div style={{position:'absolute',bottom:0,left:0,right:0,height:'65%',background:'linear-gradient(to top,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 55%,transparent 100%)',pointerEvents:'none'}}/>
+                {/* 태그칩 - 완전 불투명 */}
+                <div style={{position:'absolute',bottom:8,left:8,right:8,display:'flex',gap:4,flexWrap:'wrap'}}>
                   {item.series_tag&&<TagChip type="series" label={item.series_tag}/>}
                   <TagChip type="role" label={item.role}/>
                   {item.system_name&&<TagChip type="rule" label={item.system_name}/>}
@@ -192,7 +196,8 @@ export function PlayLogPage() {
               <div style={{padding:'10px 12px 0',flex:1,display:'flex',flexDirection:'column'}}>
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,color:'var(--color-text)',marginBottom:8}}>{item.title}</div>
                 <div style={{display:'flex',flexDirection:'column',gap:2}}>
-                  {item.played_date&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>Date.</span>{format(new Date(item.played_date),'yyyy.MM.dd')}</div>}
+                  {item.start_date&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>Start.</span>{format(new Date(item.start_date),'yyyy.MM.dd')}</div>}
+                  {item.played_date&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>End.</span>{format(new Date(item.played_date),'yyyy.MM.dd')}</div>}
                   {(item.together_with||item.character_name)&&(
                     <div style={{fontSize:'0.63rem',color:'var(--color-text-light)',display:'flex',gap:16}}>
                       {item.together_with&&<span><span style={{fontWeight:600,marginRight:4}}>GM.</span>{item.together_with}</span>}
@@ -202,7 +207,7 @@ export function PlayLogPage() {
                   {item.npc&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>등장인물.</span>{item.npc}</div>}
                 </div>
                 {item.rating>0&&<div className="stars" style={{fontSize:'0.72rem',marginTop:6}}>{'★'.repeat(item.rating)}{'☆'.repeat(5-item.rating)}</div>}
-                {item.spoiler_content&&<div style={{marginTop:4,fontSize:'0.62rem',color:'#e57373'}}><><Mi size='sm' color='danger'>warning</Mi> 스포일러 포함</></div>}
+                {item.spoiler_content&&<div style={{marginTop:4,fontSize:'0.62rem',color:'#e57373'}}><Mi size='sm' color='danger'>warning</Mi> 스포일러 포함</div>}
               </div>
               <div style={{padding:'8px 12px 10px',marginTop:8,borderTop:'1px solid var(--color-border)',display:'flex',gap:5,justifyContent:'flex-end'}} onClick={e=>e.stopPropagation()}>
                 <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
@@ -213,7 +218,7 @@ export function PlayLogPage() {
         </div>
       }
 
-      {/* 상세 보기 - 본인이므로 isOwner=true */}
+      {/* 상세 보기 */}
       <Modal isOpen={!!detail} onClose={()=>setDetail(null)} title={detail?.title}
         footer={<div className="flex justify-between w-full"><button className="btn btn-outline btn-sm" onClick={()=>{openEdit(detail);setDetail(null)}}>수정</button><button className="btn btn-outline btn-sm" onClick={()=>setDetail(null)}>닫기</button></div>}
       >
@@ -250,25 +255,41 @@ export function PlayLogPage() {
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'기록 수정':'기록 추가'}
         footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
-        {/* autocomplete=off로 자동완성 전체 차단 */}
         <div autoComplete="off">
           <div className="form-group"><label className="form-label">제목 (시나리오명) *</label><input className="form-input" autoComplete="off" value={form.title} onChange={set('title')}/></div>
-          <div className="form-group"><label className="form-label">엔딩 날짜 *</label><input className="form-input" type="date" autoComplete="off" value={form.played_date||''} onChange={set('played_date')}/></div>
+
+          {/* 시작날짜 + 엔딩날짜 */}
+          <div className="grid-2">
+            <div className="form-group"><label className="form-label">시작 날짜</label><input className="form-input" type="date" autoComplete="off" value={form.start_date||''} onChange={set('start_date')}/></div>
+            <div className="form-group"><label className="form-label">엔딩 날짜 *</label><input className="form-input" type="date" autoComplete="off" value={form.played_date||''} onChange={set('played_date')}/></div>
+          </div>
+
+          {/* 룰 + 역할 */}
+          <div className="grid-2">
+            <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
+            <div className="form-group"><label className="form-label">역할</label><select className="form-select" value={form.role} onChange={set('role')}><option value="PL">PL</option><option value="GM">GM</option></select></div>
+          </div>
+
+          {/* GM / PL */}
+          <div className="grid-2">
+            <div className="form-group"><label className="form-label">GM</label><input className="form-input" autoComplete="off" placeholder="닉네임" value={form.together_with||''} onChange={set('together_with')}/></div>
+            <div className="form-group"><label className="form-label">PL</label><input className="form-input" autoComplete="off" placeholder="플레이어" value={form.character_name||''} onChange={set('character_name')}/></div>
+          </div>
+
+          {/* 등장인물 */}
+          <div className="form-group"><label className="form-label">등장인물</label><input className="form-input" autoComplete="off" placeholder="주요 등장인물, NPC 등..." value={form.npc||''} onChange={set('npc')}/></div>
+
+          {/* 평점 */}
+          <div className="form-group"><label className="form-label">평점</label><StarRating value={form.rating} onChange={v=>setForm(f=>({...f,rating:v}))}/></div>
+
+          {/* 시리즈 태그 */}
           <div className="form-group">
             <label className="form-label">시리즈 / 캠페인 태그</label>
             <input className="form-input" autoComplete="off" placeholder="예: 황혼의 왕관..." value={form.series_tag||''} onChange={set('series_tag')}/>
             {seriesList.length>0&&<div style={{marginTop:6,display:'flex',gap:5,flexWrap:'wrap'}}><span className="text-xs text-light" style={{alignSelf:'center'}}>기존:</span>{seriesList.map(s=><button key={s} type="button" className="btn btn-outline btn-sm" style={{fontSize:'0.7rem',padding:'2px 8px'}} onClick={()=>setForm(f=>({...f,series_tag:s}))}>{s}</button>)}</div>}
           </div>
-          <div className="grid-2">
-            <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
-            <div className="form-group"><label className="form-label">역할</label><select className="form-select" value={form.role} onChange={set('role')}><option value="PL">PL</option><option value="GM">GM</option></select></div>
-          </div>
-          <div className="grid-2">
-            <div className="form-group"><label className="form-label">PL</label><input className="form-input" autoComplete="off" placeholder="플레이어" value={form.character_name||''} onChange={set('character_name')}/></div>
-            <div className="form-group"><label className="form-label">GM</label><input className="form-input" autoComplete="off" placeholder="닉네임" value={form.together_with||''} onChange={set('together_with')}/></div>
-          </div>
-          <div className="form-group"><label className="form-label">등장인물</label><input className="form-input" autoComplete="off" placeholder="주요 등장인물, NPC 등..." value={form.npc||''} onChange={set('npc')}/></div>
-          <div className="form-group"><label className="form-label">평점</label><StarRating value={form.rating} onChange={v=>setForm(f=>({...f,rating:v}))}/></div>
+
+          {/* 세션카드 이미지 */}
           <div className="form-group">
             <label className="form-label">세션카드 이미지</label>
             <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
@@ -277,6 +298,7 @@ export function PlayLogPage() {
             </div>
             {form.session_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.session_image_url} alt="preview" style={{width:60,height:34,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,session_image_url:''}))}>제거</button></div>}
           </div>
+
           <div className="form-group"><label className="form-label">시나리오 링크 URL</label><input className="form-input" autoComplete="off" placeholder="https://..." value={form.scenario_link||''} onChange={set('scenario_link')}/></div>
           <div className="form-group"><label className="form-label">세션 로그 백업 URL</label><input className="form-input" autoComplete="off" placeholder="https://..." value={form.session_log_url||''} onChange={set('session_log_url')}/></div>
           <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" autoComplete="off" value={form.memo||''} onChange={set('memo')}/></div>
@@ -298,10 +320,8 @@ export function PlayLogPage() {
                     type={showSpoilerPw?'text':'password'}
                     placeholder="열람용 비밀번호 설정"
                     value={form.spoiler_password||''} onChange={set('spoiler_password')} style={{flex:1}}/>
-                  {/* 눈 아이콘 토글 */}
                   <button type="button" onClick={()=>setShowSpoilerPw(v=>!v)}
-                    style={{background:'none',border:'none',cursor:'pointer',fontSize:'1.1rem',padding:'4px',color:'var(--color-text-light)',flexShrink:0}}
-                    title={showSpoilerPw?'숨기기':'보기'}>
+                    style={{background:'none',border:'none',cursor:'pointer',fontSize:'1.1rem',padding:'4px',color:'var(--color-text-light)',flexShrink:0}}>
                     {showSpoilerPw ? '🙈' : '👁️'}
                   </button>
                 </div>

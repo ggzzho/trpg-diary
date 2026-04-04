@@ -1,5 +1,5 @@
 // src/pages/PublicProfilePage.js
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -21,11 +21,12 @@ function calcDday(d) {
   return Math.floor((new Date() - new Date(d)) / 86400000)
 }
 
+// ── 공개 페이지 태그칩: 불투명 ──
 const TC = {
-  series: { bg:'rgba(200,169,110,0.18)', color:'#8b6f47', border:'rgba(200,169,110,0.5)' },
-  role_PL: { bg:'rgba(100,149,237,0.15)', color:'#2a5aaa', border:'rgba(100,149,237,0.4)' },
-  role_GM: { bg:'rgba(155,137,196,0.15)', color:'#5a3a9c', border:'rgba(155,137,196,0.4)' },
-  rule: { bg:'rgba(156,175,136,0.18)', color:'#4a6a30', border:'rgba(156,175,136,0.5)' },
+  series: { bg:'#c8a96e', color:'#fff', border:'#b8944e' },
+  role_PL: { bg:'#4a7ad4', color:'#fff', border:'#3a6ac4' },
+  role_GM: { bg:'#7a5ab8', color:'#fff', border:'#6a4aa8' },
+  rule: { bg:'#5a8a40', color:'#fff', border:'#4a7a30' },
 }
 function Chip({ type, label }) {
   const c = type==='series' ? TC.series : type==='role' ? (label==='GM' ? TC.role_GM : TC.role_PL) : TC.rule
@@ -37,11 +38,171 @@ function Chip({ type, label }) {
   )
 }
 
-// 유튜브 영상 ID 추출
-function getYoutubeId(url) {
+// 유튜브 영상/플레이리스트 ID 추출
+function getYoutubeInfo(url) {
   if (!url) return null
-  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)
-  return m ? m[1] : null
+  // 플레이리스트
+  const listM = url.match(/[?&]list=([a-zA-Z0-9_-]+)/)
+  const videoM = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)
+  if (listM) return { type:'playlist', listId:listM[1], videoId:videoM?videoM[1]:null }
+  if (videoM) return { type:'video', videoId:videoM[1] }
+  return null
+}
+
+// ── BGM 플레이어 컴포넌트 (YouTube IFrame API 방식) ──
+function BgmPlayer({ bgmUrl }) {
+  const [playerReady, setPlayerReady] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [userInteracted, setUserInteracted] = useState(false)
+  const [showNotice, setShowNotice] = useState(false)
+  const playerRef = useRef(null)
+  const containerRef = useRef(null)
+  const info = getYoutubeInfo(bgmUrl)
+
+  useEffect(() => {
+    if (!info) return
+
+    // YouTube IFrame API 로드
+    const loadApi = () => {
+      if (window.YT && window.YT.Player) {
+        initPlayer()
+        return
+      }
+      if (!document.getElementById('yt-iframe-api')) {
+        const script = document.createElement('script')
+        script.id = 'yt-iframe-api'
+        script.src = 'https://www.youtube.com/iframe_api'
+        document.head.appendChild(script)
+      }
+      window.onYouTubeIframeAPIReady = initPlayer
+    }
+
+    const initPlayer = () => {
+      if (playerRef.current) { try { playerRef.current.destroy() } catch {} }
+
+      const div = document.createElement('div')
+      div.id = `bgm-yt-${Date.now()}`
+      document.body.appendChild(div)
+
+      const playerVars = {
+        autoplay: 0,
+        controls: 0,
+        showinfo: 0,
+        rel: 0,
+        iv_load_policy: 3,
+        enablejsapi: 1,
+        modestbranding: 1,
+        fs: 0,
+        origin: window.location.origin,
+      }
+
+      let ytPlayer
+      if (info.type === 'playlist') {
+        ytPlayer = new window.YT.Player(div.id, {
+          height: '0', width: '0',
+          playerVars: { ...playerVars, listType:'playlist', list:info.listId },
+          events: {
+            onReady: (e) => {
+              playerRef.current = e.target
+              e.target.setVolume(30)
+              setPlayerReady(true)
+              setShowNotice(true)
+            },
+            onStateChange: (e) => {
+              setIsPlaying(e.data === window.YT.PlayerState.PLAYING)
+            },
+            onError: (e) => { console.warn('BGM player error:', e.data) }
+          }
+        })
+      } else {
+        ytPlayer = new window.YT.Player(div.id, {
+          height: '0', width: '0',
+          videoId: info.videoId,
+          playerVars,
+          events: {
+            onReady: (e) => {
+              playerRef.current = e.target
+              e.target.setVolume(30)
+              setPlayerReady(true)
+              setShowNotice(true)
+            },
+            onStateChange: (e) => {
+              setIsPlaying(e.data === window.YT.PlayerState.PLAYING)
+              // 단일곡 반복
+              if (e.data === window.YT.PlayerState.ENDED) {
+                try { e.target.seekTo(0); e.target.playVideo() } catch {}
+              }
+            },
+            onError: (e) => { console.warn('BGM player error:', e.data) }
+          }
+        })
+      }
+    }
+
+    loadApi()
+
+    return () => {
+      if (playerRef.current) { try { playerRef.current.destroy() } catch {} }
+    }
+  }, [bgmUrl])
+
+  // 첫 사용자 인터랙션 감지 → 자동 재생
+  useEffect(() => {
+    if (!playerReady || userInteracted) return
+    const events = ['click', 'touchstart', 'keydown', 'scroll']
+    const handler = () => {
+      if (!userInteracted) {
+        setUserInteracted(true)
+        try { playerRef.current?.playVideo() } catch {}
+        setShowNotice(false)
+        events.forEach(ev => document.removeEventListener(ev, handler, true))
+      }
+    }
+    events.forEach(ev => document.addEventListener(ev, handler, true))
+    return () => events.forEach(ev => document.removeEventListener(ev, handler, true))
+  }, [playerReady, userInteracted])
+
+  const togglePlay = () => {
+    if (!playerReady) return
+    try {
+      if (isPlaying) { playerRef.current.pauseVideo() }
+      else { playerRef.current.playVideo() }
+    } catch {}
+    if (!userInteracted) setUserInteracted(true)
+    if (showNotice) setShowNotice(false)
+  }
+
+  if (!info) return null
+
+  return (
+    <>
+      {/* BGM 버튼 */}
+      <button
+        className={`btn btn-sm ${isPlaying ? 'btn-primary' : 'btn-outline'}`}
+        onClick={togglePlay}
+        style={{ display:'flex', alignItems:'center', gap:4 }}
+        title={isPlaying ? 'BGM 끄기' : 'BGM 켜기'}
+      >
+        <Mi size="sm" color={isPlaying ? 'white' : 'accent'}>{isPlaying ? 'volume_up' : 'volume_off'}</Mi>
+        {isPlaying ? 'BGM 끄기' : 'BGM 켜기'}
+      </button>
+
+      {/* 첫 클릭 안내 토스트 */}
+      {showNotice && !userInteracted && (
+        <div style={{
+          position:'fixed', bottom:20, left:20, zIndex:9999,
+          background:'rgba(0,0,0,0.85)', color:'white',
+          padding:'10px 16px', borderRadius:8, fontSize:'0.82rem',
+          boxShadow:'0 4px 16px rgba(0,0,0,0.3)', backdropFilter:'blur(8px)',
+          animation:'slideUp 0.3s ease', cursor:'pointer',
+          display:'flex', alignItems:'center', gap:8
+        }} onClick={() => { setShowNotice(false); togglePlay() }}>
+        <Mi size="sm" color="white">music_note</Mi>
+          페이지를 클릭하면 BGM이 재생돼요
+        </div>
+      )}
+    </>
+  )
 }
 
 // ── 미니 캘린더 ──
@@ -49,54 +210,37 @@ function PublicCalendar({ schedules }) {
   const [cal, setCal] = useState(new Date())
   const s0 = startOfWeek(startOfMonth(cal), { weekStartsOn:0 })
   const e0 = endOfWeek(endOfMonth(cal), { weekStartsOn:0 })
-  const rows = []; let day = s0
+  const rows = []
+  let day = s0
   while (day <= e0) {
-    const wk = []
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(day), ds = format(d, 'yyyy-MM-dd')
-      const di = schedules.filter(s => s.scheduled_date === ds)
-      wk.push(
-        <div key={ds} style={{
-          height:70, border:'1px solid var(--color-border)', borderRadius:4, padding:4,
-          background: isToday(d) ? 'var(--color-nav-active-bg)' : 'var(--color-surface)',
-          opacity: !isSameMonth(d, cal) ? 0.3 : 1, overflow:'hidden'
-        }}>
-          <div style={{ fontSize:'0.68rem', fontWeight:600, color:isToday(d)?'var(--color-accent)':'var(--color-text)', marginBottom:2 }}>
-            {format(d, 'd')}
-          </div>
-          {di.slice(0, 2).map(ev => (
-            <div key={ev.id} style={{
-              fontSize:'0.58rem', padding:'1px 3px', borderRadius:2, marginBottom:1,
-              background: ev.is_gm ? 'var(--color-accent)' : 'var(--color-primary)',
-              color:'white', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'
-            }}>
-              {ev.scheduled_time && <span style={{ opacity:0.85, marginRight:2 }}>{ev.scheduled_time.slice(0,5)}</span>}
-              {ev.title}
-            </div>
-          ))}
-          {di.length > 2 && <div style={{ fontSize:'0.52rem', color:'var(--color-text-light)' }}>+{di.length-2}</div>}
-        </div>
-      )
-      day = addDays(day, 1)
-    }
-    rows.push(<React.Fragment key={day.toString()}>{wk}</React.Fragment>)
+    const d = day
+    const dStr = format(d,'yyyy-MM-dd')
+    const dayScheds = schedules.filter(s=>s.scheduled_date===dStr)
+    const inMonth = isSameMonth(d,cal)
+    const today = isToday(d)
+    rows.push(
+      <div key={dStr} style={{
+        minHeight:64, padding:'4px 5px', borderRadius:7,
+        background: today ? 'var(--color-primary)' : inMonth ? 'var(--color-surface)' : 'transparent',
+        border: today ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
+        opacity: inMonth ? 1 : 0.35,
+      }}>
+        <div style={{ fontSize:'0.68rem', fontWeight: today?700:500, color: today?'white':'var(--color-text-light)', marginBottom:3 }}>{format(d,'d')}</div>
+        {dayScheds.map((s,i)=>(
+          <div key={i} style={{ fontSize:'0.6rem', background:'var(--color-accent)', color:'white', borderRadius:3, padding:'1px 4px', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.title}</div>
+        ))}
+      </div>
+    )
+    day = addDays(day,1)
   }
-
-  if (!schedules.length) return (
-    <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>
-      예정된 일정이 없어요
-    </div>
-  )
   return (
     <div className="card">
-      <div className="flex justify-between items-center" style={{ marginBottom:10 }}>
-        <button className="btn btn-ghost btn-sm" onClick={() => setCal(subMonths(cal, 1))}>‹</button>
-        <span style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--color-accent)' }}>
-          {format(cal, 'yyyy년 M월', { locale:ko })}
-        </span>
-        <button className="btn btn-ghost btn-sm" onClick={() => setCal(addMonths(cal, 1))}>›</button>
+      <div className="flex justify-between items-center" style={{ marginBottom:14 }}>
+        <button className="btn btn-ghost btn-sm" onClick={()=>setCal(subMonths(cal,1))}><Mi size="sm">chevron_left</Mi></button>
+        <span className="text-serif" style={{ fontWeight:700, color:'var(--color-accent)' }}>{format(cal,'yyyy년 M월',{locale:ko})}</span>
+        <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}><Mi size="sm">chevron_right</Mi></button>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:3 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:6 }}>
         {['일','월','화','수','목','금','토'].map((d,i) => (
           <div key={d} style={{
             textAlign:'center', fontSize:'0.65rem', fontWeight:600,
@@ -118,8 +262,6 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState('schedules')
-  const [isFav, setIsFav] = useState(false)
-  const [favLoading, setFavLoading] = useState(false)
   const [selectedLog, setSelectedLog] = useState(null)
   const [pairSort, setPairSort] = useState('asc')
 
@@ -145,65 +287,9 @@ export default function PublicProfilePage() {
       ])
       setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds })
       setLoading(false)
-
-      if (user) {
-        const { data:fav } = await supabase.from('favorites')
-          .select('id').eq('user_id',user.id).eq('target_username',username).maybeSingle()
-        setIsFav(!!fav)
-      }
     }
     load()
   }, [username, user])
-
-  // BGM: mute=1로 자동재생 시작 → 버튼 클릭 시 postMessage로 음소거 해제
-  const bgmVideoId = getYoutubeId(profile?.bgm_url)
-  const [bgmOn, setBgmOn] = useState(false)
-  const [bgmReady, setBgmReady] = useState(false)
-
-  // YouTube iframe API 메시지 수신
-  useEffect(() => {
-    if (!bgmVideoId) return
-    const handler = (e) => {
-      try {
-        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
-        if (data?.event === 'onReady' || data?.info?.playerState !== undefined) {
-          setBgmReady(true)
-        }
-      } catch {}
-    }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
-  }, [bgmVideoId])
-
-  const toggleBgm = () => {
-    const iframe = document.getElementById('bgm-iframe')
-    if (!iframe) return
-    if (bgmOn) {
-      iframe.contentWindow.postMessage(JSON.stringify({ event:'command', func:'mute' }), '*')
-      setBgmOn(false)
-    } else {
-      iframe.contentWindow.postMessage(JSON.stringify({ event:'command', func:'unMute' }), '*')
-      iframe.contentWindow.postMessage(JSON.stringify({ event:'command', func:'playVideo' }), '*')
-      setBgmOn(true)
-    }
-  }
-
-  const toggleFav = async () => {
-    if (!user) { alert('로그인 후 이용해주세요!'); return }
-    setFavLoading(true)
-    if (isFav) {
-      await supabase.from('favorites').delete().eq('user_id',user.id).eq('target_username',username)
-      setIsFav(false)
-    } else {
-      await supabase.from('favorites').insert({
-        user_id: user.id, target_username: username,
-        target_display_name: profile?.display_name || username,
-        target_avatar_url: profile?.avatar_url || null,
-      })
-      setIsFav(true)
-    }
-    setFavLoading(false)
-  }
 
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -219,8 +305,6 @@ export default function PublicProfilePage() {
       </div>
     </div>
   )
-
-  const isMyPage = user?.id === profile?.id
 
   const sections = (() => {
     if (profile.profile_sections?.length > 0) return profile.profile_sections
@@ -241,7 +325,6 @@ export default function PublicProfilePage() {
     { key:'guestbook', label:'방명록', icon:'mail' },
   ]
 
-  // 페어 정렬 (내 페이지 정렬 방식 연동)
   const sortedPairs = [...(data.pairs||[])].sort((a,b) => {
     const da = a.first_met_date||'', db = b.first_met_date||''
     return pairSort === 'asc' ? da.localeCompare(db) : db.localeCompare(da)
@@ -249,20 +332,10 @@ export default function PublicProfilePage() {
 
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
-      {/* BGM: 음소거로 자동재생, postMessage로 제어 */}
-      {bgmVideoId && (
-        <iframe
-          id="bgm-iframe"
-          src={`https://www.youtube.com/embed/${bgmVideoId}?autoplay=1&mute=1&loop=1&playlist=${bgmVideoId}&controls=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
-          style={{ position:'fixed', bottom:-500, left:-500, width:320, height:180, border:'none', zIndex:-999, pointerEvents:'none' }}
-          allow="autoplay; encrypted-media"
-          title="bgm"
-        />
-      )}
 
       {/* 프로필 카드 */}
       <div className="card" style={{ marginBottom:24, overflow:'visible', padding:0 }}>
-        {/* 헤더 이미지 - 235px (원래 215 + 20px 추가) */}
+        {/* 헤더 이미지 */}
         <div style={{ height:235, background:'var(--color-nav-active-bg)', borderRadius:'var(--radius) var(--radius) 0 0', overflow:'hidden' }}>
           {profile.header_image_url
             ? <img src={profile.header_image_url} alt="header"
@@ -272,7 +345,7 @@ export default function PublicProfilePage() {
         </div>
 
         <div style={{ padding:'0 24px 24px', textAlign:'center' }}>
-          {/* 아바타 - 120px (원래 100 × 1.2) */}
+          {/* 아바타 */}
           <div style={{ display:'flex', justifyContent:'center', marginTop:-60, marginBottom:12 }}>
             <div className="user-avatar" style={{
               width:120, height:120, fontSize:'2.8rem',
@@ -286,43 +359,12 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          {/* 즐겨찾기 + BGM */}
-          <div style={{ display:'flex', justifyContent:'center', gap:8, marginBottom:12 }}>
-            {!isMyPage && (
-              <button className={`btn btn-sm ${isFav?'btn-primary':'btn-outline'}`}
-                onClick={toggleFav} disabled={favLoading}
-                style={{ display:'flex', alignItems:'center', gap:4 }}>
-                <Mi size="sm" color={isFav?'white':'accent'} filled={isFav}>star</Mi>
-                {isFav ? '즐겨찾기 중' : '즐겨찾기'}
-              </button>
-            )}
-            {bgmVideoId && (
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
-                <button className={`btn btn-sm ${bgmOn?'btn-primary':'btn-outline'}`} onClick={toggleBgm}
-                  style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <Mi size="sm" color={bgmOn?'white':'accent'}>{bgmOn?'volume_up':'volume_off'}</Mi>
-                  {bgmOn ? 'BGM 끄기' : 'BGM 켜기'}
-                </button>
-                {bgmOn && (
-                  <div style={{ fontSize:'0.68rem', color:'var(--color-text-light)', textAlign:'center', maxWidth:260, lineHeight:1.5,
-                    padding:'8px 12px', borderRadius:8, background:'var(--color-nav-active-bg)', border:'1px solid var(--color-border)' }}>
-                    <div style={{ fontWeight:700, marginBottom:4 }}>🔇 소리가 안 들리면?</div>
-                    <div style={{ marginBottom:4 }}>
-                      <span style={{ fontWeight:600 }}>🌐 크롬</span><br/>
-                      주소창 왼쪽 <strong>🔒 또는 ⓘ</strong> 클릭<br/>
-                      → <strong>사이트 설정</strong> → <strong>소리 → 허용</strong><br/>
-                      (없으면: 오른쪽 상단 <strong>⋮ → 설정 → 개인정보 → 사이트 설정 → 소리</strong>)
-                    </div>
-                    <div>
-                      <span style={{ fontWeight:600 }}>🐳 웨일</span><br/>
-                      주소창에 <strong>whale://settings/content/sound</strong> 입력<br/>
-                      → 소리 재생이 허용됨 → 이 사이트 주소 추가
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          {/* BGM 버튼만 (즐겨찾기 완전 제거) */}
+          {profile.bgm_url && (
+            <div style={{ display:'flex', justifyContent:'center', marginBottom:12 }}>
+              <BgmPlayer bgmUrl={profile.bgm_url} />
+            </div>
+          )}
 
           <h1 style={{ fontSize:'1.5rem', fontWeight:700, color:'var(--color-accent)', letterSpacing:'-0.03em', marginBottom:2 }}>
             {profile.display_name || profile.username}
@@ -362,7 +404,7 @@ export default function PublicProfilePage() {
               {profile.external_links.map((link,i) => (
                 <a key={i} href={link.url} target="_blank" rel="noreferrer"
                   style={{ padding:'4px 12px', borderRadius:100, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', fontSize:'0.76rem', fontWeight:600, textDecoration:'none' }}>
-                  <><Mi size="sm">link</Mi> {link.label}</>
+                  <Mi size="sm">link</Mi> {link.label}
                 </a>
               ))}
             </div>
@@ -391,9 +433,7 @@ export default function PublicProfilePage() {
         <>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(238px,1fr))', gap:13 }}>
             {!data.logs?.length
-              ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem', gridColumn:'1/-1' }}>
-                  아직 기록이 없어요
-                </div>
+              ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem', gridColumn:'1/-1' }}>아직 기록이 없어요</div>
               : data.logs.map(l => (
                 <div key={l.id}
                   style={{ borderRadius:12, overflow:'hidden', background:'var(--color-surface)', border:'1px solid var(--color-border)', boxShadow:'0 2px 12px var(--color-shadow)', display:'flex', flexDirection:'column', cursor:'pointer', transition:'transform 0.15s,box-shadow 0.15s' }}
@@ -408,8 +448,8 @@ export default function PublicProfilePage() {
                         : <span style={{ fontSize:'2.5rem', opacity:0.2 }}><Mi size='lg' color='light'>auto_stories</Mi></span>
                       }
                     </div>
-                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'65%', background:'linear-gradient(to top,var(--color-bg) 0%,rgba(255,255,255,0.6) 55%,transparent 100%)', pointerEvents:'none' }}/>
-                    <div style={{ position:'absolute', bottom:10, left:10, right:10, display:'flex', gap:4, flexWrap:'wrap' }}>
+                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'65%', background:'linear-gradient(to top,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 55%,transparent 100%)', pointerEvents:'none' }}/>
+                    <div style={{ position:'absolute', bottom:8, left:8, right:8, display:'flex', gap:4, flexWrap:'wrap' }}>
                       {l.series_tag && <Chip type="series" label={l.series_tag}/>}
                       <Chip type="role" label={l.role}/>
                       {l.system_name && <Chip type="rule" label={l.system_name}/>}
@@ -418,7 +458,8 @@ export default function PublicProfilePage() {
                   <div style={{ padding:'10px 12px 12px', flex:1, display:'flex', flexDirection:'column' }}>
                     <div style={{ fontWeight:700, fontSize:'0.88rem', lineHeight:1.3, marginBottom:8 }}>{l.title}</div>
                     <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                      {l.played_date && <div style={{ fontSize:'0.63rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>Date.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
+                      {l.start_date && <div style={{ fontSize:'0.63rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>Start.</span>{format(new Date(l.start_date),'yyyy.MM.dd')}</div>}
+                      {l.played_date && <div style={{ fontSize:'0.63rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>End.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
                       {(l.together_with||l.character_name) && (
                         <div style={{ fontSize:'0.63rem', color:'var(--color-text-light)', display:'flex', gap:12 }}>
                           {l.together_with && <span><span style={{ fontWeight:600, marginRight:4 }}>GM.</span>{l.together_with}</span>}
@@ -487,7 +528,7 @@ export default function PublicProfilePage() {
                   <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                     {s.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {s.system_name}</span>}
                     {s.author && <span className="text-xs text-light"><Mi size='sm' color='light'>edit</Mi> {s.author}</span>}
-                    {s.player_count && <span className="text-xs text-light"><><Mi size="sm" color="light">group</Mi> {s.player_count}</></span>}
+                    {s.player_count && <span className="text-xs text-light"><Mi size="sm" color="light">group</Mi> {s.player_count}</span>}
                   </div>
                   {s.scenario_url && <a href={s.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:3, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
                 </div>
@@ -497,12 +538,12 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* ── 페어 (정렬 버튼 + 연동) ── */}
+      {/* ── 페어 ── */}
       {activeTab==='pairs' && (
         <>
           <div style={{ display:'flex', gap:8, marginBottom:14 }}>
-            <button className={`btn btn-sm ${pairSort==='asc'?'btn-primary':'btn-outline'}`} onClick={()=>setPairSort('asc')}>↑ 오름차순</button>
-            <button className={`btn btn-sm ${pairSort==='desc'?'btn-primary':'btn-outline'}`} onClick={()=>setPairSort('desc')}>↓ 내림차순</button>
+            <button className={`btn btn-sm ${pairSort==='asc'?'btn-primary':'btn-outline'}`} onClick={()=>setPairSort('asc')}><Mi size='sm'>arrow_upward</Mi> 오름차순</button>
+            <button className={`btn btn-sm ${pairSort==='desc'?'btn-primary':'btn-outline'}`} onClick={()=>setPairSort('desc')}><Mi size='sm'>arrow_downward</Mi> 내림차순</button>
           </div>
           <div className="grid-auto">
             {!sortedPairs.length
@@ -522,7 +563,6 @@ export default function PublicProfilePage() {
                     </div>
                     <div style={{ padding:'12px 14px' }}>
                       <div style={{ fontWeight:700, fontSize:'1rem', marginBottom:4 }}>{p.name}</div>
-                      {p.nickname && <div className="text-xs text-light" style={{ marginBottom:6 }}>페어 캐릭터: {p.nickname}</div>}
                       {p.relations?.length > 0 && (
                         <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:6 }}>
                           {p.relations.map(r => <span key={r} className="badge badge-primary">{r}</span>)}
@@ -539,7 +579,7 @@ export default function PublicProfilePage() {
         </>
       )}
 
-      {/* ── 공수표 (리스트형) ── */}
+      {/* ── 공수표 ── */}
       {activeTab==='availability' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {!data.availability?.length

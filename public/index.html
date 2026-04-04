@@ -6,6 +6,9 @@
     <meta name="theme-color" content="#c8a96e" />
     <meta name="description" content="나만의 TRPG 다이어리 - 일정, 기록, 룰북, 시나리오를 한곳에서 관리하세요" />
     <title>TRPG Diary ✦</title>
+    <link rel="icon" type="image/x-icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Google Material Symbols Rounded -->
@@ -13,7 +16,6 @@
     <!-- 브라우저 자동완성 전역 차단 -->
     <script>
       document.addEventListener('DOMContentLoaded', function() {
-        // 모든 input/textarea에 autocomplete=off 강제 적용
         function disableAutofill(root) {
           root.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]):not([type="date"]):not([type="time"]):not([type="color"]):not([type="range"]), textarea').forEach(function(el) {
             if (!el.getAttribute('autocomplete') || el.getAttribute('autocomplete') === 'on') {
@@ -22,7 +24,6 @@
           });
         }
         disableAutofill(document);
-        // SPA 라우트 변경 시에도 적용
         var observer = new MutationObserver(function(mutations) {
           mutations.forEach(function(m) {
             m.addedNodes.forEach(function(node) {
@@ -36,7 +37,6 @@
   </head>
   <body>
     <noscript>이 앱을 사용하려면 JavaScript를 활성화해주세요.</noscript>
-    <!-- 브라우저 자동완성 방지용 더미 필드 -->
     <div style="display:none" aria-hidden="true">
       <input type="text" name="prevent_autofill" tabindex="-1" />
       <input type="password" name="prevent_autofill_pw" tabindex="-1" />

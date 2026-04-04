@@ -357,11 +357,10 @@ export function GuestbookPublicView({ ownerId }) {
 }
 
 // ── 내 홈(로그인) 방명록 관리 ──
-export function GuestbookPage({ ownerId }) {
-  const { user } = useAuth()
 
-  if (ownerId) return <GuestbookPublicView ownerId={ownerId}/>
-
+// ── 내 홈(로그인) 방명록 관리 ──
+// Hook이 조건문 아래에 있으면 안 되므로 내부 컴포넌트로 완전 분리
+function GuestbookOwnerView({ user }) {
   const [messages, setMessages] = useState([])
   const [mypages, setMypages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -372,7 +371,9 @@ export function GuestbookPage({ ownerId }) {
   const load = async () => {
     if (!user?.id) return
     setLoading(true)
-    const { data:all } = await supabase.from('guestbook').select('*').eq('owner_id', user.id).order('created_at', { ascending:false })
+    const { data:all } = await supabase
+      .from('guestbook').select('*').eq('owner_id', user.id)
+      .order('created_at', { ascending:false })
     setMessages((all||[]).filter(g => g.type==='message' || !g.type))
     setMypages((all||[]).filter(g => g.type==='mypage'))
     setLoading(false)
@@ -389,7 +390,7 @@ export function GuestbookPage({ ownerId }) {
 
   const saveEdit = async () => {
     if (!editingItem) return
-    const { url } = parseEntry(editingItem) // 기존 URL만 추출 (메모 제외)
+    const { url } = parseEntry(editingItem)
     const newContent = editForm.memo.trim()
       ? `${url}|||${editForm.memo.trim()}`
       : url
@@ -500,4 +501,11 @@ export function GuestbookPage({ ownerId }) {
       )}
     </div>
   )
+}
+
+// GuestbookPage: ownerId 있으면 공개뷰, 없으면 오너뷰 — Hook 규칙 준수
+export function GuestbookPage({ ownerId }) {
+  const { user } = useAuth()
+  if (ownerId) return <GuestbookPublicView ownerId={ownerId}/>
+  return <GuestbookOwnerView user={user}/>
 }

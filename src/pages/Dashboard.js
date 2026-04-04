@@ -52,6 +52,9 @@ export default function Dashboard() {
     {label:'페어 목록', value:stats.pairs, icon:'people', to:'/pairs', unit:'명'},
   ]
 
+  // 오늘 세션 있는지 확인
+  const hasTodaySession = upcoming.some(s => s.scheduled_date === todayStr)
+
   return (
     <div className="fade-in">
       <div style={{marginBottom:36}}>
@@ -59,6 +62,28 @@ export default function Dashboard() {
         <h1 className="text-serif" style={{fontSize:'2rem',color:'var(--color-accent)'}}>{profile?.display_name||profile?.username}님의 다이어리</h1>
         <p style={{color:'var(--color-text-light)',fontSize:'0.85rem',marginTop:8}}>오늘도 좋은 세션 되세요 🎲</p>
       </div>
+
+      {/* 오늘 세션 알림 배너 */}
+      {hasTodaySession && (
+        <div style={{
+          marginBottom:20,
+          padding:'13px 18px',
+          borderRadius:12,
+          background:'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
+          color:'white',
+          display:'flex',
+          alignItems:'center',
+          gap:10,
+          boxShadow:'0 4px 16px var(--color-btn-shadow)',
+          animation:'fadeIn 0.4s ease'
+        }}>
+          <span style={{fontSize:'1.4rem'}}>🎲</span>
+          <div>
+            <div style={{fontWeight:700,fontSize:'0.95rem'}}>오늘은 세션이 있는 날이에요!</div>
+            <div style={{fontSize:'0.78rem',opacity:0.88,marginTop:2}}>즐거운 세션 되세요 ✨</div>
+          </div>
+        </div>
+      )}
 
       <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12,marginBottom:24}}>
         {STAT_CARDS.map(c=>(
@@ -82,7 +107,20 @@ export default function Dashboard() {
           <div className="flex justify-between items-center" style={{marginBottom:16}}>
             <div>
               <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem'}}><Mi style={{marginRight:6}}>calendar_month</Mi>다가오는 일정</h2>
-              <div className="text-xs text-light">{format(today,'yyyy년 M월 d일 (EEE)',{locale:ko})}</div>
+              <div style={{display:'flex',alignItems:'center',gap:6,marginTop:3}}>
+                {/* Today 아이콘 배지 */}
+                <span style={{
+                  display:'inline-flex',alignItems:'center',gap:3,
+                  padding:'2px 7px',borderRadius:100,
+                  background:'var(--color-primary)',color:'white',
+                  fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.03em',
+                  boxShadow:'0 1px 4px var(--color-btn-shadow)'
+                }}>
+                  <Mi size="sm" color="white" style={{fontSize:'0.7rem'}}>today</Mi>
+                  Today
+                </span>
+                <div className="text-xs text-light">{format(today,'yyyy년 M월 d일 (EEE)',{locale:ko})}</div>
+              </div>
             </div>
             <Link to="/schedule" className="btn btn-ghost btn-sm">전체 보기</Link>
           </div>
@@ -92,7 +130,7 @@ export default function Dashboard() {
               const isToday = s.scheduled_date===todayStr
               return (
                 <div key={s.id} style={{padding:'10px 0',borderBottom:'1px solid var(--color-border)',display:'flex',gap:12,alignItems:'flex-start'}}>
-                  <div style={{background:'var(--color-primary)',borderRadius:7,padding:'5px 9px',textAlign:'center',minWidth:40,flexShrink:0,boxShadow:'0 2px 6px var(--color-btn-shadow)'}}>
+                  <div style={{background: isToday ? 'var(--color-accent)' : 'var(--color-primary)',borderRadius:7,padding:'5px 9px',textAlign:'center',minWidth:40,flexShrink:0,boxShadow:'0 2px 6px var(--color-btn-shadow)'}}>
                     <div style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.8)'}}>{format(new Date(s.scheduled_date),'M월',{locale:ko})}</div>
                     <div style={{fontSize:'1.1rem',color:'white',fontWeight:700,lineHeight:1}}>{format(new Date(s.scheduled_date),'d')}</div>
                   </div>

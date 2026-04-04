@@ -155,7 +155,7 @@ export function BookmarkPage() {
                 {item.tags?.length>0&&(
                   <div style={{position:'absolute',bottom:8,left:8,right:8,display:'flex',gap:4,flexWrap:'wrap'}}>
                     {item.tags.filter(t=>tags.map(tg=>tg.name).includes(t)).map(tag=>(
-                      <span key={tag} style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'rgba(200,169,110,0.25)',color:'#7a5c30',border:'1px solid rgba(200,169,110,0.5)'}}>{tag}</span>
+                      <span key={tag} style={{padding:'2px 7px',borderRadius:100,fontSize:'0.62rem',fontWeight:700,background:'#c8a96e',color:'#fff',border:'1px solid #b8944e'}}>{tag}</span>
                     ))}
                   </div>
                 )}

@@ -121,7 +121,7 @@ export function PairsPage() {
                 </div>
                 <div style={{padding:'12px 14px'}}>
                   <div style={{fontWeight:700,fontSize:'1rem',marginBottom:4}}>{item.name}</div>
-                  {item.nickname&&<div className="text-xs text-light" style={{marginBottom:6}}>페어 캐릭터: {item.nickname}</div>}
+
                   {displayRelations.length>0&&<div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:6}}>{displayRelations.map(r=><span key={r} className="badge badge-primary">{r}</span>)}</div>}
                   {item.first_met_date&&<div className="text-xs text-light"><><Mi size='sm' color='light'>calendar_today</Mi> {item.first_met_date}</> 첫 만남</div>}
                   {item.memo&&<p className="text-xs text-light" style={{marginTop:8,borderTop:'1px solid var(--color-border)',paddingTop:8}}>{item.memo}</p>}
@@ -138,10 +138,7 @@ export function PairsPage() {
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'페어 수정':'페어 추가'}
         footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
-        <div className="grid-2">
-          <div className="form-group"><label className="form-label">페어명 *</label><input className="form-input" value={form.name} onChange={set('name')}/></div>
-          <div className="form-group"><label className="form-label">페어 캐릭터명</label><input className="form-input" value={form.nickname||''} onChange={set('nickname')}/></div>
-        </div>
+        <div className="form-group"><label className="form-label">페어명 *</label><input className="form-input" value={form.name} onChange={set('name')}/></div>
         <div className="form-group">
           <label className="form-label">페어 이미지</label>
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
