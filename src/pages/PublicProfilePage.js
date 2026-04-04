@@ -450,18 +450,18 @@ export default function PublicProfilePage() {
                   </div>
                   <div style={{ padding:'10px 12px 12px', flex:1, display:'flex', flexDirection:'column' }}>
                     <div style={{ fontWeight:700, fontSize:'0.88rem', lineHeight:1.3, marginBottom:8 }}>{l.title}</div>
-                    <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                      {l.start_date && <div style={{ fontSize:'0.63rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>Start.</span>{format(new Date(l.start_date),'yyyy.MM.dd')}</div>}
-                      {l.played_date && <div style={{ fontSize:'0.63rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>End.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
+                    <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                      {l.start_date && <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>Start.</span>{format(new Date(l.start_date),'yyyy.MM.dd')}</div>}
+                      {l.played_date && <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>End.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}
                       {(l.together_with||l.character_name) && (
-                        <div style={{ fontSize:'0.63rem', color:'var(--color-text-light)', display:'flex', gap:12 }}>
+                        <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)', display:'flex', gap:12, flexWrap:'wrap' }}>
                           {l.together_with && <span><span style={{ fontWeight:600, marginRight:4 }}>GM.</span>{l.together_with}</span>}
                           {l.character_name && <span><span style={{ fontWeight:600, marginRight:4 }}>PL.</span>{l.character_name}</span>}
                         </div>
                       )}
                     </div>
-                    {l.rating > 0 && <div className="stars" style={{ fontSize:'0.72rem', marginTop:6 }}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}
-                    {l.spoiler_content && <div style={{ fontSize:'0.62rem', color:'#e57373', marginTop:4 }}>⚠️ 스포일러 포함</div>}
+                    {l.rating > 0 && <div className="stars" style={{ fontSize:'0.82rem', marginTop:6 }}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}
+                    {l.spoiler_content && <div style={{ fontSize:'0.75rem', color:'#e57373', marginTop:4 }}>⚠️ 스포일러 포함</div>}
                   </div>
                 </div>
               ))

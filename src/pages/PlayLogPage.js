@@ -195,19 +195,19 @@ export function PlayLogPage() {
               </div>
               <div style={{padding:'10px 12px 0',flex:1,display:'flex',flexDirection:'column'}}>
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,color:'var(--color-text)',marginBottom:8}}>{item.title}</div>
-                <div style={{display:'flex',flexDirection:'column',gap:2}}>
-                  {item.start_date&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>Start.</span>{format(new Date(item.start_date),'yyyy.MM.dd')}</div>}
-                  {item.played_date&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>End.</span>{format(new Date(item.played_date),'yyyy.MM.dd')}</div>}
+                <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                  {item.start_date&&<div style={{fontSize:'0.79rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>Start.</span>{format(new Date(item.start_date),'yyyy.MM.dd')}</div>}
+                  {item.played_date&&<div style={{fontSize:'0.79rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>End.</span>{format(new Date(item.played_date),'yyyy.MM.dd')}</div>}
                   {(item.together_with||item.character_name)&&(
-                    <div style={{fontSize:'0.63rem',color:'var(--color-text-light)',display:'flex',gap:16}}>
+                    <div style={{fontSize:'0.79rem',color:'var(--color-text-light)',display:'flex',gap:12,flexWrap:'wrap'}}>
                       {item.together_with&&<span><span style={{fontWeight:600,marginRight:4}}>GM.</span>{item.together_with}</span>}
                       {item.character_name&&<span><span style={{fontWeight:600,marginRight:4}}>PL.</span>{item.character_name}</span>}
                     </div>
                   )}
-                  {item.npc&&<div style={{fontSize:'0.63rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>등장인물.</span>{item.npc}</div>}
+                  {item.npc&&<div style={{fontSize:'0.79rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>등장인물.</span>{item.npc}</div>}
                 </div>
-                {item.rating>0&&<div className="stars" style={{fontSize:'0.72rem',marginTop:6}}>{'★'.repeat(item.rating)}{'☆'.repeat(5-item.rating)}</div>}
-                {item.spoiler_content&&<div style={{marginTop:4,fontSize:'0.62rem',color:'#e57373'}}><Mi size='sm' color='danger'>warning</Mi> 스포일러 포함</div>}
+                {item.rating>0&&<div className="stars" style={{fontSize:'0.82rem',marginTop:6}}>{'★'.repeat(item.rating)}{'☆'.repeat(5-item.rating)}</div>}
+                {item.spoiler_content&&<div style={{marginTop:4,fontSize:'0.75rem',color:'#e57373'}}><Mi size='sm' color='danger'>warning</Mi> 스포일러 포함</div>}
               </div>
               <div style={{padding:'8px 12px 10px',marginTop:8,borderTop:'1px solid var(--color-border)',display:'flex',gap:5,justifyContent:'flex-end'}} onClick={e=>e.stopPropagation()}>
                 <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
