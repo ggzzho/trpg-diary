@@ -6,12 +6,10 @@ import { supabase } from '../lib/supabase'
 
 const fmtDT = (d) => {
   const dt = new Date(d)
-  const date = dt.toLocaleDateString('ko-KR', { year:'2-digit', month:'numeric', day:'numeric' })
-  const time = dt.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
-  return `${date} ${time}`
+  return dt.toLocaleDateString('ko-KR', { year:'2-digit', month:'numeric', day:'numeric' })
+    + ' ' + dt.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
 }
 
-// content에서 url과 메모 파싱 (공통 유틸)
 const parseEntry = (g) => {
   const raw = g.content || ''
   if (raw.includes('|||')) {
@@ -21,23 +19,19 @@ const parseEntry = (g) => {
   return { url: raw, memo: '' }
 }
 
-// ── 페이지네이션 컴포넌트 ──
+// ── 페이지네이션 ──
 function Pagination({ total, perPage, page, onPage, onPerPage }) {
   const totalPages = Math.ceil(total / perPage)
   if (total === 0) return null
   return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, marginTop:14 }}>
-      {/* 개수 필터 */}
       <div style={{ display:'flex', gap:5 }}>
         {[10, 20, 30].map(n => (
           <button key={n} className={`btn btn-sm ${perPage===n?'btn-primary':'btn-outline'}`}
             onClick={() => { onPerPage(n); onPage(1) }}
-            style={{ fontSize:'0.72rem', padding:'3px 10px' }}>
-            {n}개
-          </button>
+            style={{ fontSize:'0.72rem', padding:'3px 10px' }}>{n}개</button>
         ))}
       </div>
-      {/* 페이지 번호 */}
       {totalPages > 1 && (
         <div style={{ display:'flex', gap:4, alignItems:'center' }}>
           <button className="btn btn-ghost btn-sm" onClick={() => onPage(p => Math.max(1,p-1))} disabled={page===1}>
@@ -45,17 +39,12 @@ function Pagination({ total, perPage, page, onPage, onPerPage }) {
           </button>
           {Array.from({ length: totalPages }, (_,i) => i+1)
             .filter(n => n===1 || n===totalPages || Math.abs(n-page)<=1)
-            .reduce((acc,n,i,arr) => {
-              if (i>0 && n-arr[i-1]>1) acc.push('...')
-              acc.push(n)
-              return acc
-            }, [])
+            .reduce((acc,n,i,arr) => { if (i>0 && n-arr[i-1]>1) acc.push('...'); acc.push(n); return acc }, [])
             .map((n,i) => n==='...'
               ? <span key={`e${i}`} style={{ padding:'0 4px', color:'var(--color-text-light)', fontSize:'0.8rem' }}>…</span>
               : <button key={n} className={`btn btn-sm ${page===n?'btn-primary':'btn-outline'}`}
                   onClick={() => onPage(n)} style={{ minWidth:30, padding:'3px 6px', fontSize:'0.78rem' }}>{n}</button>
-            )
-          }
+            )}
           <button className="btn btn-ghost btn-sm" onClick={() => onPage(p => Math.min(totalPages,p+1))} disabled={page===totalPages}>
             <Mi size="sm">chevron_right</Mi>
           </button>
@@ -65,72 +54,159 @@ function Pagination({ total, perPage, page, onPage, onPerPage }) {
   )
 }
 
-// 친구 페이지 칩 컴포넌트
-function FriendChip({ g, isOwner, userId, onEdit, onRemove }) {
-  const { url, memo } = parseEntry(g)
-  const href = url?.startsWith('http') ? url : g.author_username ? `/u/${g.author_username}` : '#'
+// ── 삭제 확인 팝업 ──
+function DeleteConfirm({ isOpen, onClose, onConfirm, message = '정말 삭제하시겠어요?' }) {
+  if (!isOpen) return null
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:9000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div className="card" style={{ maxWidth:320, width:'100%', padding:'24px 24px 20px', textAlign:'center' }}>
+        <div style={{ fontSize:'1.5rem', marginBottom:10 }}>🗑️</div>
+        <p style={{ fontSize:'0.9rem', marginBottom:20, color:'var(--color-text)' }}>{message}</p>
+        <div className="flex justify-center gap-8">
+          <button className="btn btn-outline btn-sm" onClick={onClose}>취소</button>
+          <button className="btn btn-sm" style={{ background:'#e57373', color:'white', borderColor:'#e57373' }} onClick={() => { onConfirm(); onClose() }}>삭제</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── 방명록 카드 (공통) ──
+function GuestEntry({ g, replies, isOwner, userId, onDelete, onReply, replyOpen, onToggleReply,
+  replyForm, setReplyForm, onSubmitReply, replySubmitting, authLoading }) {
+  const hidden = g.is_private && !isOwner && g.author_id !== userId
+  const replyCount = replies.length
 
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:10, background:'var(--color-surface)', border:'1px solid var(--color-border)', transition:'box-shadow 0.15s' }}
-      onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 12px var(--color-shadow)'}
-      onMouseLeave={e => e.currentTarget.style.boxShadow='none'}
-    >
-      {/* 아바타 */}
-      <a href={href} target="_blank" rel="noreferrer" style={{ textDecoration:'none', flexShrink:0 }}>
-        <div style={{ width:42, height:42, borderRadius:'50%', overflow:'hidden', background:'var(--color-primary)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1rem', color:'white', fontWeight:700 }}>
-          {g.author_avatar_url
-            ? <img src={g.author_avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.target.style.display='none' }}/>
-            : (g.author_name||'?')[0]
-          }
-        </div>
-      </a>
-
-      {/* 이름 + 메모 */}
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-          <a href={href} target="_blank" rel="noreferrer"
-            style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--color-text)', textDecoration:'none', whiteSpace:'nowrap' }}
-            onMouseEnter={e => e.target.style.color='var(--color-primary)'}
-            onMouseLeave={e => e.target.style.color='var(--color-text)'}
-          >
-            {g.author_name}
-          </a>
-          {g.author_username && (
-            <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)', whiteSpace:'nowrap', flexShrink:0 }}>@{g.author_username}</span>
-          )}
-        </div>
-        {/* 메모 박스 */}
-        {memo && (
-          <div style={{
-            marginTop: 5,
-            padding: '4px 10px',
-            borderRadius: 6,
-            background: 'var(--color-nav-active-bg)',
-            border: '1px solid var(--color-border)',
-            fontSize: '0.78rem',
-            color: 'var(--color-text-light)',
-            lineHeight: 1.5,
-            wordBreak: 'break-all',
-          }}>
-            <Mi size="sm" color="accent" style={{ marginRight:4, verticalAlign:'middle' }}>edit_note</Mi>
-            {memo}
+    <div className="card" style={{ padding:'16px 20px' }}>
+      {/* 헤더: 아바타 + 닉네임 + 날짜 + 삭제 */}
+      <div className="flex justify-between items-center" style={{ marginBottom:8 }}>
+        <div className="flex items-center gap-8">
+          <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--color-nav-active-bg)',
+            display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700,
+            fontSize:'0.8rem', color:'var(--color-accent)', flexShrink:0 }}>
+            {(g.author_name||'?')[0]}
           </div>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontWeight:700, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
+              {g.is_private && <span className="badge badge-gray" style={{ fontSize:'0.6rem' }}>🔒</span>}
+            </div>
+            <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>{fmtDT(g.created_at)}</span>
+          </div>
+        </div>
+        {(isOwner || g.author_id === userId) && (
+          <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'2px 8px', fontSize:'0.75rem' }}
+            onClick={() => onDelete(g.id)}>삭제</button>
         )}
       </div>
 
-      {/* 편집 버튼 */}
-      {(isOwner || (userId && g.author_id === userId)) && (
-        <div style={{ display:'flex', gap:4, flexShrink:0 }}>
-          {isOwner && (
-            <button className="btn btn-ghost btn-sm" style={{ padding:'4px 7px' }}
-              onClick={() => onEdit(g)} title="수정">
-              <Mi size="sm" color="light">edit</Mi>
-            </button>
-          )}
-          <button className="btn btn-ghost btn-sm" style={{ padding:'4px 7px', color:'#e57373' }}
-            onClick={() => onRemove(g.id)} title="삭제">
-            <Mi size="sm" color="danger">close</Mi>
-          </button>
+      {/* 본문 */}
+      <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.75,
+        whiteSpace:'pre-wrap', marginBottom:10, paddingLeft:40 }}>
+        {hidden ? '🔒 비공개 메시지예요' : g.content}
+      </p>
+
+      {/* 하단 액션: 댓글 + 하트 */}
+      <div className="flex items-center gap-12" style={{ paddingLeft:40 }}>
+        <button className="flex items-center gap-4" style={{ background:'none', border:'none', cursor:'pointer',
+          color:'var(--color-text-light)', fontSize:'0.78rem', padding:0 }}
+          onClick={() => onToggleReply(g.id)}>
+          <Mi size="sm" color="light">chat_bubble_outline</Mi>
+          <span>{replyCount > 0 ? replyCount : ''}</span>
+        </button>
+        <button className="flex items-center gap-4" style={{ background:'none', border:'none', cursor:'pointer',
+          color:'var(--color-text-light)', fontSize:'0.78rem', padding:0 }}>
+          <Mi size="sm" color="light">favorite_border</Mi>
+        </button>
+      </div>
+
+      {/* 댓글 영역 */}
+      {replyOpen && (
+        <div style={{ marginTop:12, paddingLeft:20, borderLeft:'2px solid var(--color-border)' }}>
+          {/* 기존 댓글 목록 */}
+          {replies.map(r => {
+            const rHidden = r.is_private && !isOwner && r.author_id !== userId
+            return (
+              <div key={r.id} style={{ paddingTop:10, paddingBottom:10, borderBottom:'1px solid var(--color-border)' }}>
+                <div className="flex justify-between items-center" style={{ marginBottom:4 }}>
+                  <div className="flex items-center gap-6">
+                    <div style={{ width:24, height:24, borderRadius:'50%', background:'var(--color-nav-active-bg)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      fontSize:'0.65rem', fontWeight:700, color:'var(--color-accent)', flexShrink:0 }}>
+                      {(r.author_name||'?')[0]}
+                    </div>
+                    <span style={{ fontWeight:700, fontSize:'0.82rem' }}>{r.author_name || '익명'}</span>
+                    {r.is_private && <span className="badge badge-gray" style={{ fontSize:'0.58rem' }}>🔒</span>}
+                    <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)' }}>{fmtDT(r.created_at)}</span>
+                  </div>
+                  {(isOwner || r.author_id === userId) && (
+                    <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px', fontSize:'0.72rem' }}
+                      onClick={() => onDelete(r.id)}>삭제</button>
+                  )}
+                </div>
+                <p style={{ fontSize:'0.84rem', color:'var(--color-text-light)', lineHeight:1.65,
+                  whiteSpace:'pre-wrap', paddingLeft:30 }}>
+                  {rHidden ? '🔒 비공개 댓글이에요' : r.content}
+                </p>
+              </div>
+            )
+          })}
+
+          {/* 댓글 입력 */}
+          <div style={{ marginTop:10 }}>
+            <div style={{ marginBottom:6 }}>
+              <input className="form-input" autoComplete="off"
+                placeholder={authLoading ? '로딩 중...' : userId ? '비워두면 내 닉네임으로 등록돼요' : '닉네임 (필수)'}
+                value={replyForm.nickname}
+                onChange={e => setReplyForm(f => ({...f, nickname:e.target.value}))}
+                style={{ fontSize:'0.82rem', padding:'5px 10px', marginBottom:5 }}/>
+              <textarea className="form-textarea" placeholder="댓글을 남겨보세요..."
+                value={replyForm.content}
+                onChange={e => setReplyForm(f => ({...f, content:e.target.value}))}
+                style={{ minHeight:56, fontSize:'0.84rem', resize:'vertical' }}/>
+            </div>
+            <div className="flex justify-between items-center">
+              <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.78rem', color:'var(--color-text-light)', cursor:'pointer' }}>
+                <input type="checkbox" checked={replyForm.is_private}
+                  onChange={e => setReplyForm(f => ({...f, is_private:e.target.checked}))}/>
+                🔒 비공개
+              </label>
+              <button className="btn btn-primary btn-sm" style={{ fontSize:'0.78rem' }}
+                onClick={() => onSubmitReply(g.id)}
+                disabled={replySubmitting || !replyForm.content.trim() || (!authLoading && !userId && !replyForm.nickname.trim())}>
+                {replySubmitting ? '등록 중...' : '댓글 등록'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── 친구 페이지 칩 ──
+function FriendChip({ g, isOwner, userId, onEdit, onRemove }) {
+  const { url, memo } = parseEntry(g)
+  const displayName = g.author_name || '익명'
+  const initial = displayName[0]
+  const href = url?.startsWith('http') ? url : g.author_username ? `/u/${g.author_username}` : '#'
+  return (
+    <div className="card" style={{ padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
+      <a href={href} target="_blank" rel="noreferrer" style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:10, flex:1, minWidth:0 }}>
+        {g.author_avatar_url
+          ? <img src={g.author_avatar_url} alt={displayName} style={{ width:40, height:40, borderRadius:'50%', objectFit:'cover', flexShrink:0, border:'2px solid var(--color-border)' }}/>
+          : <div style={{ width:40, height:40, borderRadius:'50%', background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:'1rem', color:'var(--color-accent)', flexShrink:0 }}>{initial}</div>
+        }
+        <div style={{ minWidth:0 }}>
+          <div style={{ fontWeight:700, fontSize:'0.88rem', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', color:'var(--color-text)' }}>{displayName}</div>
+          {memo && <div className="text-xs text-light" style={{ marginTop:2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{memo}</div>}
+        </div>
+      </a>
+      {(isOwner || g.author_id === userId) && (
+        <div className="flex gap-6" style={{ flexShrink:0 }}>
+          {isOwner && <button className="btn btn-ghost btn-sm" style={{ padding:'2px 6px' }} onClick={() => onEdit(g)}><Mi size="sm">edit</Mi></button>}
+          <button className="btn btn-ghost btn-sm" style={{ padding:'2px 6px', color:'#e57373' }} onClick={() => onRemove(g.id)}><Mi size="sm">close</Mi></button>
         </div>
       )}
     </div>
@@ -148,33 +224,48 @@ export function GuestbookPublicView({ ownerId }) {
   const [msgPerPage, setMsgPerPage] = useState(10)
   const [myPage, setMyPage] = useState(1)
   const [myPerPage, setMyPerPage] = useState(10)
-
   const [msgForm, setMsgForm] = useState({ nickname:'', content:'', is_private:false })
   const [msgSubmitting, setMsgSubmitting] = useState(false)
   const [msgDone, setMsgDone] = useState(false)
-
   const [pageFormOpen, setPageFormOpen] = useState(false)
   const [pageForm, setPageForm] = useState({ nickname:'', url:'', avatar_url:'' })
   const [pageSubmitting, setPageSubmitting] = useState(false)
   const [pageDone, setPageDone] = useState(false)
-
-  // 수정 모달
-  const [editingItem, setEditingItem] = useState(null) // {id, nickname, memo}
+  const [editingItem, setEditingItem] = useState(null)
   const [editForm, setEditForm] = useState({ nickname:'', memo:'' })
+  // 댓글
+  const [openReplies, setOpenReplies] = useState({})
+  const [replyForms, setReplyForms] = useState({})
+  const [replySubmitting, setReplySubmitting] = useState(false)
+  // 삭제 확인
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   const isOwner = !!(user && ownerId && user.id === ownerId)
 
   const load = async () => {
     if (!ownerId) return
-    setLoading(true)
-    const { data: all } = await supabase
-      .from('guestbook').select('*').eq('owner_id', ownerId)
-      .order('created_at', { ascending:false })
-    setMessages((all||[]).filter(g => g.type==='message' || !g.type))
-    setMypages((all||[]).filter(g => g.type==='mypage'))
+    const { data: all } = await supabase.from('guestbook').select('*')
+      .eq('owner_id', ownerId).order('created_at', { ascending: false })
+    const allData = all || []
+    setMessages(allData.filter(g => g.type === 'message' && !g.parent_id))
+    setMypages(allData.filter(g => g.type === 'mypage'))
+    // replies는 parent_id 있는 것들
     setLoading(false)
   }
-  useEffect(() => { load() }, [ownerId, user])
+  // 전체 replies (parent_id 있는 것)
+  const [allReplies, setAllReplies] = useState([])
+  const loadAll = async () => {
+    if (!ownerId) return
+    const { data } = await supabase.from('guestbook').select('*').eq('owner_id', ownerId).order('created_at', { ascending: true })
+    const all = data || []
+    setMessages(all.filter(g => g.type === 'message' && !g.parent_id))
+    setMypages(all.filter(g => g.type === 'mypage'))
+    setAllReplies(all.filter(g => g.parent_id))
+    setLoading(false)
+  }
+  useEffect(() => { loadAll() }, [ownerId, user])
+
+  const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId)
 
   const submitMsg = async () => {
     if (!msgForm.content.trim()) return
@@ -187,7 +278,7 @@ export function GuestbookPublicView({ ownerId }) {
     })
     setMsgForm({ nickname:'', content:'', is_private:false })
     setMsgDone(true); setTimeout(() => setMsgDone(false), 2500)
-    load(); setMsgSubmitting(false)
+    loadAll(); setMsgSubmitting(false)
   }
 
   const submitPage = async () => {
@@ -197,7 +288,6 @@ export function GuestbookPublicView({ ownerId }) {
     await supabase.from('guestbook').insert({
       owner_id:ownerId, author_id:user?.id||null,
       author_name:pageForm.nickname.trim(),
-      author_username:m ? m[1] : null,
       author_avatar_url:pageForm.avatar_url.trim() || null,
       content:pageForm.url.trim(),
       type:'mypage',
@@ -205,11 +295,13 @@ export function GuestbookPublicView({ ownerId }) {
     setPageForm({ nickname:'', url:'', avatar_url:'' })
     setPageFormOpen(false)
     setPageDone(true); setTimeout(() => setPageDone(false), 3000)
-    load(); setPageSubmitting(false)
+    loadAll()
+    setPageSubmitting(false)
   }
 
   const removeEntry = async (id) => {
-    await supabase.from('guestbook').delete().eq('id', id); load()
+    await supabase.from('guestbook').delete().eq('id', id)
+    loadAll()
   }
 
   const openEdit = (g) => {
@@ -217,48 +309,38 @@ export function GuestbookPublicView({ ownerId }) {
     setEditingItem(g)
     setEditForm({ nickname: g.author_name || '', memo })
   }
-
   const saveEdit = async () => {
     if (!editingItem) return
-    const { url } = parseEntry(editingItem) // 기존 URL만 추출
-    const newContent = editForm.memo.trim()
-      ? `${url}|||${editForm.memo.trim()}`
-      : url
-    await supabase.from('guestbook').update({
-      author_name: editForm.nickname.trim(),
-      content: newContent,
-    }).eq('id', editingItem.id)
+    const { memo } = parseEntry(editingItem)
+    const newContent = editForm.memo ? `${editingItem.content.split('|||')[0]}|||${editForm.memo}` : editingItem.content.split('|||')[0]
+    await supabase.from('guestbook').update({ author_name: editForm.nickname.trim(), content: newContent })
+      .eq('id', editingItem.id).eq('owner_id', user.id)
     setEditingItem(null)
-    load()
+    loadAll()
+  }
+
+  const toggleReply = (id) => setOpenReplies(o => ({...o, [id]:!o[id]}))
+  const getReplyForm = (id) => replyForms[id] || { nickname:'', content:'', is_private:false }
+  const setReplyForm = (id, updater) => setReplyForms(f => ({...f, [id]: typeof updater === 'function' ? updater(f[id]||{nickname:'',content:'',is_private:false}) : updater}))
+
+  const submitReply = async (parentId) => {
+    const form = getReplyForm(parentId)
+    if (!form.content.trim()) return
+    const authorName = form.nickname.trim() || profile?.display_name || profile?.username || '익명'
+    setReplySubmitting(true)
+    await supabase.from('guestbook').insert({
+      owner_id:ownerId, author_id:user?.id||null,
+      author_name: authorName,
+      content: form.content.trim(), is_private: form.is_private,
+      type:'message', parent_id: parentId,
+    })
+    setReplyForms(f => ({...f, [parentId]: {nickname:'',content:'',is_private:false}}))
+    setReplySubmitting(false)
+    loadAll()
   }
 
   return (
     <div>
-      {/* 수정 모달 */}
-      {editingItem && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
-          onClick={e => { if (e.target === e.currentTarget) setEditingItem(null) }}>
-          <div style={{ background:'var(--color-surface)', borderRadius:12, padding:24, width:'100%', maxWidth:380, boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}>
-            <div style={{ fontWeight:700, fontSize:'1rem', marginBottom:16 }}>친구 페이지 수정</div>
-            <div className="form-group">
-              <label className="form-label">닉네임</label>
-              <input className="form-input" autoComplete="off" value={editForm.nickname}
-                onChange={e => setEditForm(f => ({...f, nickname:e.target.value}))}/>
-            </div>
-            <div className="form-group">
-              <label className="form-label">메모</label>
-              <textarea className="form-textarea" autoComplete="off"
-                placeholder="이 친구에 대한 메모를 남겨요..." rows={3}
-                value={editForm.memo} onChange={e => setEditForm(f => ({...f, memo:e.target.value}))}/>
-            </div>
-            <div className="flex justify-end gap-8">
-              <button className="btn btn-outline btn-sm" onClick={() => setEditingItem(null)}>취소</button>
-              <button className="btn btn-primary btn-sm" onClick={saveEdit}>저장</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 탭 */}
       <div className="flex gap-8" style={{ marginBottom:20 }}>
         <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}
@@ -273,9 +355,10 @@ export function GuestbookPublicView({ ownerId }) {
         </button>
       </div>
 
-      {/* ── 방명록 ── */}
+      {/* ── 방명록 탭 ── */}
       {tab === 'message' && (
         <div>
+          {/* 입력 폼 */}
           <div className="card" style={{ marginBottom:16, padding:'16px 20px' }}>
             <div style={{ marginBottom:8 }}>
               <label className="form-label">닉네임 {(!authLoading && !user) && <span style={{color:'#e57373'}}>*</span>}</label>
@@ -301,6 +384,8 @@ export function GuestbookPublicView({ ownerId }) {
               </div>
             </div>
           </div>
+
+          {/* 목록 */}
           {loading
             ? <div className="text-sm text-light" style={{ textAlign:'center', padding:20 }}>불러오는 중...</div>
             : messages.length === 0
@@ -310,29 +395,20 @@ export function GuestbookPublicView({ ownerId }) {
                   return (
                     <>
                       <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                        {pagedMsgs.map(g => {
-                          const hidden = g.is_private && !isOwner && g.author_id !== user?.id
-                          return (
-                            <div key={g.id} className="card" style={{ padding:'14px 20px' }}>
-                              <div className="flex justify-between items-start" style={{ marginBottom:8 }}>
-                                <div className="flex items-center gap-8">
-                                  <span style={{ fontWeight:600, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
-                                  {g.is_private && <span className="badge badge-gray" style={{ fontSize:'0.62rem' }}>🔒 비공개</span>}
-                                </div>
-                                <div className="flex items-center gap-8">
-                                  <span className="text-xs text-light">{fmtDT(g.created_at)}</span>
-                                  {(isOwner || g.author_id === user?.id) && (
-                                    <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px' }}
-                                      onClick={() => removeEntry(g.id)}>삭제</button>
-                                  )}
-                                </div>
-                              </div>
-                              <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>
-                                {hidden ? '🔒 비공개 메시지예요' : g.content}
-                              </p>
-                            </div>
-                          )
-                        })}
+                        {pagedMsgs.map(g => (
+                          <GuestEntry key={g.id} g={g}
+                            replies={getReplies(g.id)}
+                            isOwner={isOwner} userId={user?.id}
+                            onDelete={(id) => setDeleteConfirm(id)}
+                            replyOpen={!!openReplies[g.id]}
+                            onToggleReply={toggleReply}
+                            replyForm={getReplyForm(g.id)}
+                            setReplyForm={(updater) => setReplyForm(g.id, updater)}
+                            onSubmitReply={submitReply}
+                            replySubmitting={replySubmitting}
+                            authLoading={authLoading}
+                          />
+                        ))}
                       </div>
                       <Pagination total={messages.length} perPage={msgPerPage} page={msgPage} onPage={setMsgPage} onPerPage={setMsgPerPage}/>
                     </>
@@ -342,10 +418,9 @@ export function GuestbookPublicView({ ownerId }) {
         </div>
       )}
 
-      {/* ── 친구 페이지 목록 ── */}
+      {/* ── 친구 페이지 탭 ── */}
       {tab === 'mypage' && (
         <div>
-          {/* 방문자 입력 폼 - 항상 표시 */}
           <div className="card" style={{ marginBottom:16, padding:'16px 20px' }}>
             <div className="flex justify-between items-center" style={{ marginBottom: pageFormOpen ? 14 : 0 }}>
               <div>
@@ -415,7 +490,7 @@ export function GuestbookPublicView({ ownerId }) {
                       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:8 }}>
                         {pagedMy.map(g => (
                           <FriendChip key={g.id} g={g} isOwner={isOwner} userId={user?.id}
-                            onEdit={openEdit} onRemove={removeEntry}/>
+                            onEdit={openEdit} onRemove={(id) => setDeleteConfirm(id)}/>
                         ))}
                       </div>
                       <Pagination total={mypages.length} perPage={myPerPage} page={myPage} onPage={setMyPage} onPerPage={setMyPerPage}/>
@@ -425,72 +500,12 @@ export function GuestbookPublicView({ ownerId }) {
           }
         </div>
       )}
-    </div>
-  )
-}
 
-// ── 내 홈(로그인) 방명록 관리 ──
-
-// ── 내 홈(로그인) 방명록 관리 ──
-// Hook이 조건문 아래에 있으면 안 되므로 내부 컴포넌트로 완전 분리
-function GuestbookOwnerView({ user }) {
-  const [messages, setMessages] = useState([])
-  const [mypages, setMypages] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('message')
-  const [editingItem, setEditingItem] = useState(null)
-  const [editForm, setEditForm] = useState({ nickname:'', memo:'' })
-  const [msgPage, setMsgPage] = useState(1)
-  const [msgPerPage, setMsgPerPage] = useState(10)
-  const [myPage, setMyPage] = useState(1)
-  const [myPerPage, setMyPerPage] = useState(10)
-
-  const load = async () => {
-    if (!user?.id) return
-    setLoading(true)
-    const { data:all } = await supabase
-      .from('guestbook').select('*').eq('owner_id', user.id)
-      .order('created_at', { ascending:false })
-    setMessages((all||[]).filter(g => g.type==='message' || !g.type))
-    setMypages((all||[]).filter(g => g.type==='mypage'))
-    setLoading(false)
-  }
-  useEffect(() => { load() }, [user])
-
-  const removeEntry = async (id) => { await supabase.from('guestbook').delete().eq('id', id); load() }
-
-  const openEdit = (g) => {
-    const { memo } = parseEntry(g)
-    setEditingItem(g)
-    setEditForm({ nickname: g.author_name || '', memo })
-  }
-
-  const saveEdit = async () => {
-    if (!editingItem) return
-    const { url } = parseEntry(editingItem)
-    const newContent = editForm.memo.trim()
-      ? `${url}|||${editForm.memo.trim()}`
-      : url
-    const { error } = await supabase.from('guestbook').update({
-      author_name: editForm.nickname.trim(),
-      content: newContent,
-    }).eq('id', editingItem.id).eq('owner_id', user.id)
-    if (error) {
-      alert('저장 실패: ' + error.message)
-      return
-    }
-    setEditingItem(null)
-    load()
-  }
-
-  return (
-    <div className="fade-in">
       {/* 수정 모달 */}
       {editingItem && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
-          onClick={e => { if (e.target === e.currentTarget) setEditingItem(null) }}>
-          <div style={{ background:'var(--color-surface)', borderRadius:12, padding:24, width:'100%', maxWidth:380, boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}>
-            <div style={{ fontWeight:700, fontSize:'1rem', marginBottom:16 }}>친구 페이지 수정</div>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:9000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div className="card" style={{ maxWidth:400, width:'100%', padding:24 }}>
+            <h3 style={{ fontWeight:700, marginBottom:16 }}>페이지 정보 수정</h3>
             <div className="form-group">
               <label className="form-label">닉네임</label>
               <input className="form-input" autoComplete="off" value={editForm.nickname}
@@ -498,9 +513,8 @@ function GuestbookOwnerView({ user }) {
             </div>
             <div className="form-group">
               <label className="form-label">메모</label>
-              <textarea className="form-textarea" autoComplete="off"
-                placeholder="이 친구에 대한 메모를 남겨요..." rows={3}
-                value={editForm.memo} onChange={e => setEditForm(f => ({...f, memo:e.target.value}))}/>
+              <input className="form-input" autoComplete="off" value={editForm.memo}
+                onChange={e => setEditForm(f => ({...f, memo:e.target.value}))}/>
             </div>
             <div className="flex justify-end gap-8">
               <button className="btn btn-outline btn-sm" onClick={() => setEditingItem(null)}>취소</button>
@@ -510,6 +524,90 @@ function GuestbookOwnerView({ user }) {
         </div>
       )}
 
+      <DeleteConfirm
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => removeEntry(deleteConfirm)}
+        message="이 항목을 삭제하시겠어요? 댓글도 함께 삭제돼요."
+      />
+    </div>
+  )
+}
+
+// ── 내 홈(로그인) 방명록 관리 ──
+function GuestbookOwnerView({ user }) {
+  const [messages, setMessages] = useState([])
+  const [allReplies, setAllReplies] = useState([])
+  const [mypages, setMypages] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState('message')
+  const [editingItem, setEditingItem] = useState(null)
+  const [editForm, setEditForm] = useState({ nickname:'', memo:'' })
+  const [msgPage, setMsgPage] = useState(1)
+  const [msgPerPage, setMsgPerPage] = useState(10)
+  const [myPage, setMyPage] = useState(1)
+  const [myPerPage, setMyPerPage] = useState(10)
+  // 댓글
+  const [openReplies, setOpenReplies] = useState({})
+  const [replyForms, setReplyForms] = useState({})
+  const [replySubmitting, setReplySubmitting] = useState(false)
+  // 삭제 확인
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+
+  const loadAll = async () => {
+    const { data } = await supabase.from('guestbook').select('*')
+      .eq('owner_id', user.id).order('created_at', { ascending: false })
+    const all = data || []
+    setMessages(all.filter(g => g.type === 'message' && !g.parent_id))
+    setMypages(all.filter(g => g.type === 'mypage'))
+    setAllReplies(all.filter(g => g.parent_id))
+    setLoading(false)
+  }
+  useEffect(() => { loadAll() }, [user])
+
+  const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId)
+
+  const removeEntry = async (id) => {
+    await supabase.from('guestbook').delete().eq('id', id)
+    loadAll()
+  }
+
+  const openEdit = (g) => {
+    const { memo } = parseEntry(g)
+    setEditingItem(g)
+    setEditForm({ nickname: g.author_name || '', memo })
+  }
+  const saveEdit = async () => {
+    if (!editingItem) return
+    const newContent = editForm.memo
+      ? `${editingItem.content.split('|||')[0]}|||${editForm.memo}`
+      : editingItem.content.split('|||')[0]
+    await supabase.from('guestbook').update({ author_name: editForm.nickname.trim(), content: newContent })
+      .eq('id', editingItem.id).eq('owner_id', user.id)
+    setEditingItem(null)
+    loadAll()
+  }
+
+  const toggleReply = (id) => setOpenReplies(o => ({...o, [id]:!o[id]}))
+  const getReplyForm = (id) => replyForms[id] || { nickname:'', content:'', is_private:false }
+  const setReplyForm = (id, updater) => setReplyForms(f => ({...f, [id]: typeof updater === 'function' ? updater(f[id]||{nickname:'',content:'',is_private:false}) : updater}))
+  const submitReply = async (parentId) => {
+    const form = getReplyForm(parentId)
+    if (!form.content.trim()) return
+    setReplySubmitting(true)
+    await supabase.from('guestbook').insert({
+      owner_id: user.id, author_id: user.id,
+      author_name: form.nickname.trim() || '나',
+      content: form.content.trim(), is_private: form.is_private,
+      type:'message', parent_id: parentId,
+    })
+    setReplyForms(f => ({...f, [parentId]: {nickname:'',content:'',is_private:false}}))
+    setReplySubmitting(false)
+    loadAll()
+  }
+
+  return (
+    <div className="fade-in">
       <div className="page-header">
         <h1 className="page-title"><Mi style={{ marginRight:8, verticalAlign:'middle' }}>mail</Mi>방명록</h1>
         <p className="page-subtitle">내 공개 페이지에 남겨진 방명록을 관리해요</p>
@@ -528,7 +626,6 @@ function GuestbookOwnerView({ user }) {
         </button>
       </div>
 
-
       {tab === 'message' && (
         loading
           ? <div className="text-sm text-light" style={{ textAlign:'center', padding:40 }}>불러오는 중...</div>
@@ -542,22 +639,18 @@ function GuestbookOwnerView({ user }) {
                   <>
                     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                       {pagedMsgs.map(g => (
-                        <div key={g.id} className="card" style={{ padding:'14px 20px' }}>
-                          <div className="flex justify-between items-start" style={{ marginBottom:8 }}>
-                            <div className="flex items-center gap-8">
-                              <span style={{ fontWeight:600, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
-                              {g.is_private && <span className="badge badge-gray" style={{ fontSize:'0.62rem' }}>🔒 비공개</span>}
-                            </div>
-                            <div className="flex items-center gap-8">
-                              <span className="text-xs text-light">{fmtDT(g.created_at)}</span>
-                              <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px' }}
-                                onClick={() => removeEntry(g.id)}>삭제</button>
-                            </div>
-                          </div>
-                          <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>
-                            {g.is_private ? '🔒 비공개 메시지' : g.content}
-                          </p>
-                        </div>
+                        <GuestEntry key={g.id} g={g}
+                          replies={getReplies(g.id)}
+                          isOwner={true} userId={user?.id}
+                          onDelete={(id) => setDeleteConfirm(id)}
+                          replyOpen={!!openReplies[g.id]}
+                          onToggleReply={toggleReply}
+                          replyForm={getReplyForm(g.id)}
+                          setReplyForm={(updater) => setReplyForm(g.id, updater)}
+                          onSubmitReply={submitReply}
+                          replySubmitting={replySubmitting}
+                          authLoading={false}
+                        />
                       ))}
                     </div>
                     <Pagination total={messages.length} perPage={msgPerPage} page={msgPage} onPage={setMsgPage} onPerPage={setMsgPerPage}/>
@@ -587,7 +680,7 @@ function GuestbookOwnerView({ user }) {
                       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:8 }}>
                         {pagedMy.map(g => (
                           <FriendChip key={g.id} g={g} isOwner={true} userId={user?.id}
-                            onEdit={openEdit} onRemove={removeEntry}/>
+                            onEdit={openEdit} onRemove={(id) => setDeleteConfirm(id)}/>
                         ))}
                       </div>
                       <Pagination total={mypages.length} perPage={myPerPage} page={myPage} onPage={setMyPage} onPerPage={setMyPerPage}/>
@@ -597,6 +690,35 @@ function GuestbookOwnerView({ user }) {
           }
         </div>
       )}
+
+      {editingItem && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:9000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div className="card" style={{ maxWidth:400, width:'100%', padding:24 }}>
+            <h3 style={{ fontWeight:700, marginBottom:16 }}>페이지 정보 수정</h3>
+            <div className="form-group">
+              <label className="form-label">닉네임</label>
+              <input className="form-input" autoComplete="off" value={editForm.nickname}
+                onChange={e => setEditForm(f => ({...f, nickname:e.target.value}))}/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">메모</label>
+              <input className="form-input" autoComplete="off" value={editForm.memo}
+                onChange={e => setEditForm(f => ({...f, memo:e.target.value}))}/>
+            </div>
+            <div className="flex justify-end gap-8">
+              <button className="btn btn-outline btn-sm" onClick={() => setEditingItem(null)}>취소</button>
+              <button className="btn btn-primary btn-sm" onClick={saveEdit}>저장</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <DeleteConfirm
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => removeEntry(deleteConfirm)}
+        message="이 항목을 삭제하시겠어요? 댓글도 함께 삭제돼요."
+      />
     </div>
   )
 }
