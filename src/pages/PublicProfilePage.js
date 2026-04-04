@@ -149,7 +149,7 @@ export default function PublicProfilePage() {
       setLoading(false)
     }
     load()
-  }, [username, user])
+  }, [username])
 
   // 페이지 떠날 때 탭 제목 복원
   useEffect(() => {

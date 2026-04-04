@@ -139,7 +139,7 @@ function FriendChip({ g, isOwner, userId, onEdit, onRemove }) {
 
 // ── 공개 페이지용 ──
 export function GuestbookPublicView({ ownerId }) {
-  const { user, profile } = useAuth()
+  const { user, profile, loading: authLoading } = useAuth()
   const [tab, setTab] = useState('message')
   const [messages, setMessages] = useState([])
   const [mypages, setMypages] = useState([])
@@ -278,9 +278,9 @@ export function GuestbookPublicView({ ownerId }) {
         <div>
           <div className="card" style={{ marginBottom:16, padding:'16px 20px' }}>
             <div style={{ marginBottom:8 }}>
-              <label className="form-label">닉네임 {!user && <span style={{color:'#e57373'}}>*</span>}</label>
+              <label className="form-label">닉네임 {(!authLoading && !user) && <span style={{color:'#e57373'}}>*</span>}</label>
               <input className="form-input" autoComplete="off"
-                placeholder={user ? '비워두면 내 닉네임으로 등록돼요' : '닉네임을 입력해주세요 (필수)'}
+                placeholder={authLoading ? '로딩 중...' : user ? '비워두면 내 닉네임으로 등록돼요' : '닉네임을 입력해주세요 (필수)'}
                 value={msgForm.nickname}
                 onChange={e => setMsgForm(f => ({...f, nickname:e.target.value}))}/>
             </div>
@@ -295,7 +295,7 @@ export function GuestbookPublicView({ ownerId }) {
               <div className="flex items-center gap-10">
                 {msgDone && <span className="text-sm" style={{ color:'#558b2f' }}>✅ 남겼어요!</span>}
                 <button className="btn btn-primary btn-sm" onClick={submitMsg}
-                  disabled={msgSubmitting || !msgForm.content.trim() || (!user && !msgForm.nickname.trim())}>
+                  disabled={msgSubmitting || !msgForm.content.trim() || (!authLoading && !user && !msgForm.nickname.trim())}>
                   {msgSubmitting ? '저장 중...' : '방명록 남기기'}
                 </button>
               </div>
