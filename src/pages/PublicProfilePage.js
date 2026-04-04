@@ -101,6 +101,7 @@ export default function PublicProfilePage() {
   const [activeTab, setActiveTab] = useState('schedules')
   const [selectedLog, setSelectedLog] = useState(null)
   const [pairSort, setPairSort] = useState('asc')
+  const [rulebookExpanded, setRulebookExpanded] = useState({})
 
   useEffect(() => {
     const load = async () => {
@@ -110,6 +111,8 @@ export default function PublicProfilePage() {
       // 탭 제목: ✦ TRPG Diary - 닉네임 또는 @아이디
       const displayName = p.display_name || p.username
       document.title = `✦ TRPG Diary - ${displayName}`
+      // 페어 정렬 설정 동기화
+      if (p.pair_sort_order) setPairSort(p.pair_sort_order)
       applyTheme(p.theme_color||'#c8a96e', p.theme_bg_color||'#faf6f0', p.theme_accent||'#8b6f47')
       applyBackground(p.background_image_url||'', p.bg_opacity !== undefined ? p.bg_opacity : 1)
 
@@ -352,12 +355,27 @@ export default function PublicProfilePage() {
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {!parents.length
               ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>룰북이 없어요</div>
-              : parents.map(r => (
-                <div key={r.id} className="card" style={{ padding:0, overflow:'hidden' }}>
-                  <RbRow r={r} isChild={false}/>
-                  {(supplMap[r.id]||[]).map(s => <RbRow key={s.id} r={s} isChild={true}/>)}
-                </div>
-              ))
+              : parents.map(r => {
+                const suppls = supplMap[r.id] || []
+                const isOpen = rulebookExpanded[r.id]
+                return (
+                  <div key={r.id} className="card" style={{ padding:0, overflow:'hidden' }}>
+                    {/* 부모 행 - 서플 있으면 클릭으로 토글 */}
+                    <div style={{ display:'flex', alignItems:'center' }}>
+                      <div style={{ flex:1 }}><RbRow r={r} isChild={false}/></div>
+                      {suppls.length > 0 && (
+                        <button onClick={() => setRulebookExpanded(e => ({...e, [r.id]:!e[r.id]}))}
+                          style={{ background:'none', border:'none', cursor:'pointer', padding:'0 14px', color:'var(--color-text-light)', display:'flex', alignItems:'center', gap:4, fontSize:'0.72rem', flexShrink:0 }}>
+                          <span>{suppls.length}권</span>
+                          <Mi size="sm" color="light">{isOpen ? 'expand_less' : 'expand_more'}</Mi>
+                        </button>
+                      )}
+                    </div>
+                    {/* 서플 - 기본 접힘 */}
+                    {isOpen && suppls.map(s => <RbRow key={s.id} r={s} isChild={true}/>)}
+                  </div>
+                )
+              })
             }
           </div>
         )
@@ -394,10 +412,6 @@ export default function PublicProfilePage() {
       {/* ── 페어 ── */}
       {activeTab==='pairs' && (
         <>
-          <div style={{ display:'flex', gap:8, marginBottom:14 }}>
-            <button className={`btn btn-sm ${pairSort==='asc'?'btn-primary':'btn-outline'}`} onClick={()=>setPairSort('asc')}><Mi size='sm'>arrow_upward</Mi> 오름차순</button>
-            <button className={`btn btn-sm ${pairSort==='desc'?'btn-primary':'btn-outline'}`} onClick={()=>setPairSort('desc')}><Mi size='sm'>arrow_downward</Mi> 내림차순</button>
-          </div>
           <div className="grid-auto">
             {!sortedPairs.length
               ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>페어 목록이 없어요</div>

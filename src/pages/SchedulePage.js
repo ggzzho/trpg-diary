@@ -13,7 +13,7 @@ const STATUS_MAP = {
   planned:{label:'예정',badge:'badge-blue'}, confirmed:{label:'확정',badge:'badge-green'},
   completed:{label:'완료',badge:'badge-gray'}, cancelled:{label:'취소',badge:'badge-red'},
 }
-const BLANK = { title:'', scheduled_date:'', scheduled_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false }
+const BLANK = { title:'', scheduled_date:'', scheduled_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false, is_intro:false, intro_rule:'' }
 const fmtTime = t => t ? t.slice(0,5) : ''
 
 function DateBox({ dateStr }) {
@@ -278,9 +278,10 @@ export default function SchedulePage() {
                     <span style={{fontWeight:600,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.title}</span>
                     <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{flexShrink:0}}>{STATUS_MAP[item.status]?.label}</span>
                     {item.is_gm&&<span className="badge badge-primary" style={{flexShrink:0}}>GM</span>}
+                    {item.is_intro&&<span className="badge badge-green" style={{flexShrink:0}}>입문탁{item.intro_rule?` · ${item.intro_rule}`:''}</span>}
                   </div>
                   <div className="text-xs text-light flex gap-12">
-                    {item.system_name&&<span><><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}</></span>}
+                    {item.system_name&&<span><><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}{item.is_intro&&item.intro_rule?` (${item.intro_rule} 입문)`:''}</></span>}
                     {item.scheduled_time&&<span>🕐 {fmtTime(item.scheduled_time)}</span>}
                     {item.location&&<span>🌐 {item.location}</span>}
                   </div>
@@ -319,6 +320,20 @@ export default function SchedulePage() {
               <option value="pl">PL</option><option value="gm">GM</option>
             </select>
           </div>
+        </div>
+        {/* 입문탁 */}
+        <div className="form-group">
+          <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',userSelect:'none'}}>
+            <input type="checkbox" checked={!!form.is_intro}
+              onChange={e=>setForm(f=>({...f,is_intro:e.target.checked,intro_rule:e.target.checked?f.intro_rule:''}))}
+              style={{width:16,height:16,accentColor:'var(--color-primary)',cursor:'pointer'}}/>
+            <span style={{fontSize:'0.88rem',fontWeight:600}}>입문탁</span>
+          </label>
+          {form.is_intro&&(
+            <input className="form-input" placeholder="어떤 룰의 입문인지 입력 (예: CoC, 인세인...)"
+              value={form.intro_rule||''} onChange={set('intro_rule')}
+              style={{marginTop:8}} autoComplete="off"/>
+          )}
         </div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.description||''} onChange={set('description')} style={{minHeight:72}}/></div>
       </Modal>

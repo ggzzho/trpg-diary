@@ -12,6 +12,8 @@ function calcDday(dateStr) {
   return Math.floor((new Date()-new Date(dateStr))/(1000*60*60*24))
 }
 
+const SORT_KEY = 'trpg_pair_sort_order'
+
 export function PairsPage() {
   const { user } = useAuth()
   const [items, setItems] = useState([])
@@ -24,7 +26,17 @@ export function PairsPage() {
   const [relationTags, setRelationTags] = useState([])
   const [tagModal, setTagModal] = useState(false)
   const [tagFilter, setTagFilter] = useState('all')
-  const [sortOrder, setSortOrder] = useState('asc')
+  // localStorage에서 초기값 로드
+  const [sortOrder, setSortOrderState] = useState(() => localStorage.getItem(SORT_KEY) || 'asc')
+
+  // 정렬 변경 시 localStorage + Supabase 동시 저장
+  const setSortOrder = async (order) => {
+    setSortOrderState(order)
+    localStorage.setItem(SORT_KEY, order)
+    if (user?.id) {
+      await supabase.from('profiles').update({ pair_sort_order: order }).eq('id', user.id)
+    }
+  }
 
   const load = async () => { const {data}=await pairsApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   const loadTags = async () => {
