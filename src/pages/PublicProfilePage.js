@@ -150,11 +150,11 @@ export default function PublicProfilePage() {
 
   const TABS = [
     { key:'schedules', label:'일정', icon:'calendar_month', count:data.schedules?.length },
-    { key:'logs', label:'기록', icon:'auto_stories', count:data.logs?.length },
     { key:'rulebooks', label:'룰북', icon:'menu_book', count:data.rulebooks?.length },
+    { key:'logs', label:'기록', icon:'auto_stories', count:data.logs?.length },
+    { key:'availability', label:'공수표', icon:'event_available', count:data.availability?.length },
     { key:'scenarios', label:'시나리오', icon:'description', count:data.scenarios?.length },
     { key:'pairs', label:'페어', icon:'people', count:data.pairs?.length },
-    { key:'availability', label:'공수표', icon:'event_available', count:data.availability?.length },
     { key:'guestbook', label:'방명록', icon:'mail' },
   ]
 
