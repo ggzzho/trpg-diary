@@ -29,8 +29,7 @@ export default function SettingsPage() {
   const [tab, setTab] = useState('profile')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [headerUploading, setHeaderUploading] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [newLink, setNewLink] = useState({label:'',url:''})
   const [pwForm, setPwForm] = useState({current:'', next:'', confirm:''})
@@ -98,23 +97,9 @@ export default function SettingsPage() {
     setSaving(false)
   }
 
-  const handleBgUpload = async e => {
-    const file=e.target.files?.[0]; if(!file) return; setUploading(true)
-    const {url,error}=await uploadFile('backgrounds',`${user.id}/bg-${Date.now()}`,file)
-    if(url){setForm(f=>({...f,background_image_url:url}));applyBackground(url,form.bg_opacity)}
-    else alert(error?.message||'업로드 실패')
-    setUploading(false)
-  }
-  const handleHeaderUpload = async e => {
-    const file=e.target.files?.[0]; if(!file) return; setHeaderUploading(true)
-    const {url,error}=await uploadFile('backgrounds',`${user.id}/header-${Date.now()}`,file)
-    if(url) setForm(f=>({...f,header_image_url:url}))
-    else alert(error?.message||'업로드 실패')
-    setHeaderUploading(false)
-  }
   const handleAvatarUpload = async e => {
     const file=e.target.files?.[0]; if(!file) return; setAvatarUploading(true)
-    const {url,error}=await uploadFile('avatars',`${user.id}/avatar-${Date.now()}`,file)
+    const {url,error}=await uploadFile('avatars',`${user.id}/avatar-${Date.now()}`,file,{compress:true,maxSize:500,quality:0.85})
     if(url){await updateProfile(user.id,{avatar_url:url});refreshProfile()}
     else alert(error?.message||'업로드 실패')
     setAvatarUploading(false)
@@ -154,7 +139,6 @@ export default function SettingsPage() {
               {form.header_image_url&&<div style={{borderRadius:8,overflow:'hidden',marginBottom:8,height:90,background:'var(--color-nav-active-bg)'}}><img src={form.header_image_url} alt="header" style={{width:'100%',height:'100%',objectFit:'cover'}} /></div>}
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.header_image_url||''} onChange={set('header_image_url')} style={{flex:1}} />
-                <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>{headerUploading?'업로드 중...':'📁 업로드'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleHeaderUpload} disabled={headerUploading} /></label>
                 {form.header_image_url&&<button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,header_image_url:''}))}>제거</button>}
               </div>
             </div>
@@ -241,7 +225,6 @@ export default function SettingsPage() {
               <label className="form-label">배경 이미지</label>
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.background_image_url} onChange={e=>handleBgUrlChange(e.target.value)} style={{flex:1}} />
-                <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>{uploading?'업로드 중...':'📁 파일 업로드'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleBgUpload} disabled={uploading} /></label>
               </div>
               {form.background_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} /><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1)}}>제거</button></div>}
             </div>

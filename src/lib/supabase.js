@@ -152,7 +152,32 @@ export const guestbookApi = {
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
-export const uploadFile = async (bucket, path, file) => {
+// Canvas로 이미지 압축 (아바타용: 500px, 품질 0.82 → 평균 100~300KB)
+const compressImage = (file, maxSize = 500, quality = 0.82) => {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const canvas = document.createElement('canvas')
+      let { width, height } = img
+      // 비율 유지하며 maxSize 이하로 축소
+      if (width > height) {
+        if (width > maxSize) { height = Math.round(height * maxSize / width); width = maxSize }
+      } else {
+        if (height > maxSize) { width = Math.round(width * maxSize / height); height = maxSize }
+      }
+      canvas.width = width
+      canvas.height = height
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+      canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
+
+export const uploadFile = async (bucket, path, file, options = {}) => {
   // 파일 형식 검증
   if (!ALLOWED_TYPES.includes(file.type)) {
     return { url: null, error: { message: 'JPG, PNG, GIF, WebP 형식만 업로드 가능해요.' } }
@@ -161,7 +186,12 @@ export const uploadFile = async (bucket, path, file) => {
   if (file.size > MAX_FILE_SIZE) {
     return { url: null, error: { message: `파일 크기가 너무 커요. 2MB 이하의 이미지를 사용해주세요. (현재: ${(file.size/1024/1024).toFixed(1)}MB)` } }
   }
-  const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
+  // 압축 옵션이 있으면 Canvas 압축 적용
+  let uploadTarget = file
+  if (options.compress) {
+    uploadTarget = await compressImage(file, options.maxSize || 500, options.quality || 0.82)
+  }
+  const { data, error } = await supabase.storage.from(bucket).upload(path, uploadTarget, { upsert: true, contentType: options.compress ? 'image/jpeg' : file.type })
   if (error) return { url: null, error }
   const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path)
   return { url: publicUrl, error: null }
