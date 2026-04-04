@@ -19,14 +19,15 @@ const parseEntry = (g) => {
   return { url: raw, memo: '' }
 }
 
-// ── 페이지네이션 (중앙 정렬) ──
+// ── 페이지네이션 ──
 function Pagination({ total, perPage, page, onPage, onPerPage }) {
   const totalPages = Math.ceil(total / perPage)
   if (total === 0) return null
   return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, marginTop:16 }}>
-      {totalPages > 1 && (
-        <div style={{ display:'flex', gap:4, alignItems:'center', justifyContent:'center' }}>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8, marginTop:16 }}>
+      {/* 페이지 번호 - 중앙 */}
+      <div style={{ flex:1, display:'flex', justifyContent:'center', gap:4, alignItems:'center' }}>
+        {totalPages > 1 && <>
           <button className="btn btn-ghost btn-sm" onClick={() => onPage(p => Math.max(1,p-1))} disabled={page===1}>
             <Mi size="sm">chevron_left</Mi>
           </button>
@@ -41,9 +42,10 @@ function Pagination({ total, perPage, page, onPage, onPerPage }) {
           <button className="btn btn-ghost btn-sm" onClick={() => onPage(p => Math.min(totalPages,p+1))} disabled={page===totalPages}>
             <Mi size="sm">chevron_right</Mi>
           </button>
-        </div>
-      )}
-      <div style={{ display:'flex', gap:5, justifyContent:'center' }}>
+        </>}
+      </div>
+      {/* 개수 선택 - 우측 */}
+      <div style={{ display:'flex', gap:5, flexShrink:0 }}>
         {[10, 20, 30].map(n => (
           <button key={n} className={`btn btn-sm ${perPage===n?'btn-primary':'btn-outline'}`}
             onClick={() => { onPerPage(n); onPage(1) }}
@@ -123,8 +125,8 @@ function GuestEntry({ g, replies, isOwner, userId, onDelete, onReply, replyOpen,
           color: liked ? '#e57373' : 'var(--color-text-light)',
           transition:'color 0.15s' }}
           onClick={() => userId && onToggleLike(g.id, likes)}>
-          <Mi size="sm" color={liked ? undefined : 'light'} style={{ color: liked ? '#e57373' : undefined }}>
-            {liked ? 'favorite' : 'favorite_border'}
+          <Mi size="sm" filled={liked} style={{ color: liked ? '#e57373' : 'var(--color-text-light)' }}>
+            favorite
           </Mi>
           {likeCount > 0 && <span style={{ color: liked ? '#e57373' : 'var(--color-text-light)' }}>{likeCount}</span>}
         </button>
