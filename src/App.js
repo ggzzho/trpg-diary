@@ -1,5 +1,5 @@
 // src/App.js
-import React from 'react'
+import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
@@ -18,6 +18,17 @@ import { BookmarkPage } from './pages/BookmarkPage'
 import SettingsPage from './pages/SettingsPage'
 import PublicProfilePage from './pages/PublicProfilePage'
 import './index.css'
+
+// vercel.app으로 접속 시 co.kr로 강제 리다이렉트
+if (typeof window !== 'undefined' &&
+    window.location.hostname.includes('vercel.app')) {
+  window.location.replace(
+    window.location.href.replace(
+      window.location.hostname,
+      'trpg-diary.co.kr'
+    )
+  )
+}
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
