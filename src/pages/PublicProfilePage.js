@@ -6,8 +6,9 @@ import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { GuestbookPublicView, FeedbackPublicView } from './GuestbookPage'
 import { LogDetailContent } from './PlayLogPage'
-import { FOOTER_TEXT, Modal } from '../components/Layout'
+import { FOOTER_TEXT, Modal, Pagination } from '../components/Layout'
 import { Mi } from '../components/Mi'
+import { usePagination } from '../hooks/usePagination'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, isSameMonth, isToday, addMonths, subMonths
@@ -197,6 +198,12 @@ export default function PublicProfilePage() {
     return pairSort === 'asc' ? da.localeCompare(db) : db.localeCompare(da)
   })
 
+  // 각 탭 페이지네이션
+  const logsPagination = usePagination(data.logs||[], 20)
+  const scenariosPagination = usePagination(data.scenarios||[], 20)
+  const pairsPagination = usePagination(sortedPairs, 20)
+  const availabilityPagination = usePagination(data.availability||[], 20)
+
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
 
@@ -325,7 +332,7 @@ export default function PublicProfilePage() {
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(238px,1fr))', gap:13 }}>
             {!data.logs?.length
               ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem', gridColumn:'1/-1' }}>아직 기록이 없어요</div>
-              : data.logs.map(l => (
+              : logsPagination.paged.map(l => (
                 <div key={l.id}
                   style={{ borderRadius:12, overflow:'hidden', background:'var(--color-surface)', border:'1px solid var(--color-border)', boxShadow:'0 2px 12px var(--color-shadow)', display:'flex', flexDirection:'column', cursor:'pointer', transition:'transform 0.15s,box-shadow 0.15s' }}
                   onClick={() => setSelectedLog(l)}
@@ -370,6 +377,7 @@ export default function PublicProfilePage() {
               ))
             }
           </div>
+          <Pagination total={(data.logs||[]).length} perPage={logsPagination.perPage} page={logsPagination.page} onPage={logsPagination.setPage} onPerPage={logsPagination.setPerPage}/>
           <Modal isOpen={!!selectedLog} onClose={()=>setSelectedLog(null)} title={selectedLog?.title}
             footer={<button className="btn btn-outline btn-sm" onClick={()=>setSelectedLog(null)}>닫기</button>}
           >
@@ -433,10 +441,11 @@ export default function PublicProfilePage() {
 
       {/* ── 시나리오 ── */}
       {activeTab==='scenarios' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        <>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {!data.scenarios?.length
             ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>시나리오가 없어요</div>
-            : data.scenarios.map(s => (
+            : scenariosPagination.paged.map(s => (
               <div key={s.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:14 }}>
                 <div style={{ width:48, height:48, borderRadius:8, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                   {s.cover_image_url ? <img src={s.cover_image_url} alt={s.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.5rem', opacity:0.4 }}><Mi size='lg' color='light'>description</Mi></span>}
@@ -456,7 +465,9 @@ export default function PublicProfilePage() {
               </div>
             ))
           }
-        </div>
+          </div>
+          <Pagination total={(data.scenarios||[]).length} perPage={scenariosPagination.perPage} page={scenariosPagination.page} onPage={scenariosPagination.setPage} onPerPage={scenariosPagination.setPerPage}/>
+        </>
       )}
 
       {/* ── 페어 ── */}
@@ -465,7 +476,7 @@ export default function PublicProfilePage() {
           <div className="grid-auto">
             {!sortedPairs.length
               ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>페어 목록이 없어요</div>
-              : sortedPairs.map(p => {
+              : pairsPagination.paged.map(p => {
                 const dday = calcDday(p.first_met_date)
                 return (
                   <div key={p.id} className="card" style={{ padding:0, overflow:'hidden' }}>
@@ -493,6 +504,7 @@ export default function PublicProfilePage() {
               })
             }
           </div>
+          <Pagination total={sortedPairs.length} perPage={pairsPagination.perPage} page={pairsPagination.page} onPage={pairsPagination.setPage} onPerPage={pairsPagination.setPerPage}/>
         </>
       )}
 
@@ -501,7 +513,7 @@ export default function PublicProfilePage() {
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {!data.availability?.length
             ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>활성화된 공수표가 없어요</div>
-            : data.availability.map(a => (
+            : availabilityPagination.paged.map(a => (
               <div key={a.id} className="card card-sm">
                 <div style={{ display:'flex', alignItems:'flex-start', gap:14 }}>
                   <div className="flex gap-8" style={{ flexShrink:0, paddingTop:2 }}>
@@ -521,6 +533,7 @@ export default function PublicProfilePage() {
               </div>
             ))
           }
+          <Pagination total={(data.availability||[]).length} perPage={availabilityPagination.perPage} page={availabilityPagination.page} onPage={availabilityPagination.setPage} onPerPage={availabilityPagination.setPerPage}/>
         </div>
       )}
 

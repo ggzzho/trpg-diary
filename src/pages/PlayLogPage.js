@@ -1,7 +1,7 @@
 // src/pages/PlayLogPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { playLogsApi, uploadFile } from '../lib/supabase'
+import { playLogsApi, uploadFile, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
@@ -127,7 +127,13 @@ export function PlayLogPage() {
   const [ruleFilter, setRuleFilter] = useState('all')
   const [showSpoilerPw, setShowSpoilerPw] = useState(false)
 
-  const load = async () => { const {data}=await playLogsApi.getAll(user.id); setItems(data||[]); setLoading(false) }
+  const load = async () => {
+    const {data} = await supabase
+      .from('play_logs').select('*').eq('user_id', user.id)
+      .order('played_date', { ascending: false, nullsFirst: false })
+    setItems(data||[])
+    setLoading(false)
+  }
   useEffect(() => { load() }, [user])
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
