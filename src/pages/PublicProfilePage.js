@@ -321,7 +321,7 @@ export default function PublicProfilePage() {
           if (!supplMap[r.parent_id]) supplMap[r.parent_id] = []
           supplMap[r.parent_id].push(r)
         })
-        const fmtLabel = {physical:'실물', digital:'전자', both:'실물+전자'}
+
         const RbRow = ({r, isChild}) => (
           <div style={{ display:'flex', alignItems:'center', gap:14, padding: isChild ? '8px 14px 8px 52px' : '10px 14px', background: isChild ? 'var(--color-nav-active-bg)' : 'transparent', borderTop: isChild ? '1px solid var(--color-border)' : 'none' }}>
             <div style={{ width:40, height:40, borderRadius:7, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -334,7 +334,6 @@ export default function PublicProfilePage() {
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:r.tags?.length>0?4:0 }}>
                 {r.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {r.system_name}</span>}
-                {r.format && <span className="badge badge-primary" style={{ fontSize:'0.62rem' }}>{fmtLabel[r.format]||r.format}</span>}
               </div>
               {r.tags?.length > 0 && <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>{r.tags.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}</div>}
             </div>

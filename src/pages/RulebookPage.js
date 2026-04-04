@@ -5,9 +5,8 @@ import { rulebooksApi, uploadFile, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager } from '../components/Layout'
 import { Mi } from '../components/Mi'
 
-const BLANK = { title:'', system_name:'', cover_image_url:'', format:'physical', memo:'', tags:[], parent_id:null }
+const BLANK = { title:'', system_name:'', cover_image_url:'', memo:'', tags:[], parent_id:null }
 const DEFAULT_TAG_NAMES = ['GM','주력','미숙','관심','초보','입문','미입문']
-const FORMAT_LABEL = { physical:'실물', digital:'전자', both:'실물+전자' }
 
 export function RulebookPage() {
   const { user } = useAuth()
@@ -124,7 +123,6 @@ export function RulebookPage() {
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
           
-          <span className="badge badge-primary" style={{ fontSize:'0.62rem' }}>{FORMAT_LABEL[item.format] || item.format}</span>
           {item.tags?.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}
         </div>
         {item.memo && <p className="text-xs text-light" style={{ marginTop:3 }}>{item.memo}</p>}
@@ -187,7 +185,6 @@ export function RulebookPage() {
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                         
-                        <span className="badge badge-primary" style={{ fontSize:'0.62rem' }}>{FORMAT_LABEL[item.format] || item.format}</span>
                         {item.tags?.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}
                       </div>
                       {item.memo && <p className="text-xs text-light" style={{ marginTop:3 }}>{item.memo}</p>}
@@ -246,7 +243,6 @@ export function RulebookPage() {
         )}
 
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
-        <div className="form-group"><label className="form-label">형태</label><select className="form-select" value={form.format} onChange={set('format')}><option value="physical">실물</option><option value="digital">전자</option><option value="both">실물+전자</option></select></div>
         <div className="form-group">
           <label className="form-label">태그<button type="button" className="btn btn-ghost btn-sm" style={{ marginLeft:8, fontSize:'0.68rem' }} onClick={() => setTagModal(true)}>+ 태그 관리</button></label>
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
