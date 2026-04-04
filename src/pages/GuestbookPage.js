@@ -592,6 +592,7 @@ function GuestbookOwnerView({ user }) {
   )
 }
 
+export function GuestbookPage({ ownerId }) {
   const { user } = useAuth()
   if (ownerId) return <GuestbookPublicView ownerId={ownerId}/>
   return <GuestbookOwnerView user={user}/>
