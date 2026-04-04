@@ -533,7 +533,7 @@ export default function PublicProfilePage() {
       {/* 푸터 */}
       <footer style={{ marginTop:60, paddingTop:20, paddingBottom:20, borderTop:'1px solid var(--color-border)', textAlign:'center', color:'var(--color-text-light)', fontSize:'0.72rem' }}>
         <div style={{marginBottom:10}}>
-          <a href="https://toss.me/trpg00z" target="_blank" rel="noreferrer"
+          <a href="https://qr.kakaopay.com/Ej8h4QBew" target="_blank" rel="noreferrer"
             style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:100,
               background:'rgba(200,169,110,0.08)',border:'1px solid var(--color-border)',
               color:'var(--color-accent)',textDecoration:'none',fontSize:'0.75rem',fontWeight:600}}>
