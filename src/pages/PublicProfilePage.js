@@ -204,12 +204,7 @@ export default function PublicProfilePage() {
     return pairSort === 'asc' ? da.localeCompare(db) : db.localeCompare(da)
   })
 
-  // 각 탭 페이지네이션
-  const sortedPairs = [...(data.pairs||[])].sort((a,b) => {
-    const da = a.first_met_date||'', db = b.first_met_date||''
-    return pairSort === 'asc' ? da.localeCompare(db) : db.localeCompare(da)
-  })
-  // pairsPagination items를 sortedPairs로 업데이트 (Hook 규칙상 위에서 선언, 여기서 paged 재계산)
+  // 각 탭 페이지네이션 - pagedPairs 계산
   const pagedPairs = sortedPairs.slice((pairsPagination.page-1)*pairsPagination.perPage, pairsPagination.page*pairsPagination.perPage)
 
   return (
