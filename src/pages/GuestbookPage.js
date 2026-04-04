@@ -42,17 +42,17 @@ function FriendChip({ g, isOwner, userId, onEdit, onRemove }) {
       </a>
 
       {/* 이름 + 메모 */}
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+      <div style={{ flex:1, minWidth:0, overflow:'hidden' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:5, overflow:'hidden' }}>
           <a href={href} target="_blank" rel="noreferrer"
-            style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--color-text)', textDecoration:'none' }}
+            style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--color-text)', textDecoration:'none', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flexShrink:1 }}
             onMouseEnter={e => e.target.style.color='var(--color-primary)'}
             onMouseLeave={e => e.target.style.color='var(--color-text)'}
           >
             {g.author_name}
           </a>
           {g.author_username && (
-            <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>@{g.author_username}</span>
+            <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)', whiteSpace:'nowrap', flexShrink:0 }}>@{g.author_username}</span>
           )}
         </div>
         {/* 메모 박스 */}

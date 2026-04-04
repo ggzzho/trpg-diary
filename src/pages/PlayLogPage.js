@@ -75,21 +75,33 @@ export function LogDetailContent({ detail, isOwner }) {
         <TagChip type="role" label={detail.role}/>
         {detail.system_name && <TagChip type="rule" label={detail.system_name}/>}
       </div>
-      <div className="grid-2" style={{marginBottom:12}}>
-        {detail.start_date && (
-          <div><div className="form-label">시작 날짜</div><div style={{fontSize:'0.85rem'}}>{format(new Date(detail.start_date),'yyyy년 M월 d일')}</div></div>
+      <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:14}}>
+        {(detail.start_date||detail.played_date) && (
+          <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
+            {detail.start_date && (
+              <div><span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6}}>시작 날짜</span><span style={{fontSize:'0.9rem'}}>{format(new Date(detail.start_date),'yyyy년 M월 d일')}</span></div>
+            )}
+            <div><span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6}}>엔딩 날짜</span><span style={{fontSize:'0.9rem'}}>{detail.played_date && format(new Date(detail.played_date),'yyyy년 M월 d일')}</span></div>
+          </div>
         )}
-        <div><div className="form-label">엔딩 날짜</div><div style={{fontSize:'0.85rem'}}>{detail.played_date && format(new Date(detail.played_date),'yyyy년 M월 d일')}</div></div>
         {(detail.together_with||detail.character_name) && (
-          <div><div className="form-label">GM / PL</div><div style={{fontSize:'0.85rem'}}>{[detail.together_with,detail.character_name].filter(Boolean).join(' / ')}</div></div>
+          <div><span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6}}>GM / PL</span><span style={{fontSize:'0.9rem'}}>{[detail.together_with,detail.character_name].filter(Boolean).join(' / ')}</span></div>
         )}
-        {detail.npc && <div><div className="form-label">등장인물</div><div style={{fontSize:'0.85rem'}}>{detail.npc}</div></div>}
+        {detail.npc && (
+          <div><span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6}}>등장인물</span><span style={{fontSize:'0.9rem'}}>{detail.npc}</span></div>
+        )}
       </div>
       {detail.rating > 0 && (
-        <div style={{marginBottom:12}}><div className="form-label">평점</div><StarRating value={detail.rating} readOnly/></div>
+        <div style={{marginBottom:12}}>
+          <span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6}}>평점</span>
+          <StarRating value={detail.rating} readOnly/>
+        </div>
       )}
       {detail.memo && (
-        <div style={{marginBottom:12}}><div className="form-label">메모</div><p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.memo}</p></div>
+        <div style={{marginBottom:12}}>
+          <span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6,display:'block',marginBottom:4}}>메모</span>
+          <p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.9rem'}}>{detail.memo}</p>
+        </div>
       )}
       {detail.scenario_link && <div style={{marginBottom:6}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}><Mi size='sm'>link</Mi> 시나리오 링크</a></div>}
       {detail.session_log_url && <div style={{marginBottom:12}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}><Mi size='sm'>save</Mi> 세션 로그 백업</a></div>}
@@ -203,8 +215,12 @@ export function PlayLogPage() {
                     </div>
                   )}
                   {item.npc&&<div style={{fontSize:'0.79rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>등장인물.</span>{item.npc}</div>}
-                  {item.start_date&&<div style={{fontSize:'0.79rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>Start.</span>{format(new Date(item.start_date),'yyyy.MM.dd')}</div>}
-                  {item.played_date&&<div style={{fontSize:'0.79rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>End.</span>{format(new Date(item.played_date),'yyyy.MM.dd')}</div>}
+                  {(item.start_date||item.played_date)&&(
+                    <div style={{fontSize:'0.79rem',color:'var(--color-text-light)',display:'flex',gap:14,flexWrap:'wrap'}}>
+                      {item.start_date&&<span><span style={{fontWeight:600,marginRight:4}}>Start.</span>{format(new Date(item.start_date),'yyyy.MM.dd')}</span>}
+                      {item.played_date&&<span><span style={{fontWeight:600,marginRight:4}}>End.</span>{format(new Date(item.played_date),'yyyy.MM.dd')}</span>}
+                    </div>
+                  )}
                 </div>
                 {item.rating>0&&<div className="stars" style={{fontSize:'0.82rem',marginTop:5}}>{'★'.repeat(item.rating)}{'☆'.repeat(5-item.rating)}</div>}
                 {item.spoiler_content&&<div style={{marginTop:3,fontSize:'0.75rem',color:'#e57373'}}><Mi size='sm' color='danger'>warning</Mi> 스포일러 포함</div>}
