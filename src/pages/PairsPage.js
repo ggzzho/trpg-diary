@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { pairsApi, uploadFile, supabase } from '../lib/supabase'
-import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager } from '../components/Layout'
+import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
+import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 
 const BLANK = { name:'', nickname:'', memo:'', relations:[], first_met_date:'', pair_image_url:'' }
@@ -88,6 +89,8 @@ export function PairsPage() {
       return sortOrder==='asc'?da.localeCompare(db):db.localeCompare(da)
     })
 
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
+
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
@@ -115,8 +118,9 @@ export function PairsPage() {
 
       {loading?<LoadingSpinner/>:filtered.length===0
         ?<EmptyState icon="people" title="페어가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
-        :<div className="grid-auto">
-          {filtered.map(item=>{
+        :<>
+          <div className="grid-auto">
+          {paged.map(item=>{
             const dday=calcDday(item.first_met_date)
             const validTagNames=relationTags.map(t=>t.name)
             const displayRelations=(item.relations||[]).filter(r=>validTagNames.includes(r))
@@ -146,6 +150,8 @@ export function PairsPage() {
             )
           })}
         </div>
+        <Pagination total={filtered.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+        </>
       }
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'페어 수정':'페어 추가'}
         footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}

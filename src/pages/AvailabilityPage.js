@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { availabilityApi } from '../lib/supabase'
-import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
+import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
+import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
 
@@ -17,6 +18,7 @@ export function AvailabilityPage() {
   const [form, setForm] = useState(BLANK)
   const [confirm, setConfirm] = useState(null)
   const [viewMode, setViewMode] = useState('card')
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(items, 20)
 
   const load = async () => { const {data}=await availabilityApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
@@ -46,8 +48,9 @@ export function AvailabilityPage() {
       {loading?<LoadingSpinner/>:items.length===0
         ?<EmptyState icon="event_available" title="공수표가 없어요" action={<button className="btn btn-primary" onClick={openNew}>등록하기</button>}/>
         :viewMode==='card'
-          ?<div className="grid-auto">
-            {items.map(item=>(
+          ?<>
+            <div className="grid-auto">
+            {paged.map(item=>(
               <div key={item.id} className="card">
                 <div className="flex justify-between items-center" style={{marginBottom:10}}>
                   <div className="flex gap-8">
@@ -69,8 +72,9 @@ export function AvailabilityPage() {
               </div>
             ))}
           </div>
-          :<div style={{display:'flex',flexDirection:'column',gap:12}}>
-            {items.map(item=>(
+          :<>
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {paged.map(item=>(
               <div key={item.id} className="card card-sm">
                 <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
                   <div className="flex gap-8" style={{flexShrink:0,paddingTop:2}}>
@@ -94,6 +98,8 @@ export function AvailabilityPage() {
               </div>
             ))}
           </div>
+          <Pagination total={items.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+          </>
       }
 
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'공수표 수정':'공수표 추가'}

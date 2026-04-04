@@ -2,7 +2,8 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { rulebooksApi, uploadFile, supabase } from '../lib/supabase'
-import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager } from '../components/Layout'
+import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
+import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 
 const BLANK = { title:'', system_name:'', cover_image_url:'', memo:'', tags:[], parent_id:null }
@@ -100,6 +101,8 @@ export function RulebookPage() {
     supplMap[i.id]?.some(s => s.title.includes(search))
   )
 
+  const { paged: pagedRulebooks, page: rbPage, setPage: setRbPage, perPage: rbPerPage, setPerPage: setRbPerPage } = usePagination(filteredParents, 20)
+
   // 부모 룰북 목록 (서플 선택용)
   const parentOptions = parents
 
@@ -151,7 +154,7 @@ export function RulebookPage() {
       {loading ? <LoadingSpinner/> : filteredParents.length === 0
         ? <EmptyState icon="menu_book" title="룰북이 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
         : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            {filteredParents.map(item => {
+            {pagedRulebooks.map(item => {
               const suppls = supplMap[item.id] || []
               const isOpen = expanded[item.id]
               return (

@@ -2,7 +2,8 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { schedulesApi } from '../lib/supabase'
-import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
+import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
+import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -116,6 +117,8 @@ export default function SchedulePage() {
     const matchSearch = !search || i.title?.includes(search) || i.system_name?.includes(search) || i.location?.includes(search)
     return matchTab && matchSearch
   }).sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date))
+
+  const { paged: pagedSchedule, page: schedulePage, setPage: setSchedulePage, perPage: schedulePerPage, setPerPage: setSchedulePerPage } = usePagination(filtered, 20)
 
   const summaryStats = useMemo(() => {
     let t=items.filter(i=>i.status==='completed'||i.scheduled_date<today)
@@ -333,8 +336,9 @@ export default function SchedulePage() {
       {viewMode==='list'&&(
         loading?<LoadingSpinner/>:filtered.length===0
           ?<EmptyState icon="calendar_month" title="일정이 없어요" action={<button className="btn btn-primary" onClick={()=>openNew()}>추가하기</button>}/>
-          :<div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {filtered.map(item=>(
+          :<>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {pagedSchedule.map(item=>(
               <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
                 <DateBox dateStr={item.scheduled_date}/>
                 <div style={{flex:1,minWidth:0}}>
@@ -358,7 +362,9 @@ export default function SchedulePage() {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+            <Pagination total={filtered.length} perPage={schedulePerPage} page={schedulePage} onPage={setSchedulePage} onPerPage={setSchedulePerPage}/>
+          </>
       )}
       </>)}
 

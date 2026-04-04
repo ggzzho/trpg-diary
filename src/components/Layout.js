@@ -204,3 +204,54 @@ export function TagManager({ tags, onAdd, onEdit, onRemove, placeholder }) {
     </div>
   )
 }
+
+// ── 공통 페이지네이션 컴포넌트 ──
+export function Pagination({ total, perPage, page, onPage, onPerPage, options = [10, 20, 30] }) {
+  const totalPages = Math.ceil(total / perPage)
+  if (total === 0) return null
+  return (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+      flexWrap:'wrap', gap:8, marginTop:16, paddingTop:12, borderTop:'1px solid var(--color-border)' }}>
+      {/* 페이지 번호 - 중앙 */}
+      <div style={{ flex:1, display:'flex', justifyContent:'center', gap:4, alignItems:'center' }}>
+        {totalPages > 1 && <>
+          <button className="btn btn-ghost btn-sm"
+            onClick={() => onPage(p => Math.max(1, p-1))} disabled={page===1}>
+            <span className="ms" style={{fontSize:16}}>chevron_left</span>
+          </button>
+          {Array.from({ length: totalPages }, (_,i) => i+1)
+            .filter(n => n===1 || n===totalPages || Math.abs(n-page)<=1)
+            .reduce((acc,n,i,arr) => {
+              if (i>0 && n-arr[i-1]>1) acc.push('...')
+              acc.push(n)
+              return acc
+            }, [])
+            .map((n,i) => n==='...'
+              ? <span key={`e${i}`} style={{ padding:'0 4px', color:'var(--color-text-light)', fontSize:'0.8rem' }}>…</span>
+              : <button key={n}
+                  className={`btn btn-sm ${page===n?'btn-primary':'btn-outline'}`}
+                  onClick={() => onPage(n)}
+                  style={{ minWidth:32, padding:'3px 6px', fontSize:'0.78rem', justifyContent:'center' }}>
+                  {n}
+                </button>
+            )}
+          <button className="btn btn-ghost btn-sm"
+            onClick={() => onPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages}>
+            <span className="ms" style={{fontSize:16}}>chevron_right</span>
+          </button>
+        </>}
+      </div>
+      {/* 개수 선택 - 우측 */}
+      <div style={{ display:'flex', gap:5, flexShrink:0 }}>
+        {options.map(n => (
+          <button key={n}
+            className={`btn btn-sm ${perPage===n?'btn-primary':'btn-outline'}`}
+            onClick={() => { onPerPage(n); onPage(1) }}
+            style={{ fontSize:'0.72rem', padding:'3px 10px' }}>
+            {n}개
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}

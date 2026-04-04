@@ -2,10 +2,11 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { playLogsApi, uploadFile } from '../lib/supabase'
-import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
+import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
 import { format } from 'date-fns'
+import { usePagination } from '../hooks/usePagination'
 
 const BLANK = {
   title:'', start_date:'', played_date:'', system_name:'', role:'PL',
@@ -160,6 +161,8 @@ export function PlayLogPage() {
     return ms&&mr
   })
 
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
+
   const relatedItems = detail?.series_tag
     ? items.filter(i=>i.series_tag===detail.series_tag&&i.id!==detail.id).sort((a,b)=>(a.played_date||'').localeCompare(b.played_date||''))
     : []
@@ -185,8 +188,9 @@ export function PlayLogPage() {
 
       {loading?<LoadingSpinner/>:filtered.length===0
         ?<EmptyState icon="auto_stories" title="기록이 없어요" action={<button className="btn btn-primary" onClick={openNew}>기록 추가</button>}/>
-        :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(238px,1fr))',gap:13}}>
-          {filtered.map(item=>(
+        :<>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(238px,1fr))',gap:13}}>
+          {paged.map(item=>(
             <div key={item.id}
               style={{borderRadius:12,overflow:'hidden',cursor:'pointer',background:'var(--color-surface)',border:'1px solid var(--color-border)',boxShadow:'0 2px 12px var(--color-shadow)',transition:'transform 0.2s,box-shadow 0.2s',display:'flex',flexDirection:'column'}}
               onClick={()=>setDetail(item)}
@@ -233,6 +237,8 @@ export function PlayLogPage() {
             </div>
           ))}
         </div>
+          <Pagination total={filtered.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+        </>
       }
 
       {/* 상세 보기 */}

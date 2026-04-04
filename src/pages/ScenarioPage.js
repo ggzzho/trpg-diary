@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { scenariosApi } from '../lib/supabase'
-import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
+import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
+import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
 
@@ -39,6 +40,8 @@ export function ScenarioPage() {
     .filter(i=>statusFilter==='all'||i.status===statusFilter)
     .filter(i=>!search||i.title.includes(search)||i.system_name?.includes(search)||i.author?.includes(search))
 
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
+
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
@@ -60,7 +63,7 @@ export function ScenarioPage() {
       {loading?<LoadingSpinner/>:filtered.length===0
         ?<EmptyState icon="description" title="시나리오가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
         :<div style={{display:'flex',flexDirection:'column',gap:8}}>
-          {filtered.map(item=>(
+          {paged.map(item=>(
             <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
               <div style={{width:48,height:48,borderRadius:8,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
                 {item.cover_image_url?<img src={item.cover_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'1.5rem',opacity:0.4}}><Mi size="lg" color="light">description</Mi></span>}

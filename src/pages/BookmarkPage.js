@@ -2,7 +2,8 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { bookmarksApi, bookmarkTagsApi } from '../lib/supabase'
-import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager } from '../components/Layout'
+import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
+import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 
 const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[] }
@@ -121,6 +122,8 @@ export function BookmarkPage() {
     return ms&&mt
   }),[items,search,tagFilter])
 
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
+
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
@@ -141,8 +144,9 @@ export function BookmarkPage() {
       </div>
       {loading?<LoadingSpinner/>:filtered.length===0
         ?<EmptyState icon="bookmark" title="북마크가 없어요" description="유용한 링크를 추가해보세요!" action={<button className="btn btn-primary" onClick={openNew}>북마크 추가</button>}/>
-        :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))',gap:14}}>
-          {filtered.map(item=>(
+        :<>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))',gap:14}}>
+          {paged.map(item=>(
             <div key={item.id}
               style={{borderRadius:12,overflow:'hidden',background:'var(--color-surface)',border:'1px solid var(--color-border)',boxShadow:'0 2px 12px var(--color-shadow)',display:'flex',flexDirection:'column',transition:'transform 0.15s, box-shadow 0.15s'}}
               onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow='0 6px 24px rgba(0,0,0,0.12)'}}
@@ -175,6 +179,8 @@ export function BookmarkPage() {
             </div>
           ))}
         </div>
+        <Pagination total={filtered.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+        </>
       }
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'북마크 수정':'북마크 추가'}
         footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
