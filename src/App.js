@@ -19,6 +19,7 @@ import SettingsPage from './pages/SettingsPage'
 import PublicProfilePage from './pages/PublicProfilePage'
 import PrivacyPage from './pages/PrivacyPage'
 import AdminFeedbackPage from './pages/AdminFeedbackPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import './index.css'
 
 // vercel.app으로 접속 시 co.kr로 강제 리다이렉트
@@ -58,10 +59,6 @@ function PrivateLayout({ children }) {
 }
 
 // 비밀번호 재설정 페이지
-function ResetPasswordPage() {
-  return <PrivateLayout><SettingsPage initialTab="password" /></PrivateLayout>
-}
-
 function AppRoutes() {
   return (
     <Routes>
