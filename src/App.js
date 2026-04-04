@@ -18,6 +18,7 @@ import { BookmarkPage } from './pages/BookmarkPage'
 import SettingsPage from './pages/SettingsPage'
 import PublicProfilePage from './pages/PublicProfilePage'
 import PrivacyPage from './pages/PrivacyPage'
+import AdminFeedbackPage from './pages/AdminFeedbackPage'
 import './index.css'
 
 // vercel.app으로 접속 시 co.kr로 강제 리다이렉트
@@ -78,6 +79,7 @@ function AppRoutes() {
       <Route path="/bookmarks" element={<PrivateLayout><BookmarkPage/></PrivateLayout>}/>
       <Route path="/guestbook" element={<PrivateLayout><GuestbookPage/></PrivateLayout>}/>
       <Route path="/settings" element={<PrivateLayout><SettingsPage/></PrivateLayout>}/>
+      <Route path="/admin/feedback" element={<PrivateLayout><AdminFeedbackPage/></PrivateLayout>}/>
       <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
       <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
     </Routes>

@@ -841,7 +841,8 @@ export function FeedbackPublicView({ ownerId }) {
         </div>
         <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)', lineHeight:1.7, margin:0 }}>
           사이트 오류, 버그, 기능 개선 요청 등을 남겨주세요.<br/>
-          답장을 원하신다면 이메일 주소를 함께 남겨주시면 연락드릴게요.<br/>
+          따로 답장을 원하신다면 이메일 주소를 함께 남겨주시면 연락드릴게요.<br/>
+          개인이 운영하는 프로젝트라 답변 및 대응이 늦을 수 있는 점 양해 부탁드려요.<br/>
           <strong>문의는 기본 비공개로 처리됩니다.</strong>
         </p>
       </div>

@@ -4,8 +4,6 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signOut } from '../lib/supabase'
 
-// 시나리오 아이콘: 📋 (클립보드/목록 느낌)
-
 const NAV_ITEMS = [
   { to:'/dashboard', icon:'home', label:'홈' },
   { to:'/schedule', icon:'calendar_month', label:'일정 관리' },
@@ -28,6 +26,7 @@ export function Layout({ children }) {
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
   const handleSignOut = async () => { await signOut(); navigate('/login') }
   const initial = profile?.display_name?.[0] || profile?.username?.[0] || '?'
+  const isAdmin = profile?.is_admin === true
 
   return (
     <div className="app-layout">
@@ -46,6 +45,16 @@ export function Layout({ children }) {
               <span className="nav-icon"><span className="ms">{item.icon}</span></span>{item.label}
             </NavLink>
           ))}
+
+          {/* 관리자 전용 */}
+          {isAdmin && (<>
+            <div style={{borderTop:'1px solid var(--color-border)',margin:'8px 0',opacity:0.5}} />
+            <NavLink to="/admin/feedback" className={({isActive})=>`nav-item ${isActive?'active':''}`}
+              style={{color:'var(--color-accent)'}}>
+              <span className="nav-icon"><span className="ms">support_agent</span></span>문의함
+            </NavLink>
+          </>)}
+
           <div style={{borderTop:'1px solid var(--color-border)',margin:'12px 0'}} />
           <NavLink to="/settings" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
             <span className="nav-icon"><span className="ms">settings</span></span>환경설정
@@ -76,6 +85,14 @@ export function Layout({ children }) {
       <main className="main-content">
         <div className="fade-in">{children}</div>
         <footer style={{marginTop:60,paddingTop:20,borderTop:'1px solid var(--color-border)',textAlign:'center',color:'var(--color-text-light)',fontSize:'0.72rem'}}>
+          <div style={{marginBottom:10}}>
+            <a href="https://toss.me/trpg00z" target="_blank" rel="noreferrer"
+              style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:100,
+                background:'rgba(200,169,110,0.08)',border:'1px solid var(--color-border)',
+                color:'var(--color-accent)',textDecoration:'none',fontSize:'0.75rem',fontWeight:600}}>
+              ☕ 후원하기
+            </a>
+          </div>
           <div style={{marginBottom:8}}>
             <a href="/privacy" style={{color:'var(--color-text-light)',textDecoration:'none',opacity:0.8}}
               onMouseOver={e=>e.target.style.opacity=1} onMouseOut={e=>e.target.style.opacity=0.8}>

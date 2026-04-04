@@ -532,6 +532,14 @@ export default function PublicProfilePage() {
 
       {/* 푸터 */}
       <footer style={{ marginTop:60, paddingTop:20, paddingBottom:20, borderTop:'1px solid var(--color-border)', textAlign:'center', color:'var(--color-text-light)', fontSize:'0.72rem' }}>
+        <div style={{marginBottom:10}}>
+          <a href="https://toss.me/trpg00z" target="_blank" rel="noreferrer"
+            style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:100,
+              background:'rgba(200,169,110,0.08)',border:'1px solid var(--color-border)',
+              color:'var(--color-accent)',textDecoration:'none',fontSize:'0.75rem',fontWeight:600}}>
+            ☕ 후원하기
+          </a>
+        </div>
         <div style={{marginBottom:8}}>
           <a href="/privacy" style={{color:'var(--color-text-light)',textDecoration:'none',opacity:0.8}}>
             개인정보 처리방침
