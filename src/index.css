@@ -207,6 +207,7 @@ body::before {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   padding: 6px 13px;
   border-radius: var(--radius);

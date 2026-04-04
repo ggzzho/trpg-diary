@@ -37,7 +37,7 @@ function Pagination({ total, perPage, page, onPage, onPerPage }) {
             .map((n,i) => n==='...'
               ? <span key={`e${i}`} style={{ padding:'0 4px', color:'var(--color-text-light)', fontSize:'0.8rem' }}>…</span>
               : <button key={n} className={`btn btn-sm ${page===n?'btn-primary':'btn-outline'}`}
-                  onClick={() => onPage(n)} style={{ minWidth:30, padding:'3px 6px', fontSize:'0.78rem' }}>{n}</button>
+                  onClick={() => onPage(n)} style={{ minWidth:30, padding:'3px 6px', fontSize:'0.78rem', textAlign:'center', justifyContent:'center' }}>{n}</button>
             )}
           <button className="btn btn-ghost btn-sm" onClick={() => onPage(p => Math.min(totalPages,p+1))} disabled={page===totalPages}>
             <Mi size="sm">chevron_right</Mi>
