@@ -35,7 +35,7 @@ export default function AuthPage() {
   const handleReset = async e => {
     e.preventDefault(); setLoading(true); setError(null)
     const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
-      redirectTo: `${window.location.origin}/reset-password`
+      redirectTo: 'https://www.trpg-diary.co.kr/reset-password'
     })
     if (error) setError(error.message)
     else setMessage('비밀번호 재설정 링크를 이메일로 보냈어요! 📬')
