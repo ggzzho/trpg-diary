@@ -449,7 +449,7 @@ export default function PublicProfilePage() {
                     </div>
                   </div>
                   <div style={{ padding:'10px 12px 12px', flex:1, display:'flex', flexDirection:'column' }}>
-                    <div style={{ fontWeight:700, fontSize:'0.88rem', lineHeight:1.3, marginBottom:8 }}>{l.title}</div>
+                    <div style={{ fontWeight:700, fontSize:'1rem', lineHeight:1.3, marginBottom:8 }}>{l.title}</div>
                     <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
                       {l.start_date && <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>Start.</span>{format(new Date(l.start_date),'yyyy.MM.dd')}</div>}
                       {l.played_date && <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>End.</span>{format(new Date(l.played_date),'yyyy.MM.dd')}</div>}

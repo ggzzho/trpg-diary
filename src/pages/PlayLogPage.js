@@ -194,7 +194,7 @@ export function PlayLogPage() {
                 </div>
               </div>
               <div style={{padding:'10px 12px 0',flex:1,display:'flex',flexDirection:'column'}}>
-                <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,color:'var(--color-text)',marginBottom:8}}>{item.title}</div>
+                <div style={{fontWeight:700,fontSize:'1rem',lineHeight:1.3,color:'var(--color-text)',marginBottom:8}}>{item.title}</div>
                 <div style={{display:'flex',flexDirection:'column',gap:3}}>
                   {item.start_date&&<div style={{fontSize:'0.79rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>Start.</span>{format(new Date(item.start_date),'yyyy.MM.dd')}</div>}
                   {item.played_date&&<div style={{fontSize:'0.79rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>End.</span>{format(new Date(item.played_date),'yyyy.MM.dd')}</div>}
