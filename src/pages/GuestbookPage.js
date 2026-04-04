@@ -42,17 +42,17 @@ function FriendChip({ g, isOwner, userId, onEdit, onRemove }) {
       </a>
 
       {/* 이름 + 메모 */}
-      <div style={{ flex:1, minWidth:0, overflow:'hidden' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
           <a href={href} target="_blank" rel="noreferrer"
-            style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--color-text)', textDecoration:'none', wordBreak:'break-all' }}
+            style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--color-text)', textDecoration:'none', whiteSpace:'nowrap' }}
             onMouseEnter={e => e.target.style.color='var(--color-primary)'}
             onMouseLeave={e => e.target.style.color='var(--color-text)'}
           >
             {g.author_name}
           </a>
           {g.author_username && (
-            <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)', whiteSpace:'nowrap' }}>@{g.author_username}</span>
+            <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)', whiteSpace:'nowrap', flexShrink:0 }}>@{g.author_username}</span>
           )}
         </div>
         {/* 메모 박스 */}
@@ -343,7 +343,7 @@ export function GuestbookPublicView({ ownerId }) {
             ? <div className="text-sm text-light" style={{ textAlign:'center', padding:20 }}>불러오는 중...</div>
             : mypages.length === 0
               ? <div className="card" style={{ textAlign:'center', padding:32, color:'var(--color-text-light)', fontSize:'0.85rem' }}>아직 남긴 페이지가 없어요</div>
-              : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:8 }}>
+              : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:8 }}>
                   {mypages.map(g => (
                     <FriendChip key={g.id} g={g} isOwner={isOwner} userId={user?.id}
                       onEdit={openEdit} onRemove={removeEntry}/>
@@ -494,7 +494,7 @@ function GuestbookOwnerView({ user }) {
               ? <div className="card" style={{ textAlign:'center', padding:40, color:'var(--color-text-light)', fontSize:'0.85rem' }}>
                   아직 남긴 페이지가 없어요.<br/><span style={{ fontSize:'0.8rem' }}>방문자들이 공개 페이지에서 링크를 남길 수 있어요!</span>
                 </div>
-              : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:8 }}>
+              : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:8 }}>
                   {mypages.map(g => (
                     <FriendChip key={g.id} g={g} isOwner={true} userId={user?.id}
                       onEdit={openEdit} onRemove={removeEntry}/>
