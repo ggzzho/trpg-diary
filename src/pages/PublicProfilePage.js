@@ -109,7 +109,7 @@ function PublicCalendar({ schedules, blocked = [] }) {
 // ── 메인 컴포넌트 ──
 export default function PublicProfilePage() {
   const { username } = useParams()
-  const { user } = useAuth()
+  const { user, profile: myProfile } = useAuth()
   const [profile, setProfile] = useState(null)
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(true)
@@ -212,12 +212,12 @@ export default function PublicProfilePage() {
         {user ? (
           <>
             <div style={{ width:18, height:18, borderRadius:'50%', overflow:'hidden', background:'rgba(255,255,255,0.3)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', fontWeight:700 }}>
-              {profile?.avatar_url
-                ? <img src={profile.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                : (profile?.display_name||user.email||'?')[0]
+              {myProfile?.avatar_url
+                ? <img src={myProfile.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                : (myProfile?.display_name||user.email||'?')[0]
               }
             </div>
-            <span>{profile?.display_name || profile?.username || '로그인 중'}</span>
+            <span>{myProfile?.display_name || myProfile?.username || '로그인 중'}</span>
           </>
         ) : (
           <>
