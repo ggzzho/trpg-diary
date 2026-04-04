@@ -67,7 +67,7 @@ export default function SchedulePage() {
   const openEditBlocked = item => { setEditingBlocked(item); setBlockedForm({...item}); setBlockedModal(true) }
   const saveBlocked = async () => {
     if (!blockedForm.scheduled_date) return
-    const payload = { ...blockedForm, entry_type:'blocked', blocked_from:blockedForm.blocked_from||null, blocked_until:blockedForm.blocked_until||null }
+    const payload = { ...blockedForm, title:'', entry_type:'blocked', blocked_from:blockedForm.blocked_from||null, blocked_until:blockedForm.blocked_until||null }
     let error
     if (editingBlocked) {
       const res = await schedulesApi.update(editingBlocked.id, payload)
