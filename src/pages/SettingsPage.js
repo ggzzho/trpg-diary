@@ -45,7 +45,6 @@ export default function SettingsPage() {
       : DEFAULT_SECTIONS.map(s=>({...s, value:p?.[s.id]||''})),
     external_links: p?.external_links||[],
     header_image_url: p?.header_image_url||'',
-    bgm_url: p?.bgm_url||'',
     theme_color: p?.theme_color||'#c8a96e',
     theme_bg_color: p?.theme_bg_color||'#faf6f0',
     theme_accent: p?.theme_accent||'#8b6f47',
@@ -192,13 +191,6 @@ export default function SettingsPage() {
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* BGM */}
-            <div className="form-group" style={{marginTop:24}}>
-              <label className="form-label"><Mi size="sm" style={{marginRight:4}}>music_note</Mi>공개 페이지 BGM (YouTube URL)</label>
-              <input className="form-input" placeholder="https://www.youtube.com/watch?v=..." value={form.bgm_url||''} onChange={set('bgm_url')}/>
-              <div className="text-xs text-light" style={{marginTop:4}}>공개 페이지 방문자가 BGM 켜기/끄기 버튼으로 음악을 틀 수 있어요</div>
             </div>
 
             {/* 외부 링크 */}
