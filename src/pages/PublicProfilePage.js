@@ -332,10 +332,7 @@ export default function PublicProfilePage() {
                 {isChild && <span style={{ fontSize:'0.65rem', color:'var(--color-text-light)', opacity:0.7 }}>└</span>}
                 {r.title}
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:r.tags?.length>0?4:0 }}>
-                {r.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {r.system_name}</span>}
-              </div>
-              {r.tags?.length > 0 && <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>{r.tags.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}</div>}
+              {r.tags?.length > 0 && <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginTop:3 }}>{r.tags.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}</div>}
             </div>
           </div>
         )
