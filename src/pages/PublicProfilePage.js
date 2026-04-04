@@ -181,6 +181,35 @@ export default function PublicProfilePage() {
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
 
+      {/* 로그인 상태 표시 배지 */}
+      <div style={{
+        position:'fixed', bottom:20, right:20, zIndex:9999,
+        display:'flex', alignItems:'center', gap:8,
+        padding:'7px 12px', borderRadius:100,
+        background: user ? 'var(--color-primary)' : 'rgba(0,0,0,0.55)',
+        color:'white', fontSize:'0.75rem', fontWeight:600,
+        boxShadow:'0 2px 12px rgba(0,0,0,0.2)',
+        backdropFilter:'blur(8px)',
+        pointerEvents:'none',
+      }}>
+        {user ? (
+          <>
+            <div style={{ width:18, height:18, borderRadius:'50%', overflow:'hidden', background:'rgba(255,255,255,0.3)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', fontWeight:700 }}>
+              {profile?.avatar_url
+                ? <img src={profile.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                : (profile?.display_name||user.email||'?')[0]
+              }
+            </div>
+            <span>{profile?.display_name || profile?.username || '로그인 중'}</span>
+          </>
+        ) : (
+          <>
+            <span style={{ opacity:0.8 }}>👤</span>
+            <span>비회원으로 보는 중</span>
+          </>
+        )}
+      </div>
+
       {/* 프로필 카드 */}
       <div className="card" style={{ marginBottom:24, overflow:'visible', padding:0 }}>
         {/* 헤더 이미지 */}
@@ -313,7 +342,7 @@ export default function PublicProfilePage() {
                         </div>
                       )}
                     </div>
-                    {l.rating > 0 && <div className="stars" style={{ fontSize:'0.82rem', marginTop:6 }}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}
+
                     {l.spoiler_content && <div style={{ fontSize:'0.75rem', color:'#e57373', marginTop:4 }}>⚠️ 스포일러 포함</div>}
                   </div>
                 </div>

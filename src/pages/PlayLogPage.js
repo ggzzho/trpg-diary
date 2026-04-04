@@ -2,14 +2,14 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { playLogsApi, uploadFile } from '../lib/supabase'
-import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, StarRating } from '../components/Layout'
+import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
 import { format } from 'date-fns'
 
 const BLANK = {
   title:'', start_date:'', played_date:'', system_name:'', role:'PL',
-  character_name:'', together_with:'', npc:'', rating:0, memo:'',
+  character_name:'', together_with:'', npc:'', memo:'',
   session_image_url:'', scenario_link:'', series_tag:'', session_log_url:'',
   spoiler_content:'', spoiler_password:''
 }
@@ -98,13 +98,6 @@ export function LogDetailContent({ detail, isOwner }) {
             <div className="text-sm">{detail.npc}</div>
           </div>
         )}
-      </div>
-      {detail.rating > 0 && (
-        <div style={{marginBottom:12}}>
-          <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>평점</div>
-          <StarRating value={detail.rating} readOnly/>
-        </div>
-      )}
       {detail.memo && (
         <div style={{marginBottom:12}}>
           <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>메모</div>
@@ -229,7 +222,7 @@ export function PlayLogPage() {
                     </div>
                   )}
                 </div>
-                {item.rating>0&&<div className="stars" style={{fontSize:'0.82rem',marginTop:5}}>{'★'.repeat(item.rating)}{'☆'.repeat(5-item.rating)}</div>}
+
                 {item.spoiler_content&&<div style={{marginTop:3,fontSize:'0.75rem',color:'#e57373'}}><Mi size='sm' color='danger'>warning</Mi> 스포일러 포함</div>}
               </div>
               <div style={{padding:'8px 12px 10px',marginTop:8,borderTop:'1px solid var(--color-border)',display:'flex',gap:5,justifyContent:'flex-end'}} onClick={e=>e.stopPropagation()}>
@@ -302,8 +295,7 @@ export function PlayLogPage() {
           {/* 등장인물 */}
           <div className="form-group"><label className="form-label">등장인물</label><input className="form-input" autoComplete="off" placeholder="주요 등장인물, NPC 등..." value={form.npc||''} onChange={set('npc')}/></div>
 
-          {/* 평점 */}
-          <div className="form-group"><label className="form-label">평점</label><StarRating value={form.rating} onChange={v=>setForm(f=>({...f,rating:v}))}/></div>
+
 
           {/* 시리즈 태그 */}
           <div className="form-group">
