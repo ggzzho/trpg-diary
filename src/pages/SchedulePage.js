@@ -10,7 +10,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
 import { ko } from 'date-fns/locale'
 
 const STATUS_MAP = {
-  planned:{label:'예정',badge:'badge-blue'}, confirmed:{label:'확정',badge:'badge-green'},
+  planned:{label:'예정',badge:'badge-blue'},
   completed:{label:'완료',badge:'badge-gray'}, cancelled:{label:'취소',badge:'badge-red'},
 }
 const BLANK = { title:'', scheduled_date:'', scheduled_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false, is_intro:false, intro_rule:'' }
@@ -312,7 +312,7 @@ export default function SchedulePage() {
         <div className="grid-2">
           <div className="form-group"><label className="form-label">상태</label>
             <select className="form-select" value={form.status} onChange={set('status')}>
-              <option value="planned">예정</option><option value="confirmed">확정</option><option value="completed">완료</option><option value="cancelled">취소</option>
+              <option value="planned">예정</option><option value="completed">완료</option><option value="cancelled">취소</option>
             </select>
           </div>
           <div className="form-group"><label className="form-label">역할</label>
