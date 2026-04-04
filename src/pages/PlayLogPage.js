@@ -75,32 +75,40 @@ export function LogDetailContent({ detail, isOwner }) {
         <TagChip type="role" label={detail.role}/>
         {detail.system_name && <TagChip type="rule" label={detail.system_name}/>}
       </div>
-      <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:14}}>
-        {(detail.start_date||detail.played_date) && (
-          <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
-            {detail.start_date && (
-              <div><span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6}}>시작 날짜</span><span style={{fontSize:'0.9rem'}}>{format(new Date(detail.start_date),'yyyy년 M월 d일')}</span></div>
-            )}
-            <div><span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6}}>엔딩 날짜</span><span style={{fontSize:'0.9rem'}}>{detail.played_date && format(new Date(detail.played_date),'yyyy년 M월 d일')}</span></div>
+      <div className="grid-2" style={{marginBottom:12}}>
+        {detail.start_date && (
+          <div>
+            <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>시작 날짜</div>
+            <div className="text-sm">{format(new Date(detail.start_date),'yyyy년 M월 d일')}</div>
           </div>
         )}
+        <div>
+          <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>엔딩 날짜</div>
+          <div className="text-sm">{detail.played_date && format(new Date(detail.played_date),'yyyy년 M월 d일')}</div>
+        </div>
         {(detail.together_with||detail.character_name) && (
-          <div><span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6}}>GM / PL</span><span style={{fontSize:'0.9rem'}}>{[detail.together_with,detail.character_name].filter(Boolean).join(' / ')}</span></div>
+          <div>
+            <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>GM / PL</div>
+            <div className="text-sm">{[detail.together_with,detail.character_name].filter(Boolean).join(' / ')}</div>
+          </div>
         )}
         {detail.npc && (
-          <div><span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6}}>등장인물</span><span style={{fontSize:'0.9rem'}}>{detail.npc}</span></div>
+          <div>
+            <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>등장인물</div>
+            <div className="text-sm">{detail.npc}</div>
+          </div>
         )}
       </div>
       {detail.rating > 0 && (
         <div style={{marginBottom:12}}>
-          <span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6}}>평점</span>
+          <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>평점</div>
           <StarRating value={detail.rating} readOnly/>
         </div>
       )}
       {detail.memo && (
         <div style={{marginBottom:12}}>
-          <span style={{fontSize:'0.78rem',fontWeight:700,color:'var(--color-text-light)',marginRight:6,display:'block',marginBottom:4}}>메모</span>
-          <p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.9rem'}}>{detail.memo}</p>
+          <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>메모</div>
+          <p style={{color:'var(--color-text-light)',lineHeight:1.7,whiteSpace:'pre-wrap',fontSize:'0.85rem'}}>{detail.memo}</p>
         </div>
       )}
       {detail.scenario_link && <div style={{marginBottom:6}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}><Mi size='sm'>link</Mi> 시나리오 링크</a></div>}
