@@ -532,12 +532,18 @@ export default function PublicProfilePage() {
 
       {/* 푸터 */}
       <footer style={{ marginTop:60, paddingTop:20, paddingBottom:20, borderTop:'1px solid var(--color-border)', textAlign:'center', color:'var(--color-text-light)', fontSize:'0.72rem' }}>
-        <div style={{marginBottom:10}}>
+        <div style={{marginBottom:10, display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap'}}>
           <a href="https://qr.kakaopay.com/Ej8h4QBew" target="_blank" rel="noreferrer"
+            style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:100,
+              background:'rgba(255,235,0,0.12)',border:'1px solid rgba(255,235,0,0.4)',
+              color:'#b8960c',textDecoration:'none',fontSize:'0.75rem',fontWeight:600}}>
+            💛 카카오페이로 후원하기
+          </a>
+          <a href="#" target="_blank" rel="noreferrer"
             style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:100,
               background:'rgba(200,169,110,0.08)',border:'1px solid var(--color-border)',
               color:'var(--color-accent)',textDecoration:'none',fontSize:'0.75rem',fontWeight:600}}>
-            ☕ 후원하기
+            📖 사용설명서 바로가기
           </a>
         </div>
         <div style={{marginBottom:8}}>
