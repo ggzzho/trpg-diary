@@ -41,51 +41,51 @@ function Chip({ type, label }) {
 // ── 미니 캘린더 ──
 function PublicCalendar({ schedules }) {
   const [cal, setCal] = useState(new Date())
-  const s0 = startOfWeek(startOfMonth(cal), { weekStartsOn:0 })
-  const e0 = endOfWeek(endOfMonth(cal), { weekStartsOn:0 })
+  const startDate = startOfWeek(startOfMonth(cal), { weekStartsOn:0 })
+  const endDate = endOfWeek(endOfMonth(cal), { weekStartsOn:0 })
   const rows = []
-  let day = s0
-  while (day <= e0) {
-    const d = day
-    const dStr = format(d,'yyyy-MM-dd')
-    const dayScheds = schedules.filter(s=>s.scheduled_date===dStr)
-    const inMonth = isSameMonth(d,cal)
-    const today = isToday(d)
-    rows.push(
-      <div key={dStr} style={{
-        minHeight:54, padding:'3px 4px', borderRadius:6,
-        background: today ? 'var(--color-primary)' : inMonth ? 'var(--color-surface)' : 'transparent',
-        border: today ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
-        opacity: inMonth ? 1 : 0.3,
-      }}>
-        <div style={{ fontSize:'0.65rem', fontWeight: today?700:500, color: today?'white':'var(--color-text-light)', marginBottom:2 }}>{format(d,'d')}</div>
-        {dayScheds.map((s,i)=>(
-          <div key={i} style={{ fontSize:'0.55rem', background:'var(--color-accent)', color:'white', borderRadius:3, padding:'1px 3px', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {s.scheduled_time ? `${s.scheduled_time.slice(0,5)} ` : ''}{s.title}
-          </div>
-        ))}
-      </div>
-    )
-    day = addDays(day,1)
+  let day = startDate
+  while (day <= endDate) {
+    const week = []
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(day)
+      const dStr = format(d, 'yyyy-MM-dd')
+      const dayScheds = schedules.filter(s => s.scheduled_date === dStr)
+      week.push(
+        <div key={dStr}
+          className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,cal)?'other-month':''}`}
+          style={{ cursor:'default' }}
+        >
+          <div className="calendar-date">{format(d,'d')}</div>
+          {dayScheds.slice(0,2).map((s,i) => (
+            <div key={i} className={`calendar-event${s.is_gm?' gm':''}`} title={s.title}>
+              {s.scheduled_time && <span style={{ opacity:0.85, marginRight:2 }}>{s.scheduled_time.slice(0,5)}</span>}
+              {s.title}
+            </div>
+          ))}
+          {dayScheds.length > 2 && (
+            <div style={{ fontSize:'0.55rem', color:'var(--color-text-light)', paddingLeft:2 }}>+{dayScheds.length-2}개 더</div>
+          )}
+        </div>
+      )
+      day = addDays(day, 1)
+    }
+    rows.push(<React.Fragment key={day.toString()}>{week}</React.Fragment>)
   }
   return (
-    <div className="card" style={{ overflowX:'auto' }}>
-      <div style={{ minWidth:280 }}>
-        <div className="flex justify-between items-center" style={{ marginBottom:12 }}>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setCal(subMonths(cal,1))}><Mi size="sm">chevron_left</Mi></button>
-          <span className="text-serif" style={{ fontWeight:700, color:'var(--color-accent)', fontSize:'0.95rem' }}>{format(cal,'yyyy년 M월',{locale:ko})}</span>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}><Mi size="sm">chevron_right</Mi></button>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:4 }}>
-          {['일','월','화','수','목','금','토'].map((d,i) => (
-            <div key={d} style={{
-              textAlign:'center', fontSize:'0.62rem', fontWeight:600,
-              color: i===0 ? '#e57373' : i===6 ? '#6b8cba' : 'var(--color-text-light)', padding:'2px 0'
-            }}>{d}</div>
-          ))}
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2 }}>{rows}</div>
+    <div className="card">
+      <div className="flex justify-between items-center" style={{ marginBottom:14 }}>
+        <button className="btn btn-ghost btn-sm" onClick={()=>setCal(subMonths(cal,1))}>‹ 이전</button>
+        <span style={{ fontWeight:700, fontSize:'1rem', color:'var(--color-accent)' }}>{format(cal,'yyyy년 M월',{locale:ko})}</span>
+        <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}>다음 ›</button>
       </div>
+      <div className="calendar-grid" style={{ marginBottom:3 }}>
+        {['일','월','화','수','목','금','토'].map((d,i) => (
+          <div key={d} className="calendar-day-header"
+            style={{ color: i===0?'#e57373':i===6?'#6b8cba':'var(--color-text-light)' }}>{d}</div>
+        ))}
+      </div>
+      <div className="calendar-grid">{rows}</div>
     </div>
   )
 }
