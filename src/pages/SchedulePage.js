@@ -13,7 +13,8 @@ const STATUS_MAP = {
   planned:{label:'예정',badge:'badge-blue'},
   completed:{label:'완료',badge:'badge-gray'}, cancelled:{label:'취소',badge:'badge-red'},
 }
-const BLANK = { title:'', scheduled_date:'', scheduled_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false, is_intro:false, intro_rule:'' }
+const BLANK = { title:'', scheduled_date:'', scheduled_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false, is_intro:false, intro_rule:'', entry_type:'session' }
+const BLOCKED_BLANK = { scheduled_date:'', blocked_from:'', blocked_until:'', description:'', entry_type:'blocked' }
 const fmtTime = t => t ? t.slice(0,5) : ''
 
 function DateBox({ dateStr }) {
@@ -29,12 +30,18 @@ function DateBox({ dateStr }) {
 export default function SchedulePage() {
   const { user } = useAuth()
   const [items, setItems] = useState([])
+  const [blockedItems, setBlockedItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
+  const [blockedModal, setBlockedModal] = useState(false)
+  const [editingBlocked, setEditingBlocked] = useState(null)
+  const [blockedForm, setBlockedForm] = useState(BLOCKED_BLANK)
+  const [blockedConfirm, setBlockedConfirm] = useState(null)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(BLANK)
   const [confirm, setConfirm] = useState(null)
   const [filter, setFilter] = useState('upcoming')
+  const [mainTab, setMainTab] = useState('session')
   const [viewMode, setViewMode] = useState('list')
   const [calendarDate, setCalendarDate] = useState(new Date())
   const [yearView, setYearView] = useState(new Date().getFullYear())
@@ -46,8 +53,26 @@ export default function SchedulePage() {
   const [copyDate, setCopyDate] = useState('')
   const [search, setSearch] = useState('')
 
-  const load = async () => { const {data}=await schedulesApi.getAll(user.id); setItems(data||[]); setLoading(false) }
+  const load = async () => {
+    const {data} = await schedulesApi.getAll(user.id)
+    const all = data || []
+    setItems(all.filter(i => i.entry_type !== 'blocked'))
+    setBlockedItems(all.filter(i => i.entry_type === 'blocked'))
+    setLoading(false)
+  }
   useEffect(() => { load() }, [user])
+
+  const setB = k => e => setBlockedForm(f=>({...f,[k]:e.target.value}))
+  const openNewBlocked = () => { setEditingBlocked(null); setBlockedForm({...BLOCKED_BLANK, scheduled_date:new Date().toISOString().split('T')[0]}); setBlockedModal(true) }
+  const openEditBlocked = item => { setEditingBlocked(item); setBlockedForm({...item}); setBlockedModal(true) }
+  const saveBlocked = async () => {
+    if (!blockedForm.scheduled_date) return
+    const payload = { ...blockedForm, entry_type:'blocked', blocked_from:blockedForm.blocked_from||null, blocked_until:blockedForm.blocked_until||null }
+    if (editingBlocked) await schedulesApi.update(editingBlocked.id, payload)
+    else await schedulesApi.create({...payload, user_id:user.id})
+    setBlockedModal(false); load()
+  }
+  const removeBlocked = async id => { await schedulesApi.remove(id); load() }
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||new Date().toISOString().split('T')[0]}); setModal(true) }
@@ -105,9 +130,11 @@ export default function SchedulePage() {
       for (let i=0;i<7;i++) {
         const d=new Date(day), dateStr=format(d,'yyyy-MM-dd')
         const di=items.filter(x=>x.scheduled_date===dateStr)
+        const bl=blockedItems.filter(x=>x.scheduled_date===dateStr)
         week.push(
           <div key={dateStr} className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,calendarDate)?'other-month':''}`}
-            style={{position:'relative'}} onClick={()=>openNew(dateStr)}>
+            style={{position:'relative', outline: bl.length>0 ? '2px solid #e57373' : 'none', outlineOffset:'-2px'}}
+            onClick={()=>openNew(dateStr)}>
             <div className="calendar-date">{format(d,'d')}</div>
             {di.slice(0,2).map(ev=>(
               <div key={ev.id}
@@ -119,7 +146,17 @@ export default function SchedulePage() {
               </div>
             ))}
             {di.length>2&&<div style={{fontSize:'0.55rem',color:'var(--color-text-light)',paddingLeft:2}}>+{di.length-2}개 더</div>}
-            {/* 복사/이동 버튼 - 일정 있는 모든 날에 표시 */}
+            {/* 불가 날짜 표시 */}
+            {bl.map((b,i)=>(
+              <div key={`bl${i}`}
+                style={{fontSize:'0.58rem',padding:'1px 3px',borderRadius:3,marginBottom:2,background:'rgba(229,115,115,0.15)',color:'#e57373',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'default'}}
+                onClick={e=>e.stopPropagation()}
+                title={[b.blocked_from&&b.blocked_until?`${fmtTime(b.blocked_from)}~${fmtTime(b.blocked_until)}`:b.blocked_from?`${fmtTime(b.blocked_from)}~`:'', b.description].filter(Boolean).join(' ')}
+              >
+                🚫 {b.blocked_from?`${fmtTime(b.blocked_from)}${b.blocked_until?`~${fmtTime(b.blocked_until)}`:'~'}`:'종일'}
+              </div>
+            ))}
+            {/* 복사/이동 버튼 */}
             {di.length>0&&(
               <div style={{position:'absolute',top:2,right:2}} onClick={e=>e.stopPropagation()}>
                 <button
@@ -236,8 +273,28 @@ export default function SchedulePage() {
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
         <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>calendar_month</Mi>일정 관리</h1><p className="page-subtitle">예정된 세션과 지나간 플레이 일정을 관리해요</p></div>
-        <button className="btn btn-primary" onClick={()=>openNew()}><Mi size='sm' color='white'>add</Mi> 일정 추가</button>
+        <div className="flex gap-8">
+          {mainTab==='session'
+            ? <button className="btn btn-primary" onClick={()=>openNew()}><Mi size='sm' color='white'>add</Mi> 일정 추가</button>
+            : <button className="btn btn-primary" style={{background:'#e57373',borderColor:'#e57373'}} onClick={openNewBlocked}><Mi size='sm' color='white'>block</Mi> 불가 날짜 추가</button>
+          }
+        </div>
       </div>
+
+      {/* 메인 탭 */}
+      <div className="flex gap-8" style={{marginBottom:16}}>
+        <button className={`btn btn-sm ${mainTab==='session'?'btn-primary':'btn-outline'}`} onClick={()=>setMainTab('session')}>
+          <Mi size='sm' color={mainTab==='session'?'white':'accent'}>calendar_month</Mi> 세션 일정
+        </button>
+        <button className={`btn btn-sm ${mainTab==='blocked'?'btn-primary':'btn-outline'}`}
+          style={mainTab==='blocked'?{background:'#e57373',borderColor:'#e57373'}:{}}
+          onClick={()=>setMainTab('blocked')}>
+          <Mi size='sm' color={mainTab==='blocked'?'white':'accent'}>block</Mi> 불가 날짜 {blockedItems.length>0&&`(${blockedItems.length})`}
+        </button>
+      </div>
+
+      {/* ── 세션 일정 탭 ── */}
+      {mainTab==='session' && (<>
       <div style={{marginBottom:12}}>
         <input className="form-input" placeholder="🔍 제목, 룰, 장소로 검색..." value={search}
           onChange={e=>setSearch(e.target.value)} autoComplete="off" style={{maxWidth:320}}/>
@@ -281,7 +338,7 @@ export default function SchedulePage() {
                     {item.is_intro&&<span className="badge badge-green" style={{flexShrink:0}}>입문탁{item.intro_rule?` · ${item.intro_rule}`:''}</span>}
                   </div>
                   <div className="text-xs text-light flex gap-12">
-                    {item.system_name&&<span><><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}{item.is_intro&&item.intro_rule?` (${item.intro_rule} 입문)`:''}</></span>}
+                    {item.system_name&&<span><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}{item.is_intro&&item.intro_rule?` (${item.intro_rule} 입문)`:''}</span>}
                     {item.scheduled_time&&<span>🕐 {fmtTime(item.scheduled_time)}</span>}
                     {item.location&&<span>🌐 {item.location}</span>}
                   </div>
@@ -291,6 +348,36 @@ export default function SchedulePage() {
                   <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
                   <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
                   <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
+                </div>
+              </div>
+            ))}
+          </div>
+      )}
+      </>)}
+
+      {/* ── 불가 날짜 탭 ── */}
+      {mainTab==='blocked' && (
+        loading?<LoadingSpinner/>:blockedItems.length===0
+          ?<EmptyState icon="block" title="등록된 불가 날짜가 없어요" action={<button className="btn btn-primary" style={{background:'#e57373',borderColor:'#e57373'}} onClick={openNewBlocked}>추가하기</button>}/>
+          :<div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {[...blockedItems].sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date)).map(item=>(
+              <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14,borderLeft:'3px solid #e57373'}}>
+                <DateBox dateStr={item.scheduled_date}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="flex items-center gap-8" style={{marginBottom:3}}>
+                    <span style={{color:'#e57373',fontWeight:700,fontSize:'0.82rem'}}>🚫 세션 불가</span>
+                    {item.blocked_from&&(
+                      <span className="badge badge-red" style={{fontSize:'0.68rem'}}>
+                        {fmtTime(item.blocked_from)}{item.blocked_until?` ~ ${fmtTime(item.blocked_until)}`:' ~'}
+                      </span>
+                    )}
+                    {!item.blocked_from&&<span className="badge badge-red" style={{fontSize:'0.68rem'}}>종일</span>}
+                  </div>
+                  {item.description&&<p className="text-sm text-light">{item.description}</p>}
+                </div>
+                <div className="flex gap-8" style={{flexShrink:0}}>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>openEditBlocked(item)}>수정</button>
+                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setBlockedConfirm(item.id)}>삭제</button>
                 </div>
               </div>
             ))}
@@ -356,6 +443,20 @@ export default function SchedulePage() {
       </Modal>
 
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 일정을 삭제하시겠어요?"/>
+
+      {/* 불가 날짜 모달 */}
+      <Modal isOpen={blockedModal} onClose={()=>setBlockedModal(false)} title={editingBlocked?'불가 날짜 수정':'불가 날짜 추가'}
+        footer={<><button className="btn btn-outline btn-sm" onClick={()=>setBlockedModal(false)}>취소</button><button className="btn btn-primary btn-sm" style={{background:'#e57373',borderColor:'#e57373'}} onClick={saveBlocked}>저장</button></>}
+      >
+        <div className="form-group"><label className="form-label">날짜 *</label><input className="form-input" type="date" value={blockedForm.scheduled_date} onChange={setB('scheduled_date')}/></div>
+        <div className="grid-2">
+          <div className="form-group"><label className="form-label">불가 시작 시간</label><input className="form-input" type="time" value={blockedForm.blocked_from||''} onChange={setB('blocked_from')}/></div>
+          <div className="form-group"><label className="form-label">불가 종료 시간</label><input className="form-input" type="time" value={blockedForm.blocked_until||''} onChange={setB('blocked_until')}/></div>
+        </div>
+        <p className="text-xs text-light" style={{marginTop:-8,marginBottom:12}}>시간 미입력 시 종일 불가로 표시돼요</p>
+        <div className="form-group"><label className="form-label">메모 (사유 등)</label><input className="form-input" placeholder="예: 시험, 출장, 개인 사정..." value={blockedForm.description||''} onChange={setB('description')} autoComplete="off"/></div>
+      </Modal>
+      <ConfirmDialog isOpen={!!blockedConfirm} onClose={()=>setBlockedConfirm(null)} onConfirm={()=>removeBlocked(blockedConfirm)} message="이 불가 날짜를 삭제하시겠어요?"/>
     </div>
   )
 }

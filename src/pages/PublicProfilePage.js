@@ -39,7 +39,7 @@ function Chip({ type, label }) {
 }
 
 // ── 미니 캘린더 ──
-function PublicCalendar({ schedules }) {
+function PublicCalendar({ schedules, blocked = [] }) {
   const [cal, setCal] = useState(new Date())
   const startDate = startOfWeek(startOfMonth(cal), { weekStartsOn:0 })
   const endDate = endOfWeek(endOfMonth(cal), { weekStartsOn:0 })
@@ -51,14 +51,16 @@ function PublicCalendar({ schedules }) {
       const d = new Date(day)
       const dStr = format(d, 'yyyy-MM-dd')
       const dayScheds = schedules.filter(s => s.scheduled_date === dStr)
+      const dayBlocked = blocked.filter(b => b.scheduled_date === dStr)
+      const hasBlocked = dayBlocked.length > 0
       week.push(
         <div key={dStr}
           className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,cal)?'other-month':''}`}
-          style={{ cursor:'default' }}
+          style={{ cursor:'default', outline: hasBlocked ? '2px solid #e57373' : 'none', outlineOffset:'-2px' }}
         >
           <div className="calendar-date">{format(d,'d')}</div>
-          {dayScheds.slice(0,2).map((s,i) => (
-            <div key={i} className={`calendar-event${s.is_gm?' gm':''}`} title={s.title}>
+          {dayScheds.slice(0,2).map((s,idx) => (
+            <div key={idx} className={`calendar-event${s.is_gm?' gm':''}`} title={s.title}>
               {s.scheduled_time && <span style={{ opacity:0.85, marginRight:2 }}>{s.scheduled_time.slice(0,5)}</span>}
               {s.title}
             </div>
@@ -66,6 +68,20 @@ function PublicCalendar({ schedules }) {
           {dayScheds.length > 2 && (
             <div style={{ fontSize:'0.55rem', color:'var(--color-text-light)', paddingLeft:2 }}>+{dayScheds.length-2}개 더</div>
           )}
+          {dayBlocked.map((b,idx) => (
+            <div key={`bl${idx}`}
+              style={{ fontSize:'0.58rem', padding:'1px 3px', borderRadius:3, marginBottom:2,
+                background:'rgba(229,115,115,0.15)', color:'#e57373',
+                overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}
+              title={[
+                b.blocked_from && b.blocked_until ? `${b.blocked_from.slice(0,5)}~${b.blocked_until.slice(0,5)}`
+                  : b.blocked_from ? `${b.blocked_from.slice(0,5)}~` : '',
+                b.description
+              ].filter(Boolean).join(' ')}
+            >
+              🚫 {b.blocked_from ? `${b.blocked_from.slice(0,5)}${b.blocked_until?`~${b.blocked_until.slice(0,5)}`:'~'}` : '종일'}
+            </div>
+          ))}
         </div>
       )
       day = addDays(day, 1)
@@ -118,17 +134,18 @@ export default function PublicProfilePage() {
 
       const today = new Date().toISOString().split('T')[0]
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
-      const [logs, rulebooks, scenarios, pairs, avail, scheds] = await Promise.all([
+      const [logs, rulebooks, scenarios, pairs, avail, schedsAll] = await Promise.all([
         safe(playLogsApi.getAll(p.id)),
         safe(supabase.from('rulebooks').select('*').eq('user_id', p.id).order('title').then(r=>r)),
         safe(scenariosApi.getAll(p.id)),
         safe(pairsApi.getAll(p.id)),
         safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).then(r=>r)),
         safe(supabase.from('schedules').select('*').eq('user_id',p.id)
-          .gte('scheduled_date',today).neq('status','cancelled').neq('status','completed')
           .order('scheduled_date').then(r=>r)),
       ])
-      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds })
+      const scheds = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
+      const blocked = schedsAll.filter(s => s.entry_type === 'blocked')
+      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked })
       setLoading(false)
     }
     load()
@@ -296,7 +313,7 @@ export default function PublicProfilePage() {
       </div>
 
       {/* ── 일정 (캘린더) ── */}
-      {activeTab==='schedules' && <PublicCalendar schedules={data.schedules||[]}/>}
+      {activeTab==='schedules' && <PublicCalendar schedules={data.schedules||[]} blocked={data.blocked||[]}/>}
 
       {/* ── 기록 (카드 + 팝업) ── */}
       {activeTab==='logs' && (

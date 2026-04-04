@@ -98,6 +98,7 @@ export function LogDetailContent({ detail, isOwner }) {
             <div className="text-sm">{detail.npc}</div>
           </div>
         )}
+      </div>
       {detail.memo && (
         <div style={{marginBottom:12}}>
           <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>메모</div>
