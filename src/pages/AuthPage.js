@@ -90,7 +90,7 @@ export default function AuthPage() {
             <div className="form-group">
               <label className="form-label">사용자명 (URL에 사용)</label>
               <input className="form-input" placeholder="trpg_player (영문, 숫자, _)" value={form.username} onChange={set('username')} required />
-              <div className="text-xs text-light" style={{ marginTop:3 }}>{window.location.origin}/u/{form.username||'...'}</div>
+              <div className="text-xs text-light" style={{ marginTop:3 }}>https://trpg-diary.co.kr/u/{form.username||'...'}</div>
             </div>
             <div className="form-group"><label className="form-label">표시 이름</label><input className="form-input" placeholder="모험가 홍길동" value={form.displayName} onChange={set('displayName')} /></div>
             <button className="btn btn-primary w-full" type="submit" disabled={loading} style={{ marginTop:8, justifyContent:'center' }}>{loading?'가입 중...':'가입하기'}</button>

@@ -193,9 +193,9 @@ export default function Dashboard() {
         <div className="card" style={{marginTop:16,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <div>
             <div className="text-serif" style={{color:'var(--color-accent)',marginBottom:3,fontSize:'0.95rem'}}><Mi style={{marginRight:6}}>open_in_new</Mi>내 공개 페이지</div>
-            <div className="text-sm text-light">{window.location.origin}/u/{profile.username}</div>
+            <div className="text-sm text-light">https://trpg-diary.co.kr/u/{profile.username}</div>
           </div>
-          <button className="btn btn-outline btn-sm" onClick={()=>{navigator.clipboard.writeText(`${window.location.origin}/u/${profile.username}`);alert('링크가 복사되었어요!')}}>링크 복사</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>{navigator.clipboard.writeText(`https://trpg-diary.co.kr/u/${profile.username}`);alert('링크가 복사되었어요!')}}>링크 복사</button>
         </div>
       )}
     </div>

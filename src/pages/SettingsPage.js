@@ -149,7 +149,7 @@ export default function SettingsPage() {
                 {profile?.avatar_url&&<button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={async()=>{await updateProfile(user.id,{avatar_url:null});refreshProfile()}}>제거</button>}
               </div>
             </div>
-            <div className="form-group"><label className="form-label">사용자명 (URL)</label><div style={{display:'flex',alignItems:'center',gap:6}}><span className="text-light text-sm">{window.location.origin}/u/</span><input className="form-input" value={profile?.username||''} disabled style={{flex:1,opacity:0.6}} /></div></div>
+            <div className="form-group"><label className="form-label">사용자명 (URL)</label><div style={{display:'flex',alignItems:'center',gap:6}}><span className="text-light text-sm">https://trpg-diary.co.kr/u/</span><input className="form-input" value={profile?.username||''} disabled style={{flex:1,opacity:0.6}} /></div></div>
             <div className="form-group"><label className="form-label">표시 이름</label><input className="form-input" value={form.display_name} onChange={set('display_name')} /></div>
 
             {/* 커스텀 프로필 항목 (드래그 순서 변경) */}
@@ -259,14 +259,14 @@ export default function SettingsPage() {
                 <div>
                   <div style={{fontWeight:600,marginBottom:3,fontSize:'0.9rem'}}>공개 페이지 활성화</div>
                   <div className="text-sm text-light">다른 사람이 내 페이지를 볼 수 있어요</div>
-                  {profile?.username&&<div className="text-xs" style={{marginTop:5,color:'var(--color-accent)'}}><Mi size="sm">link</Mi> {window.location.origin}/u/{profile.username}</div>}
+                  {profile?.username&&<div className="text-xs" style={{marginTop:5,color:'var(--color-accent)'}}><Mi size="sm">link</Mi> https://trpg-diary.co.kr/u/{profile.username}</div>}
                 </div>
                 <div onClick={()=>setForm(f=>({...f,is_public:!f.is_public}))} style={{width:40,height:22,borderRadius:11,background:form.is_public?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
                   <div style={{position:'absolute',top:2,left:form.is_public?20:2,width:18,height:18,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}} />
                 </div>
               </div>
             </div>
-            {form.is_public&&<div style={{padding:14,borderRadius:8,background:'rgba(104,159,56,0.08)',border:'1px solid rgba(104,159,56,0.2)'}}><div className="text-sm" style={{color:'#558b2f'}}>✅ 공개 상태예요.<br/><br/><strong>{window.location.origin}/u/{profile?.username}</strong></div><button className="btn btn-outline btn-sm" style={{marginTop:10}} onClick={()=>{navigator.clipboard.writeText(`${window.location.origin}/u/${profile?.username}`);alert('복사됐어요!')}}>링크 복사</button></div>}
+            {form.is_public&&<div style={{padding:14,borderRadius:8,background:'rgba(104,159,56,0.08)',border:'1px solid rgba(104,159,56,0.2)'}}><div className="text-sm" style={{color:'#558b2f'}}>✅ 공개 상태예요.<br/><br/><strong>https://trpg-diary.co.kr/u/{profile?.username}</strong></div><button className="btn btn-outline btn-sm" style={{marginTop:10}} onClick={()=>{navigator.clipboard.writeText(`https://trpg-diary.co.kr/u/${profile?.username}`);alert('복사됐어요!')}}>링크 복사</button></div>}
           </>
         )}
 

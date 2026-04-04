@@ -1,0 +1,15 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "trpg-diary.vercel.app"
+        }
+      ],
+      "destination": "https://trpg-diary.co.kr/$1",
+      "permanent": true
+    }
+  ]
+}

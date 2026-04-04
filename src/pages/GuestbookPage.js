@@ -372,7 +372,7 @@ export function GuestbookPublicView({ ownerId }) {
                   </div>
                   <div className="form-group">
                     <label className="form-label">페이지 URL *</label>
-                    <input className="form-input" placeholder="https://trpg-diary.vercel.app/u/..." autoComplete="off"
+                    <input className="form-input" placeholder="https://trpg-diary.co.kr/u/..." autoComplete="off"
                       value={pageForm.url} onChange={e => setPageForm(f => ({...f, url:e.target.value}))}/>
                   </div>
                 </div>
