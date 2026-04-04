@@ -17,6 +17,7 @@ import { GuestbookPage } from './pages/GuestbookPage'
 import { BookmarkPage } from './pages/BookmarkPage'
 import SettingsPage from './pages/SettingsPage'
 import PublicProfilePage from './pages/PublicProfilePage'
+import PrivacyPage from './pages/PrivacyPage'
 import './index.css'
 
 // vercel.app으로 접속 시 co.kr로 강제 리다이렉트
@@ -65,6 +66,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<AuthPage/>}/>
       <Route path="/u/:username" element={<PublicProfilePage/>}/>
+      <Route path="/privacy" element={<PrivacyPage/>}/>
       <Route path="/reset-password" element={<ResetPasswordPage/>}/>
       <Route path="/dashboard" element={<PrivateLayout><Dashboard/></PrivateLayout>}/>
       <Route path="/schedule" element={<PrivateLayout><SchedulePage/></PrivateLayout>}/>

@@ -76,6 +76,12 @@ export function Layout({ children }) {
       <main className="main-content">
         <div className="fade-in">{children}</div>
         <footer style={{marginTop:60,paddingTop:20,borderTop:'1px solid var(--color-border)',textAlign:'center',color:'var(--color-text-light)',fontSize:'0.72rem'}}>
+          <div style={{marginBottom:8}}>
+            <a href="/privacy" style={{color:'var(--color-text-light)',textDecoration:'none',opacity:0.8}}
+              onMouseOver={e=>e.target.style.opacity=1} onMouseOut={e=>e.target.style.opacity=0.8}>
+              개인정보 처리방침
+            </a>
+          </div>
           {FOOTER_TEXT}
         </footer>
       </main>
