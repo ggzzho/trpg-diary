@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { playLogsApi, uploadFile } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, StarRating } from '../components/Layout'
 import { Mi } from '../components/Mi'
-import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
+import { RuleSelect } from '../components/RuleSelect'
 import { format } from 'date-fns'
 
 const BLANK = {
@@ -127,7 +127,6 @@ export function PlayLogPage() {
   const [form, setForm] = useState(BLANK)
   const [confirm, setConfirm] = useState(null)
   const [detail, setDetail] = useState(null)
-  const [ruleManager, setRuleManager] = useState(false)
   const [search, setSearch] = useState('')
   const [imgUploading, setImgUploading] = useState(false)
   const [ruleFilter, setRuleFilter] = useState('all')
@@ -277,7 +276,7 @@ export function PlayLogPage() {
 
       {/* 등록/수정 모달 */}
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'기록 수정':'기록 추가'}
-        footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
+        footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
         <div autoComplete="off">
           <div className="form-group"><label className="form-label">제목 (시나리오명) *</label><input className="form-input" autoComplete="off" value={form.title} onChange={set('title')}/></div>
@@ -356,7 +355,6 @@ export function PlayLogPage() {
         </div>
       </Modal>
 
-      <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)}/>
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 기록을 삭제하시겠어요?"/>
     </div>
   )

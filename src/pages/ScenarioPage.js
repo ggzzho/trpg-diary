@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { scenariosApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
 import { Mi } from '../components/Mi'
-import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
+import { RuleSelect } from '../components/RuleSelect'
 
 const BLANK = { title:'', system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status:'unplayed', memo:'', purchase_date:'', scenario_url:'' }
 const STATUS_MAP = { unplayed:{label:'미플',badge:'badge-gray'}, played:{label:'PL 완료',badge:'badge-green'}, gm_done:{label:'GM 완료',badge:'badge-primary'}, want:{label:'위시리스트',badge:'badge-blue'} }
@@ -20,7 +20,6 @@ export function ScenarioPage() {
   const [confirm, setConfirm] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [ruleManager, setRuleManager] = useState(false)
 
   const load = async () => { const {data}=await scenariosApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
@@ -90,7 +89,7 @@ export function ScenarioPage() {
       }
 
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'시나리오 수정':'시나리오 추가'}
-        footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
+        footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" placeholder="어둠 속의 가면" value={form.title} onChange={set('title')}/></div>
         <div className="grid-2">
@@ -111,7 +110,6 @@ export function ScenarioPage() {
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{minHeight:64}}/></div>
       </Modal>
 
-      <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)}/>
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 시나리오를 삭제하시겠어요?"/>
     </div>
   )

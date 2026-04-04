@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { schedulesApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
 import { Mi } from '../components/Mi'
-import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
+import { RuleSelect } from '../components/RuleSelect'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, isSameMonth, isToday, addMonths, subMonths, getYear, getMonth } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -38,7 +38,6 @@ export default function SchedulePage() {
   const [viewMode, setViewMode] = useState('list')
   const [calendarDate, setCalendarDate] = useState(new Date())
   const [yearView, setYearView] = useState(new Date().getFullYear())
-  const [ruleManager, setRuleManager] = useState(false)
   const [summaryPeriod, setSummaryPeriod] = useState('month')
   const [summaryDate, setSummaryDate] = useState(new Date())
   const [copyModal, setCopyModal] = useState(false)
@@ -298,7 +297,7 @@ export default function SchedulePage() {
       )}
 
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'일정 수정':'새 일정 추가'}
-        footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
+        footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
         <div className="grid-2">
@@ -341,7 +340,6 @@ export default function SchedulePage() {
         </div>
       </Modal>
 
-      <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)}/>
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 일정을 삭제하시겠어요?"/>
     </div>
   )

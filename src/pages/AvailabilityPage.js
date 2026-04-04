@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { availabilityApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
 import { Mi } from '../components/Mi'
-import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
+import { RuleSelect } from '../components/RuleSelect'
 
 const BLANK = { title:'', role:'PL', system_name:'', description:'', together_with:'', scenario_link:'', is_active:true }
 
@@ -16,7 +16,6 @@ export function AvailabilityPage() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(BLANK)
   const [confirm, setConfirm] = useState(null)
-  const [ruleManager, setRuleManager] = useState(false)
   const [viewMode, setViewMode] = useState('card')
 
   const load = async () => { const {data}=await availabilityApi.getAll(user.id); setItems(data||[]); setLoading(false) }
@@ -98,7 +97,7 @@ export function AvailabilityPage() {
       }
 
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'공수표 수정':'공수표 추가'}
-        footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
+        footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
         <div className="form-group"><label className="form-label">시나리오명 *</label><input className="form-input" placeholder="시나리오명" value={form.title} onChange={set('title')}/></div>
         <div className="grid-2">
@@ -116,7 +115,6 @@ export function AvailabilityPage() {
           </select>
         </div>
       </Modal>
-      <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)}/>
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 공수표를 삭제하시겠어요?"/>
     </div>
   )

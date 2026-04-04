@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { rulebooksApi, uploadFile, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager } from '../components/Layout'
 import { Mi } from '../components/Mi'
-import { RuleSelect, RuleManagerModal } from '../components/RuleSelect'
+import { RuleSelect } from '../components/RuleSelect'
 
 const BLANK = { title:'', system_name:'', cover_image_url:'', format:'physical', memo:'', tags:[] }
 const DEFAULT_TAG_NAMES = ['GM','주력','미숙','관심','초보','입문','미입문']
@@ -18,7 +18,6 @@ export function RulebookPage() {
   const [form, setForm] = useState(BLANK)
   const [confirm, setConfirm] = useState(null)
   const [search, setSearch] = useState('')
-  const [ruleManager, setRuleManager] = useState(false)
   const [tagModal, setTagModal] = useState(false)
   const [availableTags, setAvailableTags] = useState([])
   const [imgUploading, setImgUploading] = useState(false)
@@ -109,7 +108,7 @@ export function RulebookPage() {
       }
 
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'룰북 수정':'룰북 추가'}
-        footer={<><button className="btn btn-ghost btn-sm" onClick={()=>setRuleManager(true)}>룰 관리</button><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
+        footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
         <div className="grid-2">
@@ -139,7 +138,6 @@ export function RulebookPage() {
         <TagManager tags={availableTags} onAdd={addTag} onEdit={editTag} onRemove={removeTagDef} placeholder="GM, 주력, 관심, 입문..."/>
       </Modal>
 
-      <RuleManagerModal isOpen={ruleManager} onClose={()=>setRuleManager(false)}/>
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 룰북을 삭제하시겠어요?"/>
     </div>
   )
