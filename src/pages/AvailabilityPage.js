@@ -64,14 +64,16 @@ export function AvailabilityPage() {
                 </div>
                 <h3 style={{fontWeight:600,marginBottom:7,fontSize:'0.9rem'}}>{item.title}</h3>
                 <div className="text-sm text-light" style={{display:'flex',flexDirection:'column',gap:3}}>
-                  {item.system_name&&<span><><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</></span>}
-                  {item.together_with&&<span><><Mi size='sm' color='light'>person</Mi> {item.together_with}</></span>}
+                  {item.system_name&&<span><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
+                  {item.together_with&&<span><Mi size='sm' color='light'>person</Mi> {item.together_with}</span>}
                 </div>
                 {item.description&&<p className="text-sm" style={{marginTop:8,color:'var(--color-text-light)'}}>{item.description}</p>}
                 {item.scenario_link&&<a href={item.scenario_link} target="_blank" rel="noreferrer" className="text-sm" style={{marginTop:7,display:'block',color:'var(--color-primary)'}}><Mi size="sm">link</Mi> 시나리오 링크</a>}
               </div>
             ))}
-          </div>
+            </div>
+            <Pagination total={items.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+          </>
           :<>
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
             {paged.map(item=>(
@@ -84,8 +86,8 @@ export function AvailabilityPage() {
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:600,fontSize:'0.9rem',marginBottom:5}}>{item.title}</div>
                     <div className="text-xs text-light" style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:item.description||item.together_with?6:0}}>
-                      {item.system_name&&<span><><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</></span>}
-                      {item.together_with&&<span><><Mi size='sm' color='light'>person</Mi> {item.together_with}</></span>}
+                      {item.system_name&&<span><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
+                      {item.together_with&&<span><Mi size='sm' color='light'>person</Mi> {item.together_with}</span>}
                     </div>
                     {item.description&&<p className="text-sm text-light">{item.description}</p>}
                     {item.scenario_link&&<a href={item.scenario_link} target="_blank" rel="noreferrer" style={{fontSize:'0.78rem',color:'var(--color-primary)',marginTop:4,display:'block'}}><Mi size="sm">link</Mi> 시나리오 링크</a>}
@@ -97,8 +99,8 @@ export function AvailabilityPage() {
                 </div>
               </div>
             ))}
-          </div>
-          <Pagination total={items.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+            </div>
+            <Pagination total={items.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
           </>
       }
 
