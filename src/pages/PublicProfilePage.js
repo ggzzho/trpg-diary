@@ -107,6 +107,9 @@ export default function PublicProfilePage() {
       const { data:p, error } = await getProfile(username)
       if (error || !p) { setNotFound(true); setLoading(false); return }
       setProfile(p)
+      // 탭 제목: ✦ TRPG Diary - 닉네임 또는 @아이디
+      const displayName = p.display_name || p.username
+      document.title = `✦ TRPG Diary - ${displayName}`
       applyTheme(p.theme_color||'#c8a96e', p.theme_bg_color||'#faf6f0', p.theme_accent||'#8b6f47')
       applyBackground(p.background_image_url||'', p.bg_opacity !== undefined ? p.bg_opacity : 1)
 
@@ -127,6 +130,11 @@ export default function PublicProfilePage() {
     }
     load()
   }, [username, user])
+
+  // 페이지 떠날 때 탭 제목 복원
+  useEffect(() => {
+    return () => { document.title = 'TRPG Diary ✦' }
+  }, [])
 
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
