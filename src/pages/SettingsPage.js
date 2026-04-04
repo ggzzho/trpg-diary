@@ -30,7 +30,6 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
-  const [avatarUploading, setAvatarUploading] = useState(false)
   const [newLink, setNewLink] = useState({label:'',url:''})
   const [pwForm, setPwForm] = useState({current:'', next:'', confirm:''})
   const [pwMsg, setPwMsg] = useState(null)
