@@ -159,12 +159,20 @@ export default function Dashboard() {
           {recentLogs.length===0
             ?<p className="text-light text-sm">아직 기록이 없어요</p>
             :recentLogs.map(l=>(
-              <div key={l.id} style={{padding:'9px 0',borderBottom:'1px solid var(--color-border)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <div>
-                  <div style={{fontWeight:500,fontSize:'0.88rem'}}>{l.title}</div>
-                  <div className="text-xs text-light">{l.played_date&&format(new Date(l.played_date),'yyyy.MM.dd')} · {l.role}</div>
+              <div key={l.id} style={{padding:'10px 0',borderBottom:'1px solid var(--color-border)'}}>
+                <div style={{fontWeight:600,fontSize:'0.88rem',marginBottom:4}}>{l.title}</div>
+                <div className="text-xs text-light" style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                  <span>{l.is_gm?'GM':'PL'}</span>
+                  {l.system_name&&<><span style={{opacity:0.4}}>·</span><span>{l.system_name}</span></>}
+                  {l.npc&&<><span style={{opacity:0.4}}>·</span><span>{l.npc}</span></>}
+                  {(l.start_date||l.played_date)&&<><span style={{opacity:0.4}}>·</span>
+                    <span>
+                      {l.start_date&&format(new Date(l.start_date),'yyyy.MM.dd')}
+                      {l.start_date&&l.played_date&&' ~ '}
+                      {l.played_date&&format(new Date(l.played_date),'yyyy.MM.dd')}
+                    </span>
+                  </>}
                 </div>
-                {l.rating>0&&<div className="stars" style={{fontSize:'0.78rem',flexShrink:0}}>{'★'.repeat(l.rating)}{'☆'.repeat(5-l.rating)}</div>}
               </div>
             ))
           }
