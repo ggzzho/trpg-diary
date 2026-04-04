@@ -50,99 +50,89 @@ function getYoutubeInfo(url) {
 }
 
 // ── BGM 플레이어 컴포넌트 (YouTube IFrame API 방식) ──
+// YouTube IFrame API를 안전하게 로드하는 전역 유틸
+function loadYouTubeAPI(callback) {
+  if (window.YT && window.YT.Player) {
+    callback()
+    return
+  }
+  // 이미 다른 콜백이 등록돼 있으면 체이닝
+  const prev = window.onYouTubeIframeAPIReady
+  window.onYouTubeIframeAPIReady = () => {
+    if (prev) prev()
+    callback()
+  }
+  if (!document.getElementById('yt-iframe-api')) {
+    const script = document.createElement('script')
+    script.id = 'yt-iframe-api'
+    script.src = 'https://www.youtube.com/iframe_api'
+    document.head.appendChild(script)
+  }
+}
+
 function BgmPlayer({ bgmUrl }) {
   const [playerReady, setPlayerReady] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [userInteracted, setUserInteracted] = useState(false)
   const [showNotice, setShowNotice] = useState(false)
   const playerRef = useRef(null)
-  const containerRef = useRef(null)
+  const divIdRef = useRef(`bgm-yt-${Date.now()}`)
   const info = getYoutubeInfo(bgmUrl)
 
   useEffect(() => {
     if (!info) return
 
-    // YouTube IFrame API 로드
-    const loadApi = () => {
-      if (window.YT && window.YT.Player) {
-        initPlayer()
-        return
-      }
-      if (!document.getElementById('yt-iframe-api')) {
-        const script = document.createElement('script')
-        script.id = 'yt-iframe-api'
-        script.src = 'https://www.youtube.com/iframe_api'
-        document.head.appendChild(script)
-      }
-      window.onYouTubeIframeAPIReady = initPlayer
+    // 숨겨진 div 생성
+    let div = document.getElementById(divIdRef.current)
+    if (!div) {
+      div = document.createElement('div')
+      div.id = divIdRef.current
+      div.style.cssText = 'position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;'
+      document.body.appendChild(div)
+    }
+
+    const playerVars = {
+      autoplay: 0, controls: 0, showinfo: 0, rel: 0,
+      iv_load_policy: 3, enablejsapi: 1, modestbranding: 1, fs: 0,
+      origin: window.location.origin,
     }
 
     const initPlayer = () => {
       if (playerRef.current) { try { playerRef.current.destroy() } catch {} }
 
-      const div = document.createElement('div')
-      div.id = `bgm-yt-${Date.now()}`
-      document.body.appendChild(div)
-
-      const playerVars = {
-        autoplay: 0,
-        controls: 0,
-        showinfo: 0,
-        rel: 0,
-        iv_load_policy: 3,
-        enablejsapi: 1,
-        modestbranding: 1,
-        fs: 0,
-        origin: window.location.origin,
+      const config = {
+        height: '1', width: '1',
+        playerVars: info.type === 'playlist'
+          ? { ...playerVars, listType:'playlist', list:info.listId }
+          : playerVars,
+        events: {
+          onReady: (e) => {
+            playerRef.current = e.target
+            try { e.target.setVolume(30) } catch {}
+            setPlayerReady(true)
+            setShowNotice(true)
+          },
+          onStateChange: (e) => {
+            if (!window.YT) return
+            setIsPlaying(e.data === window.YT.PlayerState.PLAYING)
+            if (e.data === window.YT.PlayerState.ENDED && info.type !== 'playlist') {
+              try { e.target.seekTo(0); e.target.playVideo() } catch {}
+            }
+          },
+          onError: (e) => { console.warn('BGM error:', e.data) }
+        }
       }
+      if (info.type !== 'playlist') config.videoId = info.videoId
 
-      let ytPlayer
-      if (info.type === 'playlist') {
-        ytPlayer = new window.YT.Player(div.id, {
-          height: '0', width: '0',
-          playerVars: { ...playerVars, listType:'playlist', list:info.listId },
-          events: {
-            onReady: (e) => {
-              playerRef.current = e.target
-              e.target.setVolume(30)
-              setPlayerReady(true)
-              setShowNotice(true)
-            },
-            onStateChange: (e) => {
-              setIsPlaying(e.data === window.YT.PlayerState.PLAYING)
-            },
-            onError: (e) => { console.warn('BGM player error:', e.data) }
-          }
-        })
-      } else {
-        ytPlayer = new window.YT.Player(div.id, {
-          height: '0', width: '0',
-          videoId: info.videoId,
-          playerVars,
-          events: {
-            onReady: (e) => {
-              playerRef.current = e.target
-              e.target.setVolume(30)
-              setPlayerReady(true)
-              setShowNotice(true)
-            },
-            onStateChange: (e) => {
-              setIsPlaying(e.data === window.YT.PlayerState.PLAYING)
-              // 단일곡 반복
-              if (e.data === window.YT.PlayerState.ENDED) {
-                try { e.target.seekTo(0); e.target.playVideo() } catch {}
-              }
-            },
-            onError: (e) => { console.warn('BGM player error:', e.data) }
-          }
-        })
-      }
+      new window.YT.Player(divIdRef.current, config)
     }
 
-    loadApi()
+    loadYouTubeAPI(initPlayer)
 
     return () => {
-      if (playerRef.current) { try { playerRef.current.destroy() } catch {} }
+      if (playerRef.current) { try { playerRef.current.destroy(); playerRef.current = null } catch {} }
+      const el = document.getElementById(divIdRef.current)
+      if (el) el.remove()
     }
   }, [bgmUrl])
 
@@ -163,11 +153,11 @@ function BgmPlayer({ bgmUrl }) {
   }, [playerReady, userInteracted])
 
   const togglePlay = () => {
-    if (!playerReady) return
+    if (!playerReady || !playerRef.current) return
     try {
       if (isPlaying) { playerRef.current.pauseVideo() }
       else { playerRef.current.playVideo() }
-    } catch {}
+    } catch (e) { console.warn('togglePlay error:', e) }
     if (!userInteracted) setUserInteracted(true)
     if (showNotice) setShowNotice(false)
   }
@@ -180,11 +170,14 @@ function BgmPlayer({ bgmUrl }) {
       <button
         className={`btn btn-sm ${isPlaying ? 'btn-primary' : 'btn-outline'}`}
         onClick={togglePlay}
-        style={{ display:'flex', alignItems:'center', gap:4 }}
-        title={isPlaying ? 'BGM 끄기' : 'BGM 켜기'}
+        disabled={!playerReady}
+        style={{ display:'flex', alignItems:'center', gap:4, opacity: playerReady ? 1 : 0.5 }}
+        title={!playerReady ? 'BGM 로딩 중...' : isPlaying ? 'BGM 끄기' : 'BGM 켜기'}
       >
-        <Mi size="sm" color={isPlaying ? 'white' : 'accent'}>{isPlaying ? 'volume_up' : 'volume_off'}</Mi>
-        {isPlaying ? 'BGM 끄기' : 'BGM 켜기'}
+        <Mi size="sm" color={isPlaying ? 'white' : 'accent'}>
+          {!playerReady ? 'hourglass_empty' : isPlaying ? 'volume_up' : 'volume_off'}
+        </Mi>
+        {!playerReady ? 'BGM 로딩 중...' : isPlaying ? 'BGM 끄기' : 'BGM 켜기'}
       </button>
 
       {/* 첫 클릭 안내 토스트 */}

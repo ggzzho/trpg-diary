@@ -394,10 +394,14 @@ function GuestbookOwnerView({ user }) {
     const newContent = editForm.memo.trim()
       ? `${url}|||${editForm.memo.trim()}`
       : url
-    await supabase.from('guestbook').update({
+    const { error } = await supabase.from('guestbook').update({
       author_name: editForm.nickname.trim(),
       content: newContent,
-    }).eq('id', editingItem.id)
+    }).eq('id', editingItem.id).eq('owner_id', user.id)
+    if (error) {
+      alert('저장 실패: ' + error.message)
+      return
+    }
     setEditingItem(null)
     load()
   }
