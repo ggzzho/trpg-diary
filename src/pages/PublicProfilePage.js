@@ -110,7 +110,7 @@ export default function PublicProfilePage() {
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
       const [logs, rulebooks, scenarios, pairs, avail, scheds] = await Promise.all([
         safe(playLogsApi.getAll(p.id)),
-        safe(rulebooksApi.getAll(p.id)),
+        safe(supabase.from('rulebooks').select('*').eq('user_id', p.id).order('title').then(r=>r)),
         safe(scenariosApi.getAll(p.id)),
         safe(pairsApi.getAll(p.id)),
         safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).then(r=>r)),
@@ -150,7 +150,7 @@ export default function PublicProfilePage() {
 
   const TABS = [
     { key:'schedules', label:'일정', icon:'calendar_month', count:data.schedules?.length },
-    { key:'rulebooks', label:'룰북', icon:'menu_book', count:data.rulebooks?.length },
+    { key:'rulebooks', label:'룰북', icon:'menu_book', count:(data.rulebooks||[]).filter(r=>!r.parent_id).length },
     { key:'logs', label:'기록', icon:'auto_stories', count:data.logs?.length },
     { key:'availability', label:'공수표', icon:'event_available', count:data.availability?.length },
     { key:'scenarios', label:'시나리오', icon:'description', count:data.scenarios?.length },
@@ -201,7 +201,7 @@ export default function PublicProfilePage() {
           <div className="flex justify-between" style={{ marginTop:16, padding:'12px 0', borderTop:'1px solid var(--color-border)', borderBottom:'1px solid var(--color-border)' }}>
             {[
               { label:'기록', v:data.logs?.length||0 },
-              { label:'룰북', v:data.rulebooks?.length||0 },
+              { label:'룰북', v:(data.rulebooks||[]).filter(r=>!r.parent_id).length },
               { label:'시나리오', v:data.scenarios?.length||0 },
               { label:'페어', v:data.pairs?.length||0 },
             ].map(s => (
@@ -314,32 +314,46 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 룰북 ── */}
-      {activeTab==='rulebooks' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {!data.rulebooks?.length
-            ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>룰북이 없어요</div>
-            : data.rulebooks.map(r => (
-              <div key={r.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:14 }}>
-                <div style={{ width:48, height:48, borderRadius:8, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {r.cover_image_url ? <img src={r.cover_image_url} alt={r.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.5rem', opacity:0.4 }}><Mi size='lg' color='light'>menu_book</Mi></span>}
-                </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:'0.9rem', marginBottom:4 }}>{r.title}</div>
-                  <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:r.tags?.length>0?4:0 }}>
-                    {r.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {r.system_name}</span>}
-                    {r.format && <span className="badge badge-primary" style={{ fontSize:'0.62rem' }}>{r.format==='physical'?'실물':r.format==='digital'?'전자':'실물+전자'}</span>}
-                  </div>
-                  {r.tags?.length > 0 && (
-                    <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
-                      {r.tags.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}
-                    </div>
-                  )}
-                </div>
+      {activeTab==='rulebooks' && (() => {
+        const parents = (data.rulebooks||[]).filter(r => !r.parent_id)
+        const supplMap = {}
+        ;(data.rulebooks||[]).filter(r => r.parent_id).forEach(r => {
+          if (!supplMap[r.parent_id]) supplMap[r.parent_id] = []
+          supplMap[r.parent_id].push(r)
+        })
+        const fmtLabel = {physical:'실물', digital:'전자', both:'실물+전자'}
+        const RbRow = ({r, isChild}) => (
+          <div style={{ display:'flex', alignItems:'center', gap:14, padding: isChild ? '8px 14px 8px 52px' : '10px 14px', background: isChild ? 'var(--color-nav-active-bg)' : 'transparent', borderTop: isChild ? '1px solid var(--color-border)' : 'none' }}>
+            <div style={{ width:40, height:40, borderRadius:7, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              {r.cover_image_url ? <img src={r.cover_image_url} alt={r.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.2rem', opacity:0.35 }}><Mi size='lg' color='light'>menu_book</Mi></span>}
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight: isChild ? 500 : 700, fontSize:'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:6 }}>
+                {isChild && <span style={{ fontSize:'0.65rem', color:'var(--color-text-light)', opacity:0.7 }}>└</span>}
+                {r.title}
               </div>
-            ))
-          }
-        </div>
-      )}
+              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:r.tags?.length>0?4:0 }}>
+                {r.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {r.system_name}</span>}
+                {r.format && <span className="badge badge-primary" style={{ fontSize:'0.62rem' }}>{fmtLabel[r.format]||r.format}</span>}
+              </div>
+              {r.tags?.length > 0 && <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>{r.tags.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}</div>}
+            </div>
+          </div>
+        )
+        return (
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {!parents.length
+              ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>룰북이 없어요</div>
+              : parents.map(r => (
+                <div key={r.id} className="card" style={{ padding:0, overflow:'hidden' }}>
+                  <RbRow r={r} isChild={false}/>
+                  {(supplMap[r.id]||[]).map(s => <RbRow key={s.id} r={s} isChild={true}/>)}
+                </div>
+              ))
+            }
+          </div>
+        )
+      })()}
 
       {/* ── 시나리오 ── */}
       {activeTab==='scenarios' && (

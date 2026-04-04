@@ -1,5 +1,5 @@
 // src/context/RuleContext.js
-// 룰 목록을 룰북 목록에서 자동으로 가져옴
+// parent_id가 null인 부모 룰북의 title을 룰 드롭다운에 표시
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
@@ -12,14 +12,14 @@ export function RuleProvider({ children }) {
 
   const load = async () => {
     if (!user) return
-    // 룰북 목록에서 system_name(룰) 컬럼을 가져와 중복 제거 후 정렬
+    // 부모 룰북(parent_id가 null)의 title만 가져와 룰 드롭다운에 표시
     const { data } = await supabase
       .from('rulebooks')
-      .select('system_name')
+      .select('id, title')
       .eq('user_id', user.id)
-      .not('system_name', 'is', null)
-    const unique = [...new Set((data || []).map(r => r.system_name).filter(Boolean))].sort()
-    setRules(unique.map((name, i) => ({ id: i, name })))
+      .is('parent_id', null)
+      .order('title')
+    setRules((data || []).map(r => ({ id:r.id, name:r.title })))
   }
 
   useEffect(() => { load() }, [user])
