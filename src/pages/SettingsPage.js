@@ -144,7 +144,10 @@ export default function SettingsPage() {
             {/* 아바타 */}
             <div className="form-group flex items-center gap-16">
               <div className="user-avatar" style={{width:56,height:56,fontSize:'1.3rem'}}>{profile?.avatar_url?<img src={profile.avatar_url} alt="avatar"/>:(profile?.display_name||'?')[0]}</div>
-              <label className="btn btn-outline btn-sm" style={{cursor:'pointer',display:'inline-flex'}}>{avatarUploading?'업로드 중...':'프로필 사진 변경'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatarUpload} disabled={avatarUploading} /></label>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <label className="btn btn-outline btn-sm" style={{cursor:'pointer',display:'inline-flex'}}>{avatarUploading?'업로드 중...':'프로필 사진 변경'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatarUpload} disabled={avatarUploading} /></label>
+                {profile?.avatar_url&&<button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={async()=>{await updateProfile(user.id,{avatar_url:null});refreshProfile()}}>제거</button>}
+              </div>
             </div>
             <div className="form-group"><label className="form-label">사용자명 (URL)</label><div style={{display:'flex',alignItems:'center',gap:6}}><span className="text-light text-sm">{window.location.origin}/u/</span><input className="form-input" value={profile?.username||''} disabled style={{flex:1,opacity:0.6}} /></div></div>
             <div className="form-group"><label className="form-label">표시 이름</label><input className="form-input" value={form.display_name} onChange={set('display_name')} /></div>
