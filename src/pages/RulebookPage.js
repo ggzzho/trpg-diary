@@ -247,10 +247,12 @@ export function RulebookPage() {
 
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
         <div className="grid-2">
-          <div className="form-group">
-            <label className="form-label">룰</label>
-            <input className="form-input" placeholder="예: CoC, 인세인, D&D 5e..." value={form.system_name||''} onChange={set('system_name')}/>
-          </div>
+          {!isSuppl && (
+            <div className="form-group">
+              <label className="form-label">룰</label>
+              <input className="form-input" placeholder="예: CoC, 인세인, D&D 5e..." value={form.system_name||''} onChange={set('system_name')}/>
+            </div>
+          )}
           <div className="form-group"><label className="form-label">형태</label><select className="form-select" value={form.format} onChange={set('format')}><option value="physical">실물</option><option value="digital">전자</option><option value="both">실물+전자</option></select></div>
         </div>
         <div className="form-group">
