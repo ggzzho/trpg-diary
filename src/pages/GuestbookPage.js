@@ -232,7 +232,7 @@ function FriendChip({ g, isOwner, userId, onEdit, onRemove }) {
       </a>
       {(isOwner || g.author_id === userId) && (
         <div className="flex gap-6" style={{ flexShrink:0 }}>
-          {isOwner && <button className="btn btn-ghost btn-sm" style={{ padding:'2px 6px' }} onClick={() => onEdit(g)}><Mi size="sm">edit</Mi></button>}
+          <button className="btn btn-ghost btn-sm" style={{ padding:'2px 6px' }} onClick={() => onEdit(g)}><Mi size="sm">edit</Mi></button>
           <button className="btn btn-ghost btn-sm" style={{ padding:'2px 6px', color:'#e57373' }} onClick={() => onRemove(g.id)}><Mi size="sm">close</Mi></button>
         </div>
       )}
@@ -261,7 +261,7 @@ export function GuestbookPublicView({ ownerId }) {
   const [pageSubmitting, setPageSubmitting] = useState(false)
   const [pageDone, setPageDone] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
-  const [editForm, setEditForm] = useState({ nickname:'', memo:'' })
+  const [editForm, setEditForm] = useState({ nickname:'', memo:'', url:'', avatar_url:'', editAs:'' })
   const [openReplies, setOpenReplies] = useState({})
   const [replyForms, setReplyForms] = useState({})
   const [replySubmitting, setReplySubmitting] = useState(false)
@@ -323,17 +323,26 @@ export function GuestbookPublicView({ ownerId }) {
   }
 
   const openEdit = (g) => {
-    const { memo } = parseEntry(g)
+    const { url, memo } = parseEntry(g)
+    const editAs = g.author_id === user?.id ? 'author' : 'owner'
     setEditingItem(g)
-    setEditForm({ nickname: g.author_name || '', memo })
+    setEditForm({ nickname: g.author_name || '', memo: memo || '', url: url || '', avatar_url: g.author_avatar_url || '', editAs })
   }
   const saveEdit = async () => {
     if (!editingItem) return
-    const newContent = editForm.memo
-      ? `${editingItem.content.split('|||')[0]}|||${editForm.memo}`
-      : editingItem.content.split('|||')[0]
-    await supabase.from('guestbook').update({ author_name: editForm.nickname.trim(), content: newContent })
-      .eq('id', editingItem.id).eq('owner_id', user.id)
+    const newContent = editForm.url.trim()
+      ? (editForm.memo.trim() ? `${editForm.url.trim()}|||${editForm.memo.trim()}` : editForm.url.trim())
+      : editingItem.content
+    const updates = { content: newContent }
+    if (editForm.editAs === 'owner') {
+      updates.author_name = editForm.nickname.trim() || editingItem.author_name
+      updates.author_avatar_url = editForm.avatar_url.trim() || null
+      await supabase.from('guestbook').update(updates).eq('id', editingItem.id).eq('owner_id', user.id)
+    } else {
+      updates.author_name = editForm.nickname.trim() || editingItem.author_name
+      updates.author_avatar_url = editForm.avatar_url.trim() || null
+      await supabase.from('guestbook').update(updates).eq('id', editingItem.id).eq('author_id', user.id)
+    }
     setEditingItem(null); loadAll()
   }
 
@@ -544,11 +553,24 @@ export function GuestbookPublicView({ ownerId }) {
       {editingItem && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:9000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
           <div className="card" style={{ maxWidth:400, width:'100%', padding:24 }}>
-            <h3 style={{ fontWeight:700, marginBottom:16 }}>페이지 정보 수정</h3>
+            <h3 style={{ fontWeight:700, marginBottom:4 }}>페이지 정보 수정</h3>
+            <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', marginBottom:16 }}>
+              {editForm.editAs === 'owner' ? '소유주 권한으로 수정해요' : '내가 남긴 정보를 수정해요'}
+            </p>
             <div className="form-group">
               <label className="form-label">닉네임</label>
               <input className="form-input" autoComplete="off" value={editForm.nickname}
                 onChange={e => setEditForm(f => ({...f, nickname:e.target.value}))}/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">링크 주소</label>
+              <input className="form-input" autoComplete="off" placeholder="https://..." value={editForm.url}
+                onChange={e => setEditForm(f => ({...f, url:e.target.value}))}/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">프로필 이미지 URL</label>
+              <input className="form-input" autoComplete="off" placeholder="https://..." value={editForm.avatar_url}
+                onChange={e => setEditForm(f => ({...f, avatar_url:e.target.value}))}/>
             </div>
             <div className="form-group">
               <label className="form-label">메모</label>
@@ -755,11 +777,24 @@ function GuestbookOwnerView({ user }) {
       {editingItem && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:9000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
           <div className="card" style={{ maxWidth:400, width:'100%', padding:24 }}>
-            <h3 style={{ fontWeight:700, marginBottom:16 }}>페이지 정보 수정</h3>
+            <h3 style={{ fontWeight:700, marginBottom:4 }}>페이지 정보 수정</h3>
+            <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', marginBottom:16 }}>
+              {editForm.editAs === 'owner' ? '소유주 권한으로 수정해요' : '내가 남긴 정보를 수정해요'}
+            </p>
             <div className="form-group">
               <label className="form-label">닉네임</label>
               <input className="form-input" autoComplete="off" value={editForm.nickname}
                 onChange={e => setEditForm(f => ({...f, nickname:e.target.value}))}/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">링크 주소</label>
+              <input className="form-input" autoComplete="off" placeholder="https://..." value={editForm.url}
+                onChange={e => setEditForm(f => ({...f, url:e.target.value}))}/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">프로필 이미지 URL</label>
+              <input className="form-input" autoComplete="off" placeholder="https://..." value={editForm.avatar_url}
+                onChange={e => setEditForm(f => ({...f, avatar_url:e.target.value}))}/>
             </div>
             <div className="form-group">
               <label className="form-label">메모</label>
