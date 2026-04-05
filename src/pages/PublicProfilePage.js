@@ -120,11 +120,18 @@ export default function PublicProfilePage() {
   const [selectedLog, setSelectedLog] = useState(null)
   const [pairSort, setPairSort] = useState('asc')
   const [rulebookExpanded, setRulebookExpanded] = useState({})
+  const [scenarioExpanded, setScenarioExpanded] = useState({})
   const [kakaoPopup, setKakaoPopup] = useState(false)
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
   const logsPagination = usePagination(data.logs||[], 20)
-  const scenariosPagination = usePagination(data.scenarios||[], 20)
+  const scenarioParents = (data.scenarios||[]).filter(s => !s.parent_id)
+  const scenarioChildMap = (data.scenarios||[]).filter(s => !!s.parent_id).reduce((m,s) => {
+    if (!m[s.parent_id]) m[s.parent_id] = []
+    m[s.parent_id].push(s)
+    return m
+  }, {})
+  const scenariosPagination = usePagination(scenarioParents, 20)
   const availabilityPagination = usePagination(data.availability||[], 20)
   const pairsPagination = usePagination(data.pairs||[], 20)
 
@@ -221,7 +228,7 @@ export default function PublicProfilePage() {
     { key:'rulebooks', label:'룰북', icon:'menu_book', count:(data.rulebooks||[]).filter(r=>!r.parent_id).length },
     { key:'logs', label:'기록', icon:'auto_stories', count:data.logs?.length },
     { key:'availability', label:'공수표', icon:'event_available', count:data.availability?.length },
-    { key:'scenarios', label:'시나리오', icon:'description', count:data.scenarios?.length },
+    { key:'scenarios', label:'시나리오', icon:'description', count:scenarioParents.length },
     { key:'pairs', label:'페어', icon:'people', count:data.pairs?.length },
     { key:'guestbook', label:'방명록', icon:'mail' },
     ...(profile?.is_admin ? [{ key:'feedback', label:'문의/피드백', icon:'support_agent' }] : []),
@@ -481,30 +488,57 @@ export default function PublicProfilePage() {
       {activeTab==='scenarios' && (
         <>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {!data.scenarios?.length
+          {!scenarioParents.length
             ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>시나리오가 없어요</div>
-            : scenariosPagination.paged.map(s => (
-              <div key={s.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:14 }}>
-                <div style={{ width:48, height:48, borderRadius:8, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {s.cover_image_url ? <img src={s.cover_image_url} alt={s.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.5rem', opacity:0.4 }}><Mi size='lg' color='light'>description</Mi></span>}
-                </div>
-                <div style={{ flex:1 }}>
-                  <div className="flex items-center gap-8" style={{ marginBottom:5 }}>
-                    <span style={{ fontWeight:700, fontSize:'0.9rem' }}>{s.title}</span>
-                    <span className="badge badge-gray">{SCENARIO_STATUS[s.status]}</span>
+            : scenariosPagination.paged.map(s => {
+                const children = scenarioChildMap[s.id] || []
+                const isOpen = !!scenarioExpanded[s.id]
+                const renderScenarioItem = (item, isChild=false) => (
+                  <div key={item.id} className="card card-sm"
+                    style={{ display:'flex', alignItems:'center', gap:14,
+                      marginLeft: isChild ? 16 : 0,
+                      borderLeft: isChild ? '3px solid var(--color-primary)' : undefined }}>
+                    <div style={{ width:isChild?38:48, height:isChild?38:48, borderRadius:8, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      {item.cover_image_url ? <img src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.2rem', opacity:0.4 }}><Mi size='lg' color='light'>description</Mi></span>}
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div className="flex items-center gap-8" style={{ marginBottom:4 }}>
+                        {isChild && <Mi size="sm" color="light">subdirectory_arrow_right</Mi>}
+                        <span style={{ fontWeight:700, fontSize:isChild?'0.85rem':'0.9rem' }}>{item.title}</span>
+                        <span className="badge badge-gray">{SCENARIO_STATUS[item.status]}</span>
+                      </div>
+                      <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+                        {item.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
+                        {item.author && <span className="text-xs text-light"><Mi size='sm' color='light'>edit</Mi> {item.author}</span>}
+                        {item.player_count && <span className="text-xs text-light"><Mi size="sm" color="light">group</Mi> {item.player_count}</span>}
+                      </div>
+                      {item.scenario_url && <a href={item.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:3, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
+                    </div>
                   </div>
-                  <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-                    {s.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {s.system_name}</span>}
-                    {s.author && <span className="text-xs text-light"><Mi size='sm' color='light'>edit</Mi> {s.author}</span>}
-                    {s.player_count && <span className="text-xs text-light"><Mi size="sm" color="light">group</Mi> {s.player_count}</span>}
+                )
+                return (
+                  <div key={s.id}>
+                    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                      <div style={{ flex:1 }}>{renderScenarioItem(s)}</div>
+                      {children.length > 0 && (
+                        <button className="btn btn-ghost btn-sm" style={{ flexShrink:0 }}
+                          onClick={() => setScenarioExpanded(e => ({...e, [s.id]:!e[s.id]}))}>
+                          <Mi size='sm'>{isOpen ? 'expand_less' : 'expand_more'}</Mi>
+                          {children.length}개
+                        </button>
+                      )}
+                    </div>
+                    {isOpen && (
+                      <div style={{ display:'flex', flexDirection:'column', gap:4, marginTop:4 }}>
+                        {children.map(c => renderScenarioItem(c, true))}
+                      </div>
+                    )}
                   </div>
-                  {s.scenario_url && <a href={s.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:3, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
-                </div>
-              </div>
-            ))
+                )
+              })
           }
           </div>
-          <Pagination total={(data.scenarios||[]).length} perPage={scenariosPagination.perPage} page={scenariosPagination.page} onPage={scenariosPagination.setPage} onPerPage={scenariosPagination.setPerPage}/>
+          <Pagination total={scenarioParents.length} perPage={scenariosPagination.perPage} page={scenariosPagination.page} onPage={scenariosPagination.setPage} onPerPage={scenariosPagination.setPerPage}/>
         </>
       )}
 
