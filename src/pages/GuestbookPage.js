@@ -74,6 +74,58 @@ function DeleteConfirm({ isOpen, onClose, onConfirm, message = '정말 삭제하
 }
 
 // ── 방명록 카드 ──
+// ── 댓글 아이템 (수정 기능 포함) ──
+function ReplyItem({ r, isOwner, userId, onDelete, onEdit, rHidden }) {
+  const [editing, setEditing] = useState(false)
+  const [editContent, setEditContent] = useState(r.content)
+  const canEdit = userId && r.author_id === userId
+  return (
+    <div style={{ padding:'10px 0', borderBottom:'1px solid var(--color-border)' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:26, height:26, borderRadius:'50%', background:'var(--color-nav-active-bg)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:'0.68rem', fontWeight:700, color:'var(--color-accent)', flexShrink:0,
+            border:'1px solid var(--color-border)' }}>
+            {(r.author_name||'?')[0]}
+          </div>
+          <span style={{ fontWeight:700, fontSize:'0.82rem' }}>{r.author_name || '익명'}</span>
+          {r.is_private && <Mi size="sm" color="light">lock</Mi>}
+          <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)' }}>{fmtDT(r.created_at)}</span>
+        </div>
+        <div style={{ display:'flex', gap:4 }}>
+          {canEdit && !editing && (
+            <button className="btn btn-ghost btn-sm" style={{ padding:'1px 6px', fontSize:'0.72rem' }}
+              onClick={() => { setEditContent(r.content); setEditing(true) }}>수정</button>
+          )}
+          {(isOwner || r.author_id === userId) && (
+            <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px', fontSize:'0.72rem' }}
+              onClick={() => onDelete(r.id)}>삭제</button>
+          )}
+        </div>
+      </div>
+      {editing ? (
+        <div style={{ paddingLeft:34 }}>
+          <textarea className="form-textarea" value={editContent}
+            onChange={e => setEditContent(e.target.value)}
+            style={{ minHeight:60, fontSize:'0.84rem', marginBottom:6 }}/>
+          <div style={{ display:'flex', gap:6 }}>
+            <button className="btn btn-primary btn-sm" style={{ fontSize:'0.75rem' }}
+              onClick={() => { onEdit(r.id, editContent); setEditing(false) }}>저장</button>
+            <button className="btn btn-outline btn-sm" style={{ fontSize:'0.75rem' }}
+              onClick={() => setEditing(false)}>취소</button>
+          </div>
+        </div>
+      ) : (
+        <p style={{ fontSize:'0.84rem', color:'var(--color-text-light)', lineHeight:1.65,
+          whiteSpace:'pre-wrap', paddingLeft:34 }}>
+          {rHidden ? <span style={{ display:'flex', alignItems:'center', gap:4 }}><Mi size="sm" color="light">lock</Mi> 비공개 댓글이에요</span> : r.content}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function GuestEntry({ g, replies, isOwner, userId, onDelete, onEdit, onReply, replyOpen, onToggleReply,
   replyForm, setReplyForm, onSubmitReply, replySubmitting, authLoading, onToggleLike }) {
   const hidden = g.is_private && !isOwner && g.author_id !== userId
@@ -156,29 +208,8 @@ function GuestEntry({ g, replies, isOwner, userId, onDelete, onEdit, onReply, re
           {replies.map(r => {
             const rHidden = r.is_private && !isOwner && r.author_id !== userId
             return (
-              <div key={r.id} style={{ padding:'10px 0', borderBottom:'1px solid var(--color-border)' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <div style={{ width:26, height:26, borderRadius:'50%', background:'var(--color-nav-active-bg)',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                      fontSize:'0.68rem', fontWeight:700, color:'var(--color-accent)', flexShrink:0,
-                      border:'1px solid var(--color-border)' }}>
-                      {(r.author_name||'?')[0]}
-                    </div>
-                    <span style={{ fontWeight:700, fontSize:'0.82rem' }}>{r.author_name || '익명'}</span>
-                    {r.is_private && <Mi size="sm" color="light">lock</Mi>}
-                    <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)' }}>{fmtDT(r.created_at)}</span>
-                  </div>
-                  {(isOwner || r.author_id === userId) && (
-                    <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px', fontSize:'0.72rem' }}
-                      onClick={() => onDelete(r.id)}>삭제</button>
-                  )}
-                </div>
-                <p style={{ fontSize:'0.84rem', color:'var(--color-text-light)', lineHeight:1.65,
-                  whiteSpace:'pre-wrap', paddingLeft:34 }}>
-                  {rHidden ? <span style={{ display:'flex', alignItems:'center', gap:4 }}><Mi size="sm" color="light">lock</Mi> 비공개 댓글이에요</span> : r.content}
-                </p>
-              </div>
+              <ReplyItem key={r.id} r={r} isOwner={isOwner} userId={userId}
+                onDelete={onDelete} onEdit={onEdit} rHidden={rHidden}/>
             )
           })}
 
@@ -600,7 +631,7 @@ function GuestbookOwnerView({ user }) {
   const [tab, setTab] = useState('message')
   const [search, setSearch] = useState('')
   const [editingItem, setEditingItem] = useState(null)
-  const [editForm, setEditForm] = useState({ nickname:'', memo:'' })
+  const [editForm, setEditForm] = useState({ nickname:'', memo:'', url:'', avatar_url:'', editAs:'' })
   const [msgPage, setMsgPage] = useState(1)
   const [msgPerPage, setMsgPerPage] = useState(10)
   const [myPage, setMyPage] = useState(1)
@@ -633,17 +664,26 @@ function GuestbookOwnerView({ user }) {
   }
 
   const openEdit = (g) => {
-    const { memo } = parseEntry(g)
+    const { url, memo } = parseEntry(g)
+    const editAs = g.author_id === user?.id ? 'author' : 'owner'
     setEditingItem(g)
-    setEditForm({ nickname: g.author_name || '', memo })
+    setEditForm({ nickname: g.author_name || '', memo: memo || '', url: url || '', avatar_url: g.author_avatar_url || '', editAs })
   }
   const saveEdit = async () => {
     if (!editingItem) return
-    const newContent = editForm.memo
-      ? `${editingItem.content.split('|||')[0]}|||${editForm.memo}`
-      : editingItem.content.split('|||')[0]
-    await supabase.from('guestbook').update({ author_name: editForm.nickname.trim(), content: newContent })
-      .eq('id', editingItem.id).eq('owner_id', user.id)
+    const newContent = editForm.url.trim()
+      ? (editForm.memo.trim() ? `${editForm.url.trim()}|||${editForm.memo.trim()}` : editForm.url.trim())
+      : editingItem.content
+    const updates = { content: newContent }
+    if (editForm.editAs === 'owner') {
+      updates.author_name = editForm.nickname.trim() || editingItem.author_name
+      updates.author_avatar_url = editForm.avatar_url.trim() || null
+      await supabase.from('guestbook').update(updates).eq('id', editingItem.id).eq('owner_id', user.id)
+    } else {
+      updates.author_name = editForm.nickname.trim() || editingItem.author_name
+      updates.author_avatar_url = editForm.avatar_url.trim() || null
+      await supabase.from('guestbook').update(updates).eq('id', editingItem.id).eq('author_id', user.id)
+    }
     setEditingItem(null); loadAll()
   }
 

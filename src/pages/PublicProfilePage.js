@@ -171,6 +171,16 @@ export default function PublicProfilePage() {
       const scheds = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
       const blocked = schedsAll.filter(s => s.entry_type === 'blocked')
       setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked })
+
+      // hidden_tabs가 있으면 초기 탭이 숨겨져 있을 수 있으므로 첫 번째 보이는 탭으로 조정
+      const hidden = p.hidden_tabs || []
+      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','pairs','guestbook']
+      const requestedTab = searchParams.get('tab') || 'schedules'
+      if (hidden.includes(requestedTab)) {
+        const firstVisible = allTabKeys.find(k => !hidden.includes(k)) || 'guestbook'
+        setActiveTab(firstVisible)
+      }
+
       setLoading(false)
     }
     load()

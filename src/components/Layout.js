@@ -145,7 +145,9 @@ export function Modal({ isOpen, onClose, title, children, footer }) {
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
         {title&&<h2 className="modal-title">{title}</h2>}
-        {children}
+        <form onSubmit={e=>e.preventDefault()}>
+          {children}
+        </form>
         {footer&&<div className="modal-footer">{footer}</div>}
       </div>
     </div>

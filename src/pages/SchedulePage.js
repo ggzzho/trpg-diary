@@ -90,8 +90,10 @@ export default function SchedulePage() {
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
     const payload = {...form, scheduled_time:form.scheduled_time||null, end_time:form.end_time||null}
-    if (editing) await schedulesApi.update(editing.id, payload)
-    else await schedulesApi.create({...payload,user_id:user.id})
+    let error
+    if (editing) ({ error } = await schedulesApi.update(editing.id, payload))
+    else ({ error } = await schedulesApi.create({...payload,user_id:user.id}))
+    if (error) { alert('저장 실패: ' + error.message); return }
     setModal(false); load()
   }
   const remove = async id => { await schedulesApi.remove(id); load() }

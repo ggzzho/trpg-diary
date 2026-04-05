@@ -217,6 +217,7 @@ export function RulebookPage() {
               )
             })}
           </div>
+          <Pagination total={filteredParents.length} perPage={rbPerPage} page={rbPage} onPage={setRbPage} onPerPage={setRbPerPage}/>
       }
 
       {/* 추가/수정 모달 */}
