@@ -31,6 +31,25 @@ export function applyTheme(primary, bg, accent) {
   root.style.setProperty('--color-text-light',
     `rgb(${Math.min(180,ar+30)}, ${Math.min(160,ag+20)}, ${Math.min(140,ab+20)})`)
   document.body.style.backgroundColor = bg
+
+  // 동적 파비콘 - 테마 컬러로 ✦ 심벌 생성
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = 32; canvas.height = 32
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = bg
+    ctx.fillRect(0, 0, 32, 32)
+    ctx.fillStyle = primary
+    ctx.font = 'bold 22px serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('✦', 16, 17)
+    const link = document.querySelector("link[rel*='icon']") || document.createElement('link')
+    link.type = 'image/x-icon'
+    link.rel = 'shortcut icon'
+    link.href = canvas.toDataURL()
+    document.head.appendChild(link)
+  } catch(e) { /* 파비콘 생성 실패 시 무시 */ }
 }
 
 // 배경 이미지 + 불투명도 적용

@@ -46,7 +46,14 @@ export default function AuthPage() {
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--color-bg)', padding:20 }}>
       <div className="card card-lg" style={{ width:'100%', maxWidth:400 }}>
         <div style={{ textAlign:'center', marginBottom:28 }}>
-          <div style={{ fontSize:'2rem', marginBottom:8 }}>✦</div>
+          <div style={{ marginBottom:12, display:'flex', justifyContent:'center' }}>
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M28 4 L31.5 22.5 L50 28 L31.5 33.5 L28 52 L24.5 33.5 L6 28 L24.5 22.5 Z"
+                fill="var(--color-primary)" opacity="0.9"/>
+              <path d="M28 10 L30.5 23.5 L44 28 L30.5 32.5 L28 46 L25.5 32.5 L12 28 L25.5 23.5 Z"
+                fill="var(--color-accent)" opacity="0.6"/>
+            </svg>
+          </div>
           <h1 style={{ fontWeight:800, color:'var(--color-accent)', fontSize:'1.5rem', letterSpacing:'-0.03em' }}>TRPG Diary</h1>
           <p className="text-sm text-light" style={{ marginTop:4 }}>나만의 TRPG 기록 다이어리</p>
         </div>

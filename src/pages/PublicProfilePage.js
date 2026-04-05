@@ -136,6 +136,22 @@ export default function PublicProfilePage() {
       // 탭 제목: ✦ TRPG Diary - 닉네임 또는 @아이디
       const displayName = p.display_name || p.username
       document.title = `✦ TRPG Diary - ${displayName}`
+
+      // OG 메타태그 동적 업데이트
+      const ogImage = p.header_image_url || p.avatar_url || 'https://trpg-diary.co.kr/logo512.png'
+      const ogTitle = `${displayName}의 TRPG Diary`
+      const ogDesc = p.play_style || `${displayName}님의 TRPG 다이어리 - trpg-diary.co.kr`
+      const ogUrl = `https://trpg-diary.co.kr/u/${p.username}`
+      const setMeta = (prop, val, attr='property') => {
+        let el = document.querySelector(`meta[${attr}="${prop}"]`)
+        if (!el) { el = document.createElement('meta'); el.setAttribute(attr, prop); document.head.appendChild(el) }
+        el.setAttribute('content', val)
+      }
+      setMeta('og:title', ogTitle); setMeta('og:description', ogDesc)
+      setMeta('og:image', ogImage); setMeta('og:url', ogUrl)
+      setMeta('twitter:title', ogTitle, 'name'); setMeta('twitter:description', ogDesc, 'name')
+      setMeta('twitter:image', ogImage, 'name')
+
       // 페어 정렬 설정 동기화
       if (p.pair_sort_order) setPairSort(p.pair_sort_order)
       applyTheme(p.theme_color||'#c8a96e', p.theme_bg_color||'#faf6f0', p.theme_accent||'#8b6f47')
