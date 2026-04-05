@@ -160,7 +160,8 @@ export function ScenarioPage() {
                 )}
               </div>
             )
-          })}\n          </div>
+          })}
+          </div>
           <Pagination total={filteredParents.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
         </>
       }
