@@ -153,7 +153,8 @@ export function RulebookPage() {
 
       {loading ? <LoadingSpinner/> : filteredParents.length === 0
         ? <EmptyState icon="menu_book" title="룰북이 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
-        : <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        : <>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {pagedRulebooks.map(item => {
               const suppls = supplMap[item.id] || []
               const isOpen = expanded[item.id]
@@ -218,6 +219,7 @@ export function RulebookPage() {
             })}
           </div>
           <Pagination total={filteredParents.length} perPage={rbPerPage} page={rbPage} onPage={setRbPage} onPerPage={setRbPerPage}/>
+        </>
       }
 
       {/* 추가/수정 모달 */}
