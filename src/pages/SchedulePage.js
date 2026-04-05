@@ -14,7 +14,7 @@ const STATUS_MAP = {
   planned:{label:'예정',badge:'badge-blue'},
   completed:{label:'완료',badge:'badge-gray'}, cancelled:{label:'취소',badge:'badge-red'},
 }
-const BLANK = { title:'', scheduled_date:'', scheduled_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false, is_intro:false, intro_rule:'', entry_type:'session' }
+const BLANK = { title:'', scheduled_date:'', scheduled_time:'', end_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false, is_intro:false, intro_rule:'', entry_type:'session' }
 const BLOCKED_BLANK = { scheduled_date:'', blocked_from:'', blocked_until:'', description:'', entry_type:'blocked' }
 const fmtTime = t => t ? t.slice(0,5) : ''
 
@@ -89,7 +89,7 @@ export default function SchedulePage() {
 
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
-    const payload = {...form, scheduled_time:form.scheduled_time||null}
+    const payload = {...form, scheduled_time:form.scheduled_time||null, end_time:form.end_time||null}
     if (editing) await schedulesApi.update(editing.id, payload)
     else await schedulesApi.create({...payload,user_id:user.id})
     setModal(false); load()
@@ -350,7 +350,7 @@ export default function SchedulePage() {
                   </div>
                   <div className="text-xs text-light flex gap-12">
                     {item.system_name&&<span><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}{item.is_intro&&item.intro_rule?` (${item.intro_rule} 입문)`:''}</span>}
-                    {item.scheduled_time&&<span>🕐 {fmtTime(item.scheduled_time)}</span>}
+                    {item.scheduled_time&&<span>🕐 {fmtTime(item.scheduled_time)}{item.end_time?` ~ ${fmtTime(item.end_time)}`:''}</span>}
                     {item.location&&<span>🌐 {item.location}</span>}
                   </div>
                   {item.description&&<p className="text-sm text-light" style={{marginTop:4}}>{item.description}</p>}
@@ -403,7 +403,8 @@ export default function SchedulePage() {
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
         <div className="grid-2">
           <div className="form-group"><label className="form-label">날짜 *</label><input className="form-input" type="date" value={form.scheduled_date} onChange={set('scheduled_date')}/></div>
-          <div className="form-group"><label className="form-label">시간</label><input className="form-input" type="time" value={form.scheduled_time||''} onChange={set('scheduled_time')}/></div>
+          <div className="form-group"><label className="form-label">시작 시간</label><input className="form-input" type="time" value={form.scheduled_time||''} onChange={set('scheduled_time')}/></div>
+          <div className="form-group"><label className="form-label">종료 시간</label><input className="form-input" type="time" value={form.end_time||''} onChange={set('end_time')}/></div>
         </div>
         <div className="grid-2">
           <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>

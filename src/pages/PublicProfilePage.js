@@ -120,6 +120,7 @@ export default function PublicProfilePage() {
   const [selectedLog, setSelectedLog] = useState(null)
   const [pairSort, setPairSort] = useState('asc')
   const [rulebookExpanded, setRulebookExpanded] = useState({})
+  const [kakaoPopup, setKakaoPopup] = useState(false)
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
   const logsPagination = usePagination(data.logs||[], 20)
@@ -212,16 +213,23 @@ export default function PublicProfilePage() {
 
       {/* 로그인 상태 표시 배지 - auth 로딩 완료 후 표시 */}
       {!authLoading && (
-      <div style={{
-        position:'fixed', bottom:20, right:20, zIndex:9999,
-        display:'flex', alignItems:'center', gap:8,
-        padding:'7px 12px', borderRadius:100,
-        background: user ? 'var(--color-primary)' : 'rgba(0,0,0,0.55)',
-        color:'white', fontSize:'0.75rem', fontWeight:600,
-        boxShadow:'0 2px 12px rgba(0,0,0,0.2)',
-        backdropFilter:'blur(8px)',
-        pointerEvents:'none',
-      }}>
+      <div
+        onClick={() => { if (user) window.location.href='/dashboard'; else window.location.href='/login' }}
+        style={{
+          position:'fixed', bottom:20, right:20, zIndex:9999,
+          display:'flex', alignItems:'center', gap:8,
+          padding:'7px 12px', borderRadius:100,
+          background: user ? 'var(--color-primary)' : 'rgba(0,0,0,0.55)',
+          color:'white', fontSize:'0.75rem', fontWeight:600,
+          boxShadow:'0 2px 12px rgba(0,0,0,0.2)',
+          backdropFilter:'blur(8px)',
+          cursor:'pointer',
+          transition:'opacity 0.15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.opacity='0.85'}
+        onMouseLeave={e => e.currentTarget.style.opacity='1'}
+        title={user ? '대시보드로 이동' : '로그인 / 회원가입'}
+      >
         {user ? (
           <>
             <div style={{ width:18, height:18, borderRadius:'50%', overflow:'hidden', background:'rgba(255,255,255,0.3)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', fontWeight:700 }}>
@@ -235,7 +243,7 @@ export default function PublicProfilePage() {
         ) : (
           <>
             <span style={{ opacity:0.8 }}>👤</span>
-            <span>비회원으로 보는 중</span>
+            <span>로그인 / 회원가입</span>
           </>
         )}
       </div>
@@ -549,13 +557,18 @@ export default function PublicProfilePage() {
       {/* 푸터 */}
       <footer style={{ marginTop:60, paddingTop:20, paddingBottom:20, borderTop:'1px solid var(--color-border)', textAlign:'center', color:'var(--color-text-light)', fontSize:'0.72rem' }}>
         <div style={{marginBottom:10, display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap'}}>
-          <a href="https://qr.kakaopay.com/Ej8h4QBew" target="_blank" rel="noreferrer"
+          <button
+            onClick={() => {
+              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+              if (isMobile) window.open('https://qr.kakaopay.com/Ej8h4QBew', '_blank')
+              else setKakaoPopup(true)
+            }}
             style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:100,
               background:'rgba(255,235,0,0.12)',border:'1px solid rgba(255,235,0,0.4)',
-              color:'#b8960c',textDecoration:'none',fontSize:'0.75rem',fontWeight:600}}>
+              color:'#b8960c',fontSize:'0.75rem',fontWeight:600,cursor:'pointer'}}>
             💛 카카오페이로 후원하기
-          </a>
-          <a href="#" target="_blank" rel="noreferrer"
+          </button>
+          <a href="https://posty.pe/0k44m9" target="_blank" rel="noreferrer"
             style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:100,
               background:'rgba(200,169,110,0.08)',border:'1px solid var(--color-border)',
               color:'var(--color-accent)',textDecoration:'none',fontSize:'0.75rem',fontWeight:600}}>
@@ -569,6 +582,25 @@ export default function PublicProfilePage() {
         </div>
         {FOOTER_TEXT}
       </footer>
+
+      {/* 카카오페이 PC 안내 팝업 */}
+      {kakaoPopup && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}
+          onClick={() => setKakaoPopup(false)}>
+          <div style={{background:'var(--color-surface)',borderRadius:16,padding:'28px 24px',maxWidth:300,width:'100%',textAlign:'center',border:'1px solid var(--color-border)'}}
+            onClick={e => e.stopPropagation()}>
+            <div style={{fontSize:'2rem',marginBottom:10}}>💛</div>
+            <p style={{fontWeight:700,fontSize:'0.95rem',marginBottom:8,color:'var(--color-text)'}}>카카오페이 후원</p>
+            <p style={{fontSize:'0.82rem',color:'var(--color-text-light)',lineHeight:1.7,marginBottom:16}}>
+              모바일 카메라로 QR을 스캔하거나<br/>모바일에서 접속해주세요!
+            </p>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https://qr.kakaopay.com/Ej8h4QBew"
+              alt="카카오페이 QR" style={{width:140,height:140,borderRadius:8,marginBottom:16,border:'1px solid var(--color-border)'}}/>
+            <button className="btn btn-outline btn-sm" style={{justifyContent:'center',width:'100%'}}
+              onClick={() => setKakaoPopup(false)}>닫기</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

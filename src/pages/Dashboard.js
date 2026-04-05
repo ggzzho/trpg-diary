@@ -60,7 +60,6 @@ export default function Dashboard() {
       <div style={{marginBottom:36}}>
         <p style={{color:'var(--color-text-light)',fontSize:'0.85rem',marginBottom:6}}>{greet()}</p>
         <h1 className="text-serif" style={{fontSize:'2rem',color:'var(--color-accent)'}}>{profile?.display_name||profile?.username}님의 다이어리</h1>
-        <p style={{color:'var(--color-text-light)',fontSize:'0.85rem',marginTop:8}}>오늘도 좋은 세션 되세요 🎲</p>
       </div>
 
       {/* 오늘 세션 알림 배너 */}
@@ -80,7 +79,6 @@ export default function Dashboard() {
           <span style={{fontSize:'1.4rem'}}>🎲</span>
           <div>
             <div style={{fontWeight:700,fontSize:'0.95rem'}}>오늘은 세션이 있는 날이에요!</div>
-            <div style={{fontSize:'0.78rem',opacity:0.88,marginTop:2}}>즐거운 세션 되세요 ✨</div>
           </div>
         </div>
       )}

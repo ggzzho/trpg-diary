@@ -16,7 +16,8 @@ const NAV_ITEMS = [
   { to:'/guestbook', icon:'mail', label:'방명록' },
 ]
 
-export const FOOTER_TEXT = '© 2026 TRPG Diary. Made with Claude (AI). All rights reserved.'
+export const FOOTER_TEXT = '© 2026 TRPG Diary v1.1.0 · Made with Claude (AI). All rights reserved.'
+export const SITE_VERSION = 'v1.1.0'
 
 export function Layout({ children }) {
   const { user, profile } = useAuth()
@@ -27,6 +28,7 @@ export function Layout({ children }) {
   const handleSignOut = async () => { await signOut(); navigate('/login') }
   const initial = profile?.display_name?.[0] || profile?.username?.[0] || '?'
   const isAdmin = profile?.is_admin === true
+  const [kakaoPopup, setKakaoPopup] = useState(false)
 
   return (
     <div className="app-layout">
@@ -86,25 +88,50 @@ export function Layout({ children }) {
         <div className="fade-in">{children}</div>
         <footer style={{marginTop:60,paddingTop:20,borderTop:'1px solid var(--color-border)',textAlign:'center',color:'var(--color-text-light)',fontSize:'0.72rem'}}>
           <div style={{marginBottom:10, display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap'}}>
-            <a href="https://qr.kakaopay.com/Ej8h4QBew" target="_blank" rel="noreferrer"
+            <button
+              onClick={() => {
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                if (isMobile) window.open('https://qr.kakaopay.com/Ej8h4QBew', '_blank')
+                else setKakaoPopup(true)
+              }}
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:100,
                 background:'rgba(255,235,0,0.12)',border:'1px solid rgba(255,235,0,0.4)',
-                color:'#b8960c',textDecoration:'none',fontSize:'0.75rem',fontWeight:600}}>
+                color:'#b8960c',fontSize:'0.75rem',fontWeight:600,cursor:'pointer'}}>
               💛 카카오페이로 후원하기
-            </a>
-            <a href="#" target="_blank" rel="noreferrer"
+            </button>
+            <a href="https://posty.pe/0k44m9" target="_blank" rel="noreferrer"
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:100,
                 background:'rgba(200,169,110,0.08)',border:'1px solid var(--color-border)',
                 color:'var(--color-accent)',textDecoration:'none',fontSize:'0.75rem',fontWeight:600}}>
               📖 사용설명서 바로가기
             </a>
           </div>
+
+          {/* 카카오페이 PC 안내 팝업 */}
+          {kakaoPopup && (
+            <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}
+              onClick={() => setKakaoPopup(false)}>
+              <div style={{background:'var(--color-surface)',borderRadius:16,padding:'28px 24px',maxWidth:300,width:'100%',textAlign:'center',border:'1px solid var(--color-border)'}}
+                onClick={e => e.stopPropagation()}>
+                <div style={{fontSize:'2rem',marginBottom:10}}>💛</div>
+                <p style={{fontWeight:700,fontSize:'0.95rem',marginBottom:8,color:'var(--color-text)'}}>카카오페이 후원</p>
+                <p style={{fontSize:'0.82rem',color:'var(--color-text-light)',lineHeight:1.7,marginBottom:16}}>
+                  모바일 카메라로 QR을 스캔하거나<br/>모바일에서 접속해주세요!
+                </p>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https://qr.kakaopay.com/Ej8h4QBew"
+                  alt="카카오페이 QR" style={{width:140,height:140,borderRadius:8,marginBottom:16,border:'1px solid var(--color-border)'}}/>
+                <button className="btn btn-outline btn-sm" style={{justifyContent:'center',width:'100%'}}
+                  onClick={() => setKakaoPopup(false)}>닫기</button>
+              </div>
+            </div>
+          )}
           <div style={{marginBottom:8}}>
             <a href="/privacy" style={{color:'var(--color-text-light)',textDecoration:'none',opacity:0.8}}
               onMouseOver={e=>e.target.style.opacity=1} onMouseOut={e=>e.target.style.opacity=0.8}>
               개인정보 처리방침
             </a>
           </div>
+          <div style={{marginBottom:4, opacity:0.6, fontSize:'0.68rem'}}>{SITE_VERSION}</div>
           {FOOTER_TEXT}
         </footer>
       </main>
