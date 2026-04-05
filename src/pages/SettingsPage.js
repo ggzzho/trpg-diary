@@ -42,6 +42,7 @@ export default function SettingsPage() {
   // ── form을 profile에서 초기화 (profile이 바뀔 때마다 동기화) ──
   const buildForm = (p) => ({
     display_name: p?.display_name||'',
+    avatar_url: p?.avatar_url||'',
     profile_sections: p?.profile_sections?.length>0 ? p.profile_sections
       : DEFAULT_SECTIONS.map(s=>({...s, value:p?.[s.id]||''})),
     external_links: p?.external_links||[],
@@ -165,11 +166,39 @@ export default function SettingsPage() {
               </div>
             </div>
             {/* 아바타 */}
-            <div className="form-group flex items-center gap-16">
-              <div className="user-avatar" style={{width:56,height:56,fontSize:'1.3rem'}}>{profile?.avatar_url?<img src={profile.avatar_url} alt="avatar"/>:(profile?.display_name||'?')[0]}</div>
-              <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <label className="btn btn-outline btn-sm" style={{cursor:'pointer',display:'inline-flex'}}>{avatarUploading?'업로드 중...':'프로필 사진 변경'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatarUpload} disabled={avatarUploading} /></label>
-                {profile?.avatar_url&&<button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={async()=>{await updateProfile(user.id,{avatar_url:null});refreshProfile()}}>제거</button>}
+            <div className="form-group">
+              <label className="form-label">프로필 이미지</label>
+              <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:10}}>
+                <div className="user-avatar" style={{width:56,height:56,fontSize:'1.3rem',flexShrink:0}}>
+                  {(form.avatar_url||profile?.avatar_url)
+                    ? <img src={form.avatar_url||profile?.avatar_url} alt="avatar"/>
+                    : (profile?.display_name||'?')[0]}
+                </div>
+                <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                  <label className="btn btn-outline btn-sm" style={{cursor:'pointer',display:'inline-flex'}}>
+                    {avatarUploading?'업로드 중...':'파일 업로드'}
+                    <input type="file" accept="image/*" style={{display:'none'}}
+                      onChange={async e => {
+                        const file=e.target.files?.[0]; if(!file) return; setAvatarUploading(true)
+                        const {url,error}=await uploadFile('avatars',`${user.id}/avatar-${Date.now()}`,file,{compress:true,maxSize:500,quality:0.85})
+                        if(url){ await updateProfile(user.id,{avatar_url:url}); setForm(f=>({...f,avatar_url:url})); refreshProfile() }
+                        else alert(error?.message||'업로드 실패')
+                        setAvatarUploading(false)
+                      }} disabled={avatarUploading}/>
+                  </label>
+                  {(form.avatar_url||profile?.avatar_url) && (
+                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
+                      onClick={async()=>{
+                        await updateProfile(user.id,{avatar_url:null})
+                        setForm(f=>({...f,avatar_url:''}))
+                        refreshProfile()
+                      }}>제거</button>
+                  )}
+                </div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <input className="form-input" placeholder="또는 이미지 URL 직접 입력 (https://...)"
+                  value={form.avatar_url||''} onChange={e=>setForm(f=>({...f,avatar_url:e.target.value}))}/>
               </div>
             </div>
             <div className="form-group"><label className="form-label">사용자명 (URL)</label><div style={{display:'flex',alignItems:'center',gap:6}}><span className="text-light text-sm">https://trpg-diary.co.kr/u/</span><input className="form-input" value={profile?.username||''} disabled style={{flex:1,opacity:0.6}} /></div></div>

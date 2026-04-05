@@ -131,7 +131,6 @@ export function Layout({ children }) {
               개인정보 처리방침
             </a>
           </div>
-          <div style={{marginBottom:4, opacity:0.6, fontSize:'0.68rem'}}>{SITE_VERSION}</div>
           {FOOTER_TEXT}
         </footer>
       </main>

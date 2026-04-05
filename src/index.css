@@ -72,6 +72,11 @@ body::before {
   flex: 1;
   padding: 36px 44px;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.main-content > .fade-in {
+  flex: 1;
 }
 
 /* ── 모바일 햄버거 버튼 ───────────────────────────────────── */

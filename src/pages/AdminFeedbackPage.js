@@ -12,6 +12,53 @@ const fmtDT = (d) => {
     + ' ' + dt.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
 }
 
+function ReplyEditItem({ r, onDelete, onSaved }) {
+  const [editing, setEditing] = useState(false)
+  const [content, setContent] = useState(r.content)
+  return (
+    <div style={{padding:'10px 0', borderBottom:'1px solid var(--color-border)'}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
+        <div style={{display:'flex', alignItems:'center', gap:8}}>
+          <div style={{width:26, height:26, borderRadius:'50%', background:'var(--color-primary)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:'0.68rem', fontWeight:700, color:'white', flexShrink:0}}>관</div>
+          <span style={{fontWeight:700, fontSize:'0.82rem'}}>{r.author_name}</span>
+          <span className="badge badge-primary" style={{fontSize:'0.6rem'}}>관리자</span>
+          <span style={{fontSize:'0.68rem', color:'var(--color-text-light)'}}>{fmtDT(r.created_at)}</span>
+        </div>
+        <div style={{display:'flex', gap:4}}>
+          {!editing && (
+            <button className="btn btn-ghost btn-sm" style={{padding:'1px 6px', fontSize:'0.72rem'}}
+              onClick={() => { setContent(r.content); setEditing(true) }}>수정</button>
+          )}
+          <button className="btn btn-ghost btn-sm" style={{color:'#e57373', padding:'1px 6px', fontSize:'0.72rem'}}
+            onClick={() => onDelete(r.id)}>삭제</button>
+        </div>
+      </div>
+      {editing ? (
+        <div style={{paddingLeft:34}}>
+          <textarea className="form-textarea" value={content}
+            onChange={e => setContent(e.target.value)}
+            style={{minHeight:60, fontSize:'0.84rem', marginBottom:6}}/>
+          <div style={{display:'flex', gap:6}}>
+            <button className="btn btn-primary btn-sm" style={{fontSize:'0.75rem'}}
+              onClick={async () => {
+                await supabase.from('guestbook').update({content}).eq('id', r.id)
+                setEditing(false); onSaved()
+              }}>저장</button>
+            <button className="btn btn-outline btn-sm" style={{fontSize:'0.75rem'}}
+              onClick={() => setEditing(false)}>취소</button>
+          </div>
+        </div>
+      ) : (
+        <p style={{fontSize:'0.84rem', color:'var(--color-text-light)', lineHeight:1.65, whiteSpace:'pre-wrap', paddingLeft:34}}>
+          {r.content}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function AdminFeedbackPage() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
@@ -162,25 +209,9 @@ export default function AdminFeedbackPage() {
                   {isOpen && (
                     <div style={{marginTop:14, paddingLeft:16, borderLeft:'2px solid var(--color-border)'}}>
                       {replyList.map(r => (
-                        <div key={r.id} style={{padding:'10px 0', borderBottom:'1px solid var(--color-border)'}}>
-                          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
-                            <div style={{display:'flex', alignItems:'center', gap:8}}>
-                              <div style={{width:26, height:26, borderRadius:'50%', background:'var(--color-primary)',
-                                display:'flex', alignItems:'center', justifyContent:'center',
-                                fontSize:'0.68rem', fontWeight:700, color:'white', flexShrink:0}}>
-                                관
-                              </div>
-                              <span style={{fontWeight:700, fontSize:'0.82rem'}}>{r.author_name}</span>
-                              <span className="badge badge-primary" style={{fontSize:'0.6rem'}}>관리자</span>
-                              <span style={{fontSize:'0.68rem', color:'var(--color-text-light)'}}>{fmtDT(r.created_at)}</span>
-                            </div>
-                            <button className="btn btn-ghost btn-sm" style={{color:'#e57373', padding:'1px 6px', fontSize:'0.72rem'}}
-                              onClick={() => setDeleteConfirm(r.id)}>삭제</button>
-                          </div>
-                          <p style={{fontSize:'0.84rem', color:'var(--color-text-light)', lineHeight:1.65, whiteSpace:'pre-wrap', paddingLeft:34}}>
-                            {r.content}
-                          </p>
-                        </div>
+                        <ReplyEditItem key={r.id} r={r}
+                          onDelete={(id) => setDeleteConfirm(id)}
+                          onSaved={loadAll}/>
                       ))}
 
                       {/* 답변 입력 */}

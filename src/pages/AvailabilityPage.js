@@ -18,10 +18,19 @@ export function AvailabilityPage() {
   const [form, setForm] = useState(BLANK)
   const [confirm, setConfirm] = useState(null)
   const [viewMode, setViewMode] = useState('card')
-  const { paged, page, setPage, perPage, setPerPage } = usePagination(items, 20)
+  const [search, setSearch] = useState('')
+  const [sortOrder, setSortOrder] = useState('asc')
 
   const load = async () => { const {data}=await availabilityApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
+
+  const filtered = items
+    .filter(i => !search || i.title?.includes(search) || i.system_name?.includes(search) || i.together_with?.includes(search))
+    .sort((a,b) => {
+      const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
+      return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
+    })
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const openNew = () => { setEditing(null); setForm(BLANK); setModal(true) }
@@ -45,7 +54,16 @@ export function AvailabilityPage() {
         </div>
       </div>
 
-      {loading?<LoadingSpinner/>:items.length===0
+      <div style={{marginBottom:16, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
+        <input className="form-input" placeholder="🔍 제목, 룰, 받는 사람 검색..." value={search}
+          onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
+        <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
+          onClick={()=>setSortOrder(o=>o==='asc'?'desc':'asc')}>
+          가나다순 {sortOrder==='asc'?'↑':'↓'}
+        </button>
+      </div>
+
+      {loading?<LoadingSpinner/>:filtered.length===0
         ?<EmptyState icon="event_available" title="공수표가 없어요" action={<button className="btn btn-primary" onClick={openNew}>등록하기</button>}/>
         :viewMode==='card'
           ?<>
@@ -72,7 +90,7 @@ export function AvailabilityPage() {
               </div>
             ))}
             </div>
-            <Pagination total={items.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+            <Pagination total={filtered.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
           </>
           :<>
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
@@ -100,7 +118,7 @@ export function AvailabilityPage() {
               </div>
             ))}
             </div>
-            <Pagination total={items.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+            <Pagination total={filtered.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
           </>
       }
 

@@ -312,7 +312,7 @@ export function GuestbookPublicView({ ownerId }) {
   }
   useEffect(() => { loadAll() }, [ownerId, user])
 
-  const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId)
+  const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
 
   // 검색 필터
   const filteredMessages = search.trim()
@@ -652,7 +652,7 @@ function GuestbookOwnerView({ user }) {
   }
   useEffect(() => { loadAll() }, [user])
 
-  const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId)
+  const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
 
   const filteredMessages = search.trim()
     ? messages.filter(g => (g.author_name||'').includes(search) || (g.content||'').includes(search))
@@ -890,7 +890,7 @@ export function FeedbackPublicView({ ownerId }) {
   }
   useEffect(() => { loadAll() }, [ownerId, user])
 
-  const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId)
+  const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
 
   const submit = async () => {
     if (!form.content.trim()) return

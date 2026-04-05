@@ -300,7 +300,8 @@ export default function PublicProfilePage() {
             <div className="user-avatar" style={{
               width:120, height:120, fontSize:'2.8rem',
               border:'4px solid white', boxShadow:'0 4px 20px rgba(0,0,0,0.18)',
-              background:'var(--color-surface)', position:'relative', zIndex:2
+              background:'var(--color-primary)', color:'white',
+              position:'relative', zIndex:2
             }}>
               {profile.avatar_url
                 ? <img src={profile.avatar_url} alt="avatar"/>

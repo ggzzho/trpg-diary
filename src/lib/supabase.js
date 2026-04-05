@@ -161,7 +161,6 @@ const compressImage = (file, maxSize = 500, quality = 0.82) => {
       URL.revokeObjectURL(url)
       const canvas = document.createElement('canvas')
       let { width, height } = img
-      // 비율 유지하며 maxSize 이하로 축소
       if (width > height) {
         if (width > maxSize) { height = Math.round(height * maxSize / width); width = maxSize }
       } else {
@@ -169,8 +168,16 @@ const compressImage = (file, maxSize = 500, quality = 0.82) => {
       }
       canvas.width = width
       canvas.height = height
-      canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-      canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality)
+      const ctx = canvas.getContext('2d')
+      // 투명 배경 처리: 테마 배경색으로 채우기
+      const themeBg = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf6f0'
+      ctx.fillStyle = themeBg
+      ctx.fillRect(0, 0, width, height)
+      ctx.drawImage(img, 0, 0, width, height)
+      // PNG/GIF는 투명도 유지를 위해 png로, 나머지는 jpeg
+      const isPng = file.type === 'image/png' || file.type === 'image/gif'
+      const mimeType = isPng ? 'image/png' : 'image/jpeg'
+      canvas.toBlob(blob => resolve(blob || file), mimeType, isPng ? 1 : quality)
     }
     img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
     img.src = url
@@ -191,7 +198,9 @@ export const uploadFile = async (bucket, path, file, options = {}) => {
   if (options.compress) {
     uploadTarget = await compressImage(file, options.maxSize || 500, options.quality || 0.82)
   }
-  const { data, error } = await supabase.storage.from(bucket).upload(path, uploadTarget, { upsert: true, contentType: options.compress ? 'image/jpeg' : file.type })
+  const isPngGif = file.type === 'image/png' || file.type === 'image/gif'
+  const uploadContentType = options.compress ? (isPngGif ? 'image/png' : 'image/jpeg') : file.type
+  const { data, error } = await supabase.storage.from(bucket).upload(path, uploadTarget, { upsert: true, contentType: uploadContentType })
   if (error) return { url: null, error }
   const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path)
   return { url: publicUrl, error: null }
