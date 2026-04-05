@@ -1,5 +1,5 @@
 // src/pages/ScenarioPage.js
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { scenariosApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
@@ -7,9 +7,9 @@ import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
 
-const BLANK = { title:'', system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status:'unplayed', memo:'', purchase_date:'', scenario_url:'' }
+const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status:'unplayed', memo:'', purchase_date:'', scenario_url:'' }
 const STATUS_MAP = { unplayed:{label:'미플',badge:'badge-gray'}, played:{label:'PL 완료',badge:'badge-green'}, gm_done:{label:'GM 완료',badge:'badge-primary'}, want:{label:'위시리스트',badge:'badge-blue'} }
-const cleanPayload = f => ({...f, purchase_date:f.purchase_date||null})
+const cleanPayload = f => ({...f, purchase_date:f.purchase_date||null, parent_id:f.parent_id||null})
 
 export function ScenarioPage() {
   const { user } = useAuth()
@@ -21,31 +21,90 @@ export function ScenarioPage() {
   const [confirm, setConfirm] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [sortOrder, setSortOrder] = useState('asc')
+  const [isChild, setIsChild] = useState(false)
+  const [expanded, setExpanded] = useState({})
 
   const load = async () => { const {data}=await scenariosApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
-  const openNew = () => { setEditing(null); setForm(BLANK); setModal(true) }
-  const openEdit = item => { setEditing(item); setForm({...item}); setModal(true) }
+  const openNew = () => { setEditing(null); setForm(BLANK); setIsChild(false); setModal(true) }
+  const openEdit = item => { setEditing(item); setForm({...item}); setIsChild(!!item.parent_id); setModal(true) }
   const save = async () => {
     if (!form.title) return
-    if (editing) await scenariosApi.update(editing.id, cleanPayload(form))
-    else await scenariosApi.create({...cleanPayload(form),user_id:user.id})
+    const payload = cleanPayload({...form, parent_id: isChild ? (form.parent_id||null) : null})
+    if (editing) await scenariosApi.update(editing.id, payload)
+    else await scenariosApi.create({...payload, user_id:user.id})
     setModal(false); load()
   }
   const remove = async id => { await scenariosApi.remove(id); load() }
+  const toggleExpand = id => setExpanded(e => ({...e, [id]:!e[id]}))
 
-  const filtered = items
-    .filter(i=>statusFilter==='all'||i.status===statusFilter)
-    .filter(i=>!search||i.title.includes(search)||i.system_name?.includes(search)||i.author?.includes(search))
+  const parents = useMemo(() => items.filter(i => !i.parent_id), [items])
+  const childMap = useMemo(() => {
+    const m = {}
+    items.filter(i => i.parent_id).forEach(i => {
+      if (!m[i.parent_id]) m[i.parent_id] = []
+      m[i.parent_id].push(i)
+    })
+    return m
+  }, [items])
 
-  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
+  const filteredParents = useMemo(() => parents
+    .filter(i => {
+      const matchStatus = statusFilter==='all' || i.status===statusFilter
+      const matchSearch = !search || i.title.includes(search) || i.system_name?.includes(search) || i.author?.includes(search)
+        || childMap[i.id]?.some(c => c.title.includes(search))
+      return matchStatus && matchSearch
+    })
+    .sort((a,b) => {
+      const ta=a.title.toLowerCase(), tb=b.title.toLowerCase()
+      return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
+    }), [parents, statusFilter, search, sortOrder, childMap])
+
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filteredParents, 20)
+  const parentOptions = parents.filter(p => !editing || p.id !== editing.id)
+
+  const renderItem = (item, isChildItem=false) => (
+    <div key={item.id} className="card card-sm"
+      style={{display:'flex',alignItems:'center',gap:14,
+        marginLeft: isChildItem ? 20 : 0,
+        borderLeft: isChildItem ? '3px solid var(--color-primary)' : undefined,
+      }}>
+      <div style={{width:isChildItem?38:48,height:isChildItem?38:48,borderRadius:8,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        {item.cover_image_url
+          ? <img src={item.cover_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+          : <span style={{fontSize:'1.2rem',opacity:0.4}}><Mi size="lg" color="light">description</Mi></span>}
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <div className="flex items-center gap-8" style={{marginBottom:4}}>
+          {isChildItem && <Mi size="sm" color="light">subdirectory_arrow_right</Mi>}
+          <span style={{fontWeight:700,fontSize:isChildItem?'0.85rem':'0.9rem'}}>{item.title}</span>
+          <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`}>{STATUS_MAP[item.status]?.label}</span>
+        </div>
+        <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+          {item.system_name&&<span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
+          {item.author&&<span className="text-xs text-light"><Mi size='sm' color='light'>person</Mi> {item.author}</span>}
+          {item.player_count&&<span className="text-xs text-light"><Mi size='sm' color='light'>group</Mi> {item.player_count}</span>}
+        </div>
+        {item.scenario_url&&<a href={item.scenario_url} target="_blank" rel="noreferrer" style={{fontSize:'0.7rem',color:'var(--color-primary)',marginTop:3,display:'block'}}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
+        {item.memo&&<p className="text-xs text-light" style={{marginTop:3}}>{item.memo}</p>}
+      </div>
+      <div className="flex gap-8" style={{flexShrink:0}}>
+        <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
+        <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
+      </div>
+    </div>
+  )
 
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
-        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>description</Mi>시나리오 목록</h1><p className="page-subtitle">보유/위시 TRPG 시나리오 목록이예요 ({items.length}개)</p></div>
+        <div>
+          <h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>description</Mi>시나리오 목록</h1>
+          <p className="page-subtitle">보유/위시 TRPG 시나리오 목록이예요 ({items.length}개)</p>
+        </div>
         <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 시나리오 추가</button>
       </div>
 
@@ -56,45 +115,63 @@ export function ScenarioPage() {
           </button>
         ))}
       </div>
-      <div style={{marginBottom:16}}>
+      <div style={{marginBottom:16,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
         <input className="form-input" placeholder="🔍 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
+        <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
+          onClick={()=>setSortOrder(o=>o==='asc'?'desc':'asc')}>
+          가나다순 {sortOrder==='asc'?'↑':'↓'}
+        </button>
       </div>
 
-      {loading?<LoadingSpinner/>:filtered.length===0
+      {loading?<LoadingSpinner/>:filteredParents.length===0
         ?<EmptyState icon="description" title="시나리오가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
-        :<div style={{display:'flex',flexDirection:'column',gap:8}}>
-          {paged.map(item=>(
-            <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
-              <div style={{width:48,height:48,borderRadius:8,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                {item.cover_image_url?<img src={item.cover_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'1.5rem',opacity:0.4}}><Mi size="lg" color="light">description</Mi></span>}
-              </div>
-              <div style={{flex:1,minWidth:0}}>
-                <div className="flex items-center gap-8" style={{marginBottom:5}}>
-                  <span style={{fontWeight:700,fontSize:'0.9rem'}}>{item.title}</span>
-                  <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`}>{STATUS_MAP[item.status]?.label}</span>
+        :<>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          {paged.map(item => {
+            const children = childMap[item.id] || []
+            const isOpen = !!expanded[item.id]
+            return (
+              <div key={item.id}>
+                <div style={{display:'flex',alignItems:'center',gap:4}}>
+                  <div style={{flex:1}}>{renderItem(item)}</div>
+                  {children.length > 0 && (
+                    <button className="btn btn-ghost btn-sm" style={{flexShrink:0}}
+                      onClick={()=>toggleExpand(item.id)}>
+                      <Mi size='sm'>{isOpen?'expand_less':'expand_more'}</Mi>
+                      {children.length}개
+                    </button>
+                  )}
                 </div>
-                {/* 항목 간격 추가 */}
-                <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
-                  {item.system_name&&<span className="text-xs text-light"><><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</></span>}
-                  {item.author&&<span className="text-xs text-light"><><Mi size='sm' color='light'>person</Mi> {item.author}</></span>}
-                  {item.player_count&&<span className="text-xs text-light"><><Mi size='sm' color='light'>group</Mi> {item.player_count}</></span>}
-                </div>
-                {item.scenario_url&&<a href={item.scenario_url} target="_blank" rel="noreferrer" style={{fontSize:'0.7rem',color:'var(--color-primary)',marginTop:3,display:'block'}}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
-                {item.memo&&<p className="text-xs text-light" style={{marginTop:3}}>{item.memo}</p>}
+                {isOpen && <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:4}}>
+                  {children.map(c => renderItem(c, true))}
+                </div>}
               </div>
-              <div className="flex gap-8">
-                <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
-                <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
-              </div>
-            </div>
-          ))}
-        </div>
+            )
+          })}
+          </div>
+          <Pagination total={filteredParents.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+        </>
       }
 
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'시나리오 수정':'시나리오 추가'}
         footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" placeholder="어둠 속의 가면" value={form.title} onChange={set('title')}/></div>
+        <div className="form-group" style={{marginBottom:8}}>
+          <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:'0.85rem'}}>
+            <input type="checkbox" checked={isChild} onChange={e=>{setIsChild(e.target.checked);if(!e.target.checked)setForm(f=>({...f,parent_id:null}))}}/>
+            이 시나리오는 시나리오집에 포함된 시나리오예요
+          </label>
+        </div>
+        {isChild && (
+          <div className="form-group">
+            <label className="form-label">시나리오집 선택</label>
+            <select className="form-select" value={form.parent_id||''} onChange={e=>setForm(f=>({...f,parent_id:e.target.value||null}))}>
+              <option value="">선택해주세요</option>
+              {parentOptions.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}
+            </select>
+          </div>
+        )}
         <div className="grid-2">
           <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
           <div className="form-group"><label className="form-label">라이터</label><input className="form-input" value={form.author||''} onChange={set('author')}/></div>
@@ -109,7 +186,7 @@ export function ScenarioPage() {
           </select>
         </div>
         <div className="form-group"><label className="form-label">시나리오 URL</label><input className="form-input" placeholder="https://..." value={form.scenario_url||''} onChange={set('scenario_url')}/></div>
-        <div className="form-group"><label className="form-label">표지 이미지 URL</label><input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.cover_image_url||''} onChange={set('cover_image_url')}/></div>
+        <div className="form-group"><label className="form-label">표지 이미지 URL</label><input className="form-input" placeholder="https://..." value={form.cover_image_url||''} onChange={set('cover_image_url')}/></div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{minHeight:64}}/></div>
       </Modal>
 

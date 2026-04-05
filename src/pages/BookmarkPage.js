@@ -63,6 +63,7 @@ export function BookmarkPage() {
   const [tagModal, setTagModal] = useState(false)
   const [tagFilter, setTagFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [sortOrder, setSortOrder] = useState('asc')
   const [fetching, setFetching] = useState(false)
   const [fetchMsg, setFetchMsg] = useState('')
 
@@ -120,7 +121,10 @@ export function BookmarkPage() {
     const ms=!search||i.title?.includes(search)||i.url?.includes(search)||i.memo?.includes(search)
     const mt=tagFilter==='all'||i.tags?.includes(tagFilter)
     return ms&&mt
-  }),[items,search,tagFilter])
+  }).sort((a,b)=>{
+    const ta=(a.title||a.url||'').toLowerCase(), tb=(b.title||b.url||'').toLowerCase()
+    return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
+  }),[items,search,tagFilter,sortOrder])
 
   const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
 
@@ -134,7 +138,14 @@ export function BookmarkPage() {
         </div>
       </div>
       <div style={{marginBottom:20}}>
-        <input className="form-input" placeholder="🔍 제목, URL, 메모로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:320,marginBottom:tags.length>0?10:0}}/>
+        <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:tags.length>0?10:0,flexWrap:'wrap'}}>
+          <input className="form-input" placeholder="🔍 제목, URL, 메모로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
+          <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
+            onClick={()=>setSortOrder(o=>o==='asc'?'desc':'asc')}>
+            <Mi size='sm' color={sortOrder==='asc'?'white':'accent'}>{sortOrder==='asc'?'sort':'sort'}</Mi>
+            가나다순 {sortOrder==='asc'?'↑':'↓'}
+          </button>
+        </div>
         {tags.length>0&&(
           <div className="flex gap-8" style={{flexWrap:'wrap',marginTop:8}}>
             <button className={`btn btn-sm ${tagFilter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setTagFilter('all')}>전체</button>

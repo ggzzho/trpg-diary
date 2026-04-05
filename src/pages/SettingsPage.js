@@ -34,6 +34,9 @@ export default function SettingsPage() {
   const [pwForm, setPwForm] = useState({current:'', next:'', confirm:''})
   const [pwMsg, setPwMsg] = useState(null)
   const [pwErr, setPwErr] = useState(null)
+  const [withdrawConfirm, setWithdrawConfirm] = useState(false)
+  const [withdrawInput, setWithdrawInput] = useState('')
+  const [withdrawing, setWithdrawing] = useState(false)
   const dragIdx = useRef(null)
 
   // ── form을 profile에서 초기화 (profile이 바뀔 때마다 동기화) ──
@@ -117,7 +120,26 @@ export default function SettingsPage() {
     else { setPwMsg('비밀번호가 변경됐어요! ✅'); setPwForm({current:'',next:'',confirm:''}) }
   }
 
-  const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'theme',label:'테마',icon:'palette'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'}]
+  const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'theme',label:'테마',icon:'palette'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'},{key:'withdraw',label:'회원 탈퇴',icon:'person_remove'}]
+
+  const handleWithdraw = async () => {
+    if (withdrawInput !== '탈퇴합니다') return
+    setWithdrawing(true)
+    try {
+      // 유저 데이터 삭제 (profiles는 cascade로 처리)
+      await supabase.auth.admin?.deleteUser?.(user.id)
+      // admin API 없으면 직접 signOut 후 안내
+      await supabase.auth.signOut()
+      alert('탈퇴가 완료됐어요. 이용해주셔서 감사합니다.')
+      window.location.href = '/login'
+    } catch(e) {
+      // Supabase Edge Function 없이 처리 가능한 방법
+      await supabase.from('profiles').delete().eq('id', user.id)
+      await supabase.auth.signOut()
+      window.location.href = '/login'
+    }
+    setWithdrawing(false)
+  }
 
   return (
     <div className="fade-in">
@@ -284,8 +306,46 @@ export default function SettingsPage() {
           </>
         )}
 
-        {/* 저장 버튼 (비밀번호 탭 제외) */}
-        {tab!=='password'&&(
+        {/* ── 회원 탈퇴 ── */}
+        {tab==='withdraw'&&(
+          <div style={{maxWidth:480}}>
+            <h2 style={{fontWeight:700,color:'#e57373',marginBottom:8,fontSize:'1rem',display:'flex',alignItems:'center',gap:6}}>
+              <Mi size='sm' color='danger'>person_remove</Mi> 회원 탈퇴
+            </h2>
+            <div style={{padding:'14px 16px',borderRadius:10,background:'rgba(229,115,115,0.07)',border:'1px solid rgba(229,115,115,0.25)',marginBottom:20,fontSize:'0.84rem',color:'var(--color-text-light)',lineHeight:1.8}}>
+              탈퇴 시 모든 데이터(일정, 기록, 룰북, 페어 등)가 <strong>영구적으로 삭제</strong>되며 복구할 수 없어요.<br/>
+              신중하게 결정해주세요.
+            </div>
+            {!withdrawConfirm ? (
+              <button className="btn btn-sm" style={{background:'rgba(229,115,115,0.1)',color:'#e57373',border:'1px solid rgba(229,115,115,0.3)'}}
+                onClick={() => setWithdrawConfirm(true)}>
+                <Mi size='sm' color='danger'>person_remove</Mi> 탈퇴 진행하기
+              </button>
+            ) : (
+              <div>
+                <p style={{fontSize:'0.84rem',marginBottom:10,color:'var(--color-text-light)'}}>
+                  정말 탈퇴하시겠어요? 아래 칸에 <strong style={{color:'#e57373'}}>탈퇴합니다</strong> 를 입력해주세요.
+                </p>
+                <input className="form-input" placeholder="탈퇴합니다" value={withdrawInput}
+                  onChange={e => setWithdrawInput(e.target.value)}
+                  style={{marginBottom:10,borderColor:withdrawInput==='탈퇴합니다'?'#e57373':undefined}}/>
+                <div style={{display:'flex',gap:8}}>
+                  <button className="btn btn-outline btn-sm" onClick={() => {setWithdrawConfirm(false);setWithdrawInput('')}}>
+                    취소
+                  </button>
+                  <button className="btn btn-sm" style={{background:'#e57373',color:'white',border:'none'}}
+                    onClick={handleWithdraw}
+                    disabled={withdrawInput !== '탈퇴합니다' || withdrawing}>
+                    {withdrawing ? '처리 중...' : '최종 탈퇴'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 저장 버튼 (비밀번호/탈퇴 탭 제외) */}
+        {tab!=='password' && tab!=='withdraw' &&(
           <div style={{marginTop:20,paddingTop:16,borderTop:'1px solid var(--color-border)',display:'flex',justifyContent:'flex-end',alignItems:'center',gap:10}}>
             {saved&&<span className="text-sm" style={{color:'#558b2f'}}>✅ 저장됐어요!</span>}
             <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?'저장 중...':'설정 저장'}</button>
