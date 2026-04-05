@@ -67,34 +67,44 @@ export function ScenarioPage() {
   const parentOptions = parents.filter(p => !editing || p.id !== editing.id)
 
   const renderItem = (item, isChildItem=false) => (
-    <div key={item.id} className="card card-sm"
-      style={{display:'flex',alignItems:'center',gap:14,
-        marginLeft: isChildItem ? 20 : 0,
-        borderLeft: isChildItem ? '3px solid var(--color-primary)' : undefined,
+    <div key={item.id}
+      style={{display:'flex',alignItems:'center',gap:14,padding:'10px 14px',
+        background: isChildItem ? 'var(--color-nav-active-bg)' : undefined,
+        borderTop: isChildItem ? '1px solid var(--color-border)' : undefined,
       }}>
-      <div style={{width:isChildItem?38:48,height:isChildItem?38:48,borderRadius:8,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{width:40,height:40,borderRadius:7,overflow:'hidden',flexShrink:0,
+        background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',
+        justifyContent:'center',border:'1px solid var(--color-border)'}}>
         {item.cover_image_url
           ? <img src={item.cover_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-          : <span style={{fontSize:'1.2rem',opacity:0.4}}><Mi size="lg" color="light">description</Mi></span>}
+          : <span style={{fontSize:'1.1rem',opacity:0.35}}><Mi size="lg" color="light">description</Mi></span>}
       </div>
       <div style={{flex:1,minWidth:0}}>
-        <div className="flex items-center gap-8" style={{marginBottom:4}}>
+        <div style={{fontWeight:700,fontSize:isChildItem?'0.85rem':'0.9rem',marginBottom:3,display:'flex',alignItems:'center',gap:8}}>
           {isChildItem && <Mi size="sm" color="light">subdirectory_arrow_right</Mi>}
-          <span style={{fontWeight:700,fontSize:isChildItem?'0.85rem':'0.9rem'}}>{item.title}</span>
-          <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`}>{STATUS_MAP[item.status]?.label}</span>
+          {item.title}
+          <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{fontSize:'0.65rem'}}>{STATUS_MAP[item.status]?.label}</span>
         </div>
-        <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
           {item.system_name&&<span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
           {item.author&&<span className="text-xs text-light"><Mi size='sm' color='light'>person</Mi> {item.author}</span>}
           {item.player_count&&<span className="text-xs text-light"><Mi size='sm' color='light'>group</Mi> {item.player_count}</span>}
         </div>
-        {item.scenario_url&&<a href={item.scenario_url} target="_blank" rel="noreferrer" style={{fontSize:'0.7rem',color:'var(--color-primary)',marginTop:3,display:'block'}}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
-        {item.memo&&<p className="text-xs text-light" style={{marginTop:3}}>{item.memo}</p>}
+        {item.scenario_url&&<a href={item.scenario_url} target="_blank" rel="noreferrer" style={{fontSize:'0.7rem',color:'var(--color-primary)',marginTop:2,display:'block'}}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
+        {item.memo&&<p className="text-xs text-light" style={{marginTop:2}}>{item.memo}</p>}
       </div>
-      <div className="flex gap-8" style={{flexShrink:0}}>
-        <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
-        <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
-      </div>
+      {!isChildItem && (
+        <div className="flex gap-8" style={{flexShrink:0}}>
+          <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
+          <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
+        </div>
+      )}
+      {isChildItem && (
+        <div className="flex gap-8" style={{flexShrink:0}}>
+          <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
+          <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
+        </div>
+      )}
     </div>
   )
 
@@ -131,24 +141,26 @@ export function ScenarioPage() {
             const children = childMap[item.id] || []
             const isOpen = !!expanded[item.id]
             return (
-              <div key={item.id}>
-                <div style={{display:'flex',alignItems:'center',gap:4}}>
-                  <div style={{flex:1}}>{renderItem(item)}</div>
-                  {children.length > 0 && (
-                    <button className="btn btn-ghost btn-sm" style={{flexShrink:0}}
-                      onClick={()=>toggleExpand(item.id)}>
-                      <Mi size='sm'>{isOpen?'expand_less':'expand_more'}</Mi>
-                      {children.length}개
-                    </button>
-                  )}
-                </div>
-                {isOpen && <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:4}}>
-                  {children.map(c => renderItem(c, true))}
-                </div>}
+              <div key={item.id} className="card" style={{padding:0,overflow:'hidden'}}>
+                {renderItem(item)}
+                {children.length > 0 && (
+                  <button style={{width:'100%',background:'none',border:'none',
+                    borderTop:'1px solid var(--color-border)',
+                    padding:'5px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:4,
+                    color:'var(--color-text-light)',fontSize:'0.78rem'}}
+                    onClick={()=>toggleExpand(item.id)}>
+                    <Mi size='sm' color='light'>{isOpen?'expand_less':'expand_more'}</Mi>
+                    {isOpen ? '접기' : `시나리오 ${children.length}개 보기`}
+                  </button>
+                )}
+                {isOpen && (
+                  <div style={{borderTop:'1px solid var(--color-border)'}}>
+                    {children.map(c => renderItem(c, true))}
+                  </div>
+                )}
               </div>
             )
-          })}
-          </div>
+          })}\n          </div>
           <Pagination total={filteredParents.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
         </>
       }

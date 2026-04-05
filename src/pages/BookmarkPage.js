@@ -8,8 +8,25 @@ import { Mi } from '../components/Mi'
 
 const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[] }
 
-// microlink.io API - 트위터/X, 일반 사이트 모두 지원
+// OG 메타 가져오기 - 여러 서비스 순차 시도
 async function fetchOgMeta(url) {
+  // 1차: jsonlink.io (무료, 제한 없음)
+  try {
+    const res = await fetch(
+      `https://jsonlink.io/api/extract?url=${encodeURIComponent(url)}`,
+      { signal: AbortSignal.timeout(8000) }
+    )
+    const json = await res.json()
+    if (json.title || json.images?.[0]) {
+      return {
+        title: json.title || '',
+        description: json.description || '',
+        thumbnail_url: json.images?.[0] || '',
+      }
+    }
+  } catch {}
+
+  // 2차: microlink.io (월 100회 제한 있음)
   try {
     const res = await fetch(
       `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=false`,
@@ -26,7 +43,7 @@ async function fetchOgMeta(url) {
     }
   } catch {}
 
-  // 폴백: allorigins
+  // 3차: allorigins (폴백)
   try {
     const res = await fetch(
       `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,

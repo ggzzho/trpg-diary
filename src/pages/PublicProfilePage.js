@@ -495,42 +495,47 @@ export default function PublicProfilePage() {
                 const children = scenarioChildMap[s.id] || []
                 const isOpen = !!scenarioExpanded[s.id]
                 const renderScenarioItem = (item, isChild=false) => (
-                  <div key={item.id} className="card card-sm"
-                    style={{ display:'flex', alignItems:'center', gap:14,
-                      marginLeft: isChild ? 16 : 0,
-                      borderLeft: isChild ? '3px solid var(--color-primary)' : undefined }}>
-                    <div style={{ width:isChild?38:48, height:isChild?38:48, borderRadius:8, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      {item.cover_image_url ? <img src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.2rem', opacity:0.4 }}><Mi size='lg' color='light'>description</Mi></span>}
+                  <div key={item.id}
+                    style={{ display:'flex', alignItems:'center', gap:14, padding:'10px 14px',
+                      background: isChild ? 'var(--color-nav-active-bg)' : undefined,
+                      borderTop: isChild ? '1px solid var(--color-border)' : undefined }}>
+                    <div style={{ width:40, height:40, borderRadius:7, overflow:'hidden', flexShrink:0,
+                      background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center',
+                      justifyContent:'center', border:'1px solid var(--color-border)' }}>
+                      {item.cover_image_url
+                        ? <img src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                        : <span style={{ fontSize:'1.1rem', opacity:0.35 }}><Mi size='lg' color='light'>description</Mi></span>}
                     </div>
                     <div style={{ flex:1 }}>
-                      <div className="flex items-center gap-8" style={{ marginBottom:4 }}>
+                      <div style={{ fontWeight:700, fontSize:isChild?'0.85rem':'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:8 }}>
                         {isChild && <Mi size="sm" color="light">subdirectory_arrow_right</Mi>}
-                        <span style={{ fontWeight:700, fontSize:isChild?'0.85rem':'0.9rem' }}>{item.title}</span>
-                        <span className="badge badge-gray">{SCENARIO_STATUS[item.status]}</span>
+                        {item.title}
+                        <span className="badge badge-gray" style={{fontSize:'0.65rem'}}>{SCENARIO_STATUS[item.status]}</span>
                       </div>
-                      <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+                      <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
                         {item.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
                         {item.author && <span className="text-xs text-light"><Mi size='sm' color='light'>edit</Mi> {item.author}</span>}
                         {item.player_count && <span className="text-xs text-light"><Mi size="sm" color="light">group</Mi> {item.player_count}</span>}
                       </div>
-                      {item.scenario_url && <a href={item.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:3, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
+                      {item.scenario_url && <a href={item.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:2, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
                     </div>
                   </div>
                 )
                 return (
-                  <div key={s.id}>
-                    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                      <div style={{ flex:1 }}>{renderScenarioItem(s)}</div>
-                      {children.length > 0 && (
-                        <button className="btn btn-ghost btn-sm" style={{ flexShrink:0 }}
-                          onClick={() => setScenarioExpanded(e => ({...e, [s.id]:!e[s.id]}))}>
-                          <Mi size='sm'>{isOpen ? 'expand_less' : 'expand_more'}</Mi>
-                          {children.length}개
-                        </button>
-                      )}
-                    </div>
+                  <div key={s.id} className="card" style={{padding:0,overflow:'hidden'}}>
+                    {renderScenarioItem(s)}
+                    {children.length > 0 && (
+                      <button style={{width:'100%',background:'none',border:'none',
+                        borderTop:'1px solid var(--color-border)',
+                        padding:'5px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:4,
+                        color:'var(--color-text-light)',fontSize:'0.78rem'}}
+                        onClick={() => setScenarioExpanded(e => ({...e, [s.id]:!e[s.id]}))}>
+                        <Mi size='sm' color='light'>{isOpen?'expand_less':'expand_more'}</Mi>
+                        {isOpen ? '접기' : `시나리오 ${children.length}개 보기`}
+                      </button>
+                    )}
                     {isOpen && (
-                      <div style={{ display:'flex', flexDirection:'column', gap:4, marginTop:4 }}>
+                      <div style={{borderTop:'1px solid var(--color-border)'}}>
                         {children.map(c => renderScenarioItem(c, true))}
                       </div>
                     )}

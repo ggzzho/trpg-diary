@@ -341,26 +341,28 @@ export default function SchedulePage() {
           :<>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
             {pagedSchedule.map(item=>(
-              <div key={item.id} className="card card-sm" style={{display:'flex',alignItems:'center',gap:14}}>
-                <DateBox dateStr={item.scheduled_date}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div className="flex items-center gap-8" style={{marginBottom:3}}>
-                    <span style={{fontWeight:600,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.title}</span>
-                    <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{flexShrink:0}}>{STATUS_MAP[item.status]?.label}</span>
-                    {item.is_gm&&<span className="badge badge-primary" style={{flexShrink:0}}>GM</span>}
-                    {item.is_intro&&<span className="badge badge-green" style={{flexShrink:0}}>입문탁{item.intro_rule?` · ${item.intro_rule}`:''}</span>}
+              <div key={item.id} className="card card-sm">
+                <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
+                  <DateBox dateStr={item.scheduled_date}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',marginBottom:3}}>
+                      <span style={{fontWeight:600,fontSize:'0.88rem'}}>{item.title}</span>
+                      <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{flexShrink:0}}>{STATUS_MAP[item.status]?.label}</span>
+                      {item.is_gm&&<span className="badge badge-primary" style={{flexShrink:0}}>GM</span>}
+                      {item.is_intro&&<span className="badge badge-green" style={{flexShrink:0}}>입문탁{item.intro_rule?` · ${item.intro_rule}`:''}</span>}
+                    </div>
+                    <div className="text-xs text-light" style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                      {item.system_name&&<span><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}</span>}
+                      {item.scheduled_time&&<span>🕐 {fmtTime(item.scheduled_time)}{item.end_time?` ~ ${fmtTime(item.end_time)}`:''}</span>}
+                      {item.location&&<span>🌐 {item.location}</span>}
+                    </div>
+                    {item.description&&<p className="text-sm text-light" style={{marginTop:4}}>{item.description}</p>}
                   </div>
-                  <div className="text-xs text-light flex gap-12">
-                    {item.system_name&&<span><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}{item.is_intro&&item.intro_rule?` (${item.intro_rule} 입문)`:''}</span>}
-                    {item.scheduled_time&&<span>🕐 {fmtTime(item.scheduled_time)}{item.end_time?` ~ ${fmtTime(item.end_time)}`:''}</span>}
-                    {item.location&&<span>🌐 {item.location}</span>}
+                  <div style={{display:'flex',gap:4,flexShrink:0}}>
+                    <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
+                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
                   </div>
-                  {item.description&&<p className="text-sm text-light" style={{marginTop:4}}>{item.description}</p>}
-                </div>
-                <div className="flex gap-8" style={{flexShrink:0}}>
-                  <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
-                  <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
-                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
                 </div>
               </div>
             ))}
