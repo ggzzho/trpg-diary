@@ -52,6 +52,7 @@ export default function SettingsPage() {
     background_image_url: p?.background_image_url||'',
     bg_opacity: p?.bg_opacity!==undefined ? p.bg_opacity : 1,
     is_public: p?.is_public??true,
+    hidden_tabs: p?.hidden_tabs||[],
   })
 
   const [form, setForm] = useState(() => buildForm(profile))
@@ -288,7 +289,39 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-            {form.is_public&&<div style={{padding:14,borderRadius:8,background:'rgba(104,159,56,0.08)',border:'1px solid rgba(104,159,56,0.2)'}}><div className="text-sm" style={{color:'#558b2f'}}>✅ 공개 상태예요.<br/><br/><strong>https://trpg-diary.co.kr/u/{profile?.username}</strong></div><button className="btn btn-outline btn-sm" style={{marginTop:10}} onClick={()=>{navigator.clipboard.writeText(`https://trpg-diary.co.kr/u/${profile?.username}`);alert('복사됐어요!')}}>링크 복사</button></div>}
+            {form.is_public&&<div style={{padding:14,borderRadius:8,background:'rgba(104,159,56,0.08)',border:'1px solid rgba(104,159,56,0.2)',marginBottom:20}}><div className="text-sm" style={{color:'#558b2f'}}>✅ 공개 상태예요.<br/><br/><strong>https://trpg-diary.co.kr/u/{profile?.username}</strong></div><button className="btn btn-outline btn-sm" style={{marginTop:10}} onClick={()=>{navigator.clipboard.writeText(`https://trpg-diary.co.kr/u/${profile?.username}`);alert('복사됐어요!')}}>링크 복사</button></div>}
+
+            {/* 탭별 공개 설정 */}
+            <h3 style={{fontWeight:700,fontSize:'0.9rem',marginBottom:12,color:'var(--color-text)'}}>탭별 공개 설정</h3>
+            <p className="text-sm text-light" style={{marginBottom:14}}>공개 페이지에서 숨기고 싶은 탭을 선택하세요. 본인은 항상 볼 수 있어요.</p>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {[
+                {key:'schedules', label:'일정', icon:'calendar_month'},
+                {key:'rulebooks', label:'룰북', icon:'menu_book'},
+                {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
+                {key:'availability', label:'공수표', icon:'event_available'},
+                {key:'scenarios', label:'시나리오', icon:'description'},
+                {key:'pairs', label:'페어', icon:'people'},
+                {key:'guestbook', label:'방명록', icon:'mail'},
+              ].map(t => {
+                const isHidden = (form.hidden_tabs||[]).includes(t.key)
+                return (
+                  <div key={t.key} className="card" style={{padding:'10px 14px',background:'var(--color-nav-active-bg)'}}>
+                    <div className="flex justify-between items-center">
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <Mi size='sm' color={isHidden?'light':'accent'}>{t.icon}</Mi>
+                        <span style={{fontSize:'0.88rem',fontWeight:500,color:isHidden?'var(--color-text-light)':'var(--color-text)'}}>{t.label}</span>
+                        {isHidden&&<span className="badge badge-gray" style={{fontSize:'0.65rem'}}>비공개</span>}
+                      </div>
+                      <div onClick={()=>setForm(f=>({...f,hidden_tabs:isHidden?(f.hidden_tabs||[]).filter(k=>k!==t.key):[...(f.hidden_tabs||[]),t.key]}))}
+                        style={{width:36,height:20,borderRadius:10,background:isHidden?'#ccc':'var(--color-primary)',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
+                        <div style={{position:'absolute',top:2,left:isHidden?2:18,width:16,height:16,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </>
         )}
 

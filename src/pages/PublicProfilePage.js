@@ -189,6 +189,7 @@ export default function PublicProfilePage() {
     return l
   })()
 
+  const hiddenTabs = profile?.hidden_tabs || []
   const TABS = [
     { key:'schedules', label:'일정', icon:'calendar_month', count:data.schedules?.length },
     { key:'rulebooks', label:'룰북', icon:'menu_book', count:(data.rulebooks||[]).filter(r=>!r.parent_id).length },
@@ -198,7 +199,7 @@ export default function PublicProfilePage() {
     { key:'pairs', label:'페어', icon:'people', count:data.pairs?.length },
     { key:'guestbook', label:'방명록', icon:'mail' },
     ...(profile?.is_admin ? [{ key:'feedback', label:'문의/피드백', icon:'support_agent' }] : []),
-  ]
+  ].filter(t => !hiddenTabs.includes(t.key))
 
   const sortedPairs = [...(data.pairs||[])].sort((a,b) => {
     const da = a.first_met_date||'', db = b.first_met_date||''

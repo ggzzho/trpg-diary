@@ -74,45 +74,63 @@ function DeleteConfirm({ isOpen, onClose, onConfirm, message = '정말 삭제하
 }
 
 // ── 방명록 카드 ──
-function GuestEntry({ g, replies, isOwner, userId, onDelete, onReply, replyOpen, onToggleReply,
+function GuestEntry({ g, replies, isOwner, userId, onDelete, onEdit, onReply, replyOpen, onToggleReply,
   replyForm, setReplyForm, onSubmitReply, replySubmitting, authLoading, onToggleLike }) {
   const hidden = g.is_private && !isOwner && g.author_id !== userId
   const replyCount = replies.length
   const likes = Array.isArray(g.likes) ? g.likes : []
   const liked = userId && likes.includes(userId)
   const likeCount = likes.length
+  const [editing, setEditing] = useState(false)
+  const [editContent, setEditContent] = useState(g.content)
+
+  const canEdit = userId && g.author_id === userId
 
   return (
     <div className="card" style={{ padding:'16px 20px' }}>
       {/* 헤더 */}
       <div className="flex justify-between items-center" style={{ marginBottom:10 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          {/* 아바타 */}
           <div style={{ width:34, height:34, borderRadius:'50%', background:'var(--color-nav-active-bg)',
             display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700,
             fontSize:'0.85rem', color:'var(--color-accent)', flexShrink:0, border:'1px solid var(--color-border)' }}>
             {(g.author_name||'?')[0]}
           </div>
-          {/* 닉네임 + 날짜 한 줄 */}
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <span style={{ fontWeight:700, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
             {g.is_private && <Mi size="sm" color="light">lock</Mi>}
             <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>{fmtDT(g.created_at)}</span>
           </div>
         </div>
-        {(isOwner || g.author_id === userId) && (
-          <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'2px 8px', fontSize:'0.75rem' }}
-            onClick={() => onDelete(g.id)}>삭제</button>
-        )}
+        <div style={{ display:'flex', gap:4 }}>
+          {canEdit && !editing && (
+            <button className="btn btn-ghost btn-sm" style={{ padding:'2px 8px', fontSize:'0.75rem' }}
+              onClick={() => { setEditContent(g.content); setEditing(true) }}>수정</button>
+          )}
+          {(isOwner || g.author_id === userId) && (
+            <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'2px 8px', fontSize:'0.75rem' }}
+              onClick={() => onDelete(g.id)}>삭제</button>
+          )}
+        </div>
       </div>
 
-      {/* 본문 */}
-      <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.75,
-        whiteSpace:'pre-wrap', marginBottom:12, paddingLeft:44 }}>
-        {hidden ? <span style={{ display:'flex', alignItems:'center', gap:4 }}><Mi size="sm" color="light">lock</Mi> 비공개 메시지예요</span> : g.content}
-      </p>
-
-      {/* 액션 바: 댓글 + 하트 */}
+      {/* 본문 또는 수정 폼 */}
+      {editing ? (
+        <div style={{ paddingLeft:44, marginBottom:12 }}>
+          <textarea className="form-textarea" value={editContent}
+            onChange={e => setEditContent(e.target.value)}
+            style={{ minHeight:80, fontSize:'0.88rem', marginBottom:8 }}/>
+          <div style={{ display:'flex', gap:6 }}>
+            <button className="btn btn-primary btn-sm" onClick={() => { onEdit(g.id, editContent); setEditing(false) }}>저장</button>
+            <button className="btn btn-outline btn-sm" onClick={() => setEditing(false)}>취소</button>
+          </div>
+        </div>
+      ) : (
+        <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.75,
+          whiteSpace:'pre-wrap', marginBottom:12, paddingLeft:44 }}>
+          {hidden ? <span style={{ display:'flex', alignItems:'center', gap:4 }}><Mi size="sm" color="light">lock</Mi> 비공개 메시지예요</span> : g.content}
+        </p>
+      )}
       <div style={{ display:'flex', alignItems:'center', gap:16, paddingLeft:44 }}>
         <button style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none',
           cursor:'pointer', color:'var(--color-text-light)', fontSize:'0.78rem', padding:0 }}
@@ -339,6 +357,11 @@ export function GuestbookPublicView({ ownerId }) {
     setReplySubmitting(false); loadAll()
   }
 
+  const editEntry = async (id, content) => {
+    await supabase.from('guestbook').update({ content }).eq('id', id).eq('author_id', user.id)
+    loadAll()
+  }
+
   const toggleLike = async (id, currentLikes) => {
     if (!user) return
     const likes = Array.isArray(currentLikes) ? currentLikes : []
@@ -416,6 +439,7 @@ export function GuestbookPublicView({ ownerId }) {
                             replies={getReplies(g.id)}
                             isOwner={isOwner} userId={user?.id}
                             onDelete={(id) => setDeleteConfirm(id)}
+                            onEdit={editEntry}
                             replyOpen={!!openReplies[g.id]}
                             onToggleReply={toggleReply}
                             replyForm={getReplyForm(g.id)}
@@ -620,6 +644,11 @@ function GuestbookOwnerView({ user }) {
     setReplySubmitting(false); loadAll()
   }
 
+  const editEntry = async (id, content) => {
+    await supabase.from('guestbook').update({ content }).eq('id', id).eq('author_id', user.id)
+    loadAll()
+  }
+
   const toggleLike = async (id, currentLikes) => {
     const likes = Array.isArray(currentLikes) ? currentLikes : []
     const newLikes = likes.includes(user.id)
@@ -672,6 +701,7 @@ function GuestbookOwnerView({ user }) {
                           replies={getReplies(g.id)}
                           isOwner={true} userId={user?.id}
                           onDelete={(id) => setDeleteConfirm(id)}
+                          onEdit={editEntry}
                           replyOpen={!!openReplies[g.id]}
                           onToggleReply={toggleReply}
                           replyForm={getReplyForm(g.id)}
@@ -809,6 +839,11 @@ export function FeedbackPublicView({ ownerId }) {
     loadAll()
   }
 
+  const editEntry = async (id, content) => {
+    await supabase.from('guestbook').update({ content }).eq('id', id).eq('author_id', user.id)
+    loadAll()
+  }
+
   const toggleReply = (id) => setOpenReplies(o => ({...o, [id]:!o[id]}))
   const getReplyForm = (id) => replyForms[id] || { nickname:'', content:'', is_private:true }
   const setReplyForm = (id, updater) => setReplyForms(f => ({...f, [id]: typeof updater==='function' ? updater(f[id]||{nickname:'',content:'',is_private:true}) : updater}))
@@ -912,8 +947,17 @@ export function FeedbackPublicView({ ownerId }) {
                           </div>
                         </div>
                         {(isOwner || g.author_id === user?.id) && (
-                          <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'2px 8px', fontSize:'0.75rem' }}
-                            onClick={() => setDeleteConfirm(g.id)}>삭제</button>
+                          <div style={{ display:'flex', gap:4 }}>
+                            {g.author_id === user?.id && (
+                              <button className="btn btn-ghost btn-sm" style={{ padding:'2px 8px', fontSize:'0.75rem' }}
+                                onClick={() => {
+                                  const newContent = prompt('내용을 수정해주세요:', g.content)
+                                  if (newContent !== null && newContent.trim()) editEntry(g.id, newContent.trim())
+                                }}>수정</button>
+                            )}
+                            <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'2px 8px', fontSize:'0.75rem' }}
+                              onClick={() => setDeleteConfirm(g.id)}>삭제</button>
+                          </div>
                         )}
                       </div>
                       <p style={{ fontSize:'0.88rem', color:'var(--color-text-light)', lineHeight:1.75, whiteSpace:'pre-wrap', marginBottom:12, paddingLeft:44 }}>
