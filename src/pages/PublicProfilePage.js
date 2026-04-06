@@ -19,7 +19,7 @@ const SCENARIO_STATUS = { unplayed:'미플', played:'PL완료', gm_done:'GM완�
 
 function calcDday(d) {
   if (!d) return null
-  return Math.floor((new Date() - new Date(d)) / 86400000)
+  return Math.floor((new Date() - new Date(d)) / 86400000) + 1
 }
 
 // ── 공개 페이지 태그칩: 불투명 ──
@@ -125,14 +125,29 @@ export default function PublicProfilePage() {
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
   const logsPagination = usePagination(data.logs||[], 20)
-  const scenarioParents = (data.scenarios||[]).filter(s => !s.parent_id)
+  const scenarioParents = [...(data.scenarios||[]).filter(s => !s.parent_id)].sort((a,b) => {
+    const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
+    return (profile?.scenario_sort_order||'asc')==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
+  })
   const scenarioChildMap = (data.scenarios||[]).filter(s => !!s.parent_id).reduce((m,s) => {
     if (!m[s.parent_id]) m[s.parent_id] = []
     m[s.parent_id].push(s)
     return m
   }, {})
   const scenariosPagination = usePagination(scenarioParents, 20)
-  const availabilityPagination = usePagination(data.availability||[], 20)
+
+  const sortedAvailability = [...(data.availability||[])].sort((a,b) => {
+    const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
+    return (profile?.availability_sort_order||'asc')==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
+  })
+  const availabilityPagination = usePagination(sortedAvailability, 20)
+
+  const sortedBookmarks = [...(data.bookmarks||[])].sort((a,b) => {
+    const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
+    return (profile?.bookmark_sort_order||'asc')==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
+  })
+  const bookmarksPagination = usePagination(sortedBookmarks, 20)
+
   const pairsPagination = usePagination(data.pairs||[], 20)
 
   useEffect(() => {
@@ -166,7 +181,7 @@ export default function PublicProfilePage() {
 
       const today = new Date().toISOString().split('T')[0]
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
-      const [logs, rulebooks, scenarios, pairs, avail, schedsAll] = await Promise.all([
+      const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks] = await Promise.all([
         safe(playLogsApi.getAll(p.id)),
         safe(supabase.from('rulebooks').select('*').eq('user_id', p.id).order('title').then(r=>r)),
         safe(scenariosApi.getAll(p.id)),
@@ -174,14 +189,15 @@ export default function PublicProfilePage() {
         safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).then(r=>r)),
         safe(supabase.from('schedules').select('*').eq('user_id',p.id)
           .order('scheduled_date').then(r=>r)),
+        safe(supabase.from('bookmarks').select('*').eq('user_id',p.id).order('title').then(r=>r)),
       ])
       const scheds = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
       const blocked = schedsAll.filter(s => s.entry_type === 'blocked')
-      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked })
+      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked, bookmarks })
 
       // hidden_tabs가 있으면 초기 탭이 숨겨져 있을 수 있으므로 첫 번째 보이는 탭으로 조정
       const hidden = p.hidden_tabs || []
-      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','pairs','guestbook']
+      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','pairs','bookmarks','guestbook']
       const requestedTab = searchParams.get('tab') || 'schedules'
       if (hidden.includes(requestedTab)) {
         const firstVisible = allTabKeys.find(k => !hidden.includes(k)) || 'guestbook'
@@ -230,9 +246,15 @@ export default function PublicProfilePage() {
     { key:'availability', label:'공수표', icon:'event_available', count:data.availability?.length },
     { key:'scenarios', label:'시나리오', icon:'description', count:scenarioParents.length },
     { key:'pairs', label:'페어', icon:'people', count:data.pairs?.length },
+    { key:'bookmarks', label:'북마크', icon:'bookmark', count:data.bookmarks?.length },
     { key:'guestbook', label:'방명록', icon:'mail' },
     ...(profile?.is_admin ? [{ key:'feedback', label:'문의/피드백', icon:'support_agent' }] : []),
   ].filter(t => !hiddenTabs.includes(t.key))
+
+  // 정렬 연동
+  const scenarioSortOrder = profile?.scenario_sort_order || 'asc'
+  const bookmarkSortOrder = profile?.bookmark_sort_order || 'asc'
+  const availabilitySortOrder = profile?.availability_sort_order || 'asc'
 
   const sortedPairs = [...(data.pairs||[])].sort((a,b) => {
     const da = a.first_met_date||'', db = b.first_met_date||''
@@ -589,7 +611,7 @@ export default function PublicProfilePage() {
       {/* ── 공수표 ── */}
       {activeTab==='availability' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          {!data.availability?.length
+          {!sortedAvailability.length
             ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>활성화된 공수표가 없어요</div>
             : availabilityPagination.paged.map(a => (
               <div key={a.id} className="card card-sm">
@@ -611,7 +633,34 @@ export default function PublicProfilePage() {
               </div>
             ))
           }
-          <Pagination total={(data.availability||[]).length} perPage={availabilityPagination.perPage} page={availabilityPagination.page} onPage={availabilityPagination.setPage} onPerPage={availabilityPagination.setPerPage}/>
+          <Pagination total={sortedAvailability.length} perPage={availabilityPagination.perPage} page={availabilityPagination.page} onPage={availabilityPagination.setPage} onPerPage={availabilityPagination.setPerPage}/>
+        </div>
+      )}
+
+      {/* ── 북마크 ── */}
+      {activeTab==='bookmarks' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {!sortedBookmarks.length
+            ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>북마크가 없어요</div>
+            : bookmarksPagination.paged.map(b => (
+              <div key={b.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:14 }}>
+                {b.thumbnail_url
+                  ? <img src={b.thumbnail_url} alt={b.title} style={{ width:48, height:48, borderRadius:8, objectFit:'cover', flexShrink:0 }}/>
+                  : <div style={{ width:48, height:48, borderRadius:8, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <Mi color="light">bookmark</Mi>
+                    </div>
+                }
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.title||'제목 없음'}</div>
+                  {b.description && <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.description}</p>}
+                  <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize:'0.72rem', color:'var(--color-primary)' }}>
+                    <Mi size='sm'>link</Mi> 링크 열기
+                  </a>
+                </div>
+              </div>
+            ))
+          }
+          <Pagination total={sortedBookmarks.length} perPage={bookmarksPagination.perPage} page={bookmarksPagination.page} onPage={bookmarksPagination.setPage} onPerPage={bookmarksPagination.setPerPage}/>
         </div>
       )}
 

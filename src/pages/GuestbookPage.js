@@ -75,10 +75,11 @@ function DeleteConfirm({ isOpen, onClose, onConfirm, message = '정말 삭제하
 
 // ── 방명록 카드 ──
 // ── 댓글 아이템 (수정 기능 포함) ──
-function ReplyItem({ r, isOwner, userId, onDelete, onEdit, rHidden }) {
+function ReplyItem({ r, isOwner, userId, onDelete, onEdit, rHidden, parentIsPrivate }) {
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(r.content)
   const canEdit = userId && r.author_id === userId
+  const showLock = r.is_private || parentIsPrivate
   return (
     <div style={{ padding:'10px 0', borderBottom:'1px solid var(--color-border)' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
@@ -90,7 +91,7 @@ function ReplyItem({ r, isOwner, userId, onDelete, onEdit, rHidden }) {
             {(r.author_name||'?')[0]}
           </div>
           <span style={{ fontWeight:700, fontSize:'0.82rem' }}>{r.author_name || '익명'}</span>
-          {r.is_private && <Mi size="sm" color="light">lock</Mi>}
+          {showLock && <Mi size="sm" color="light">lock</Mi>}
           <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)' }}>{fmtDT(r.created_at)}</span>
         </div>
         <div style={{ display:'flex', gap:4 }}>
@@ -209,7 +210,8 @@ function GuestEntry({ g, replies, isOwner, userId, onDelete, onEdit, onReply, re
             const rHidden = r.is_private && !isOwner && r.author_id !== userId
             return (
               <ReplyItem key={r.id} r={r} isOwner={isOwner} userId={userId}
-                onDelete={onDelete} onEdit={onEdit} rHidden={rHidden}/>
+                onDelete={onDelete} onEdit={onEdit} rHidden={rHidden}
+                parentIsPrivate={g.is_private}/>
             )
           })}
 
@@ -867,7 +869,7 @@ export function FeedbackPublicView({ ownerId }) {
   const [items, setItems] = useState([])
   const [allReplies, setAllReplies] = useState([])
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ nickname:'', email:'', content:'', is_private:true })
+  const [form, setForm] = useState({ nickname:'', email:'', content:'', is_private:false })
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [openReplies, setOpenReplies] = useState({})
@@ -904,7 +906,7 @@ export function FeedbackPublicView({ ownerId }) {
       is_private: form.is_private, type: 'feedback',
     })
     if (error) { alert('전송 실패: ' + error.message); setSubmitting(false); return }
-    setForm({ nickname:'', email:'', content:'', is_private:true })
+    setForm({ nickname:'', email:'', content:'', is_private:false })
     setDone(true); setTimeout(() => setDone(false), 3000)
     loadAll(); setSubmitting(false)
   }
@@ -920,8 +922,8 @@ export function FeedbackPublicView({ ownerId }) {
   }
 
   const toggleReply = (id) => setOpenReplies(o => ({...o, [id]:!o[id]}))
-  const getReplyForm = (id) => replyForms[id] || { nickname:'', content:'', is_private:true }
-  const setReplyForm = (id, updater) => setReplyForms(f => ({...f, [id]: typeof updater==='function' ? updater(f[id]||{nickname:'',content:'',is_private:true}) : updater}))
+  const getReplyForm = (id) => replyForms[id] || { nickname:'', content:'', is_private:false }
+  const setReplyForm = (id, updater) => setReplyForms(f => ({...f, [id]: typeof updater==='function' ? updater(f[id]||{nickname:'',content:'',is_private:false}) : updater}))
 
   const submitReply = async (parentId) => {
     const rf = getReplyForm(parentId)
@@ -935,7 +937,7 @@ export function FeedbackPublicView({ ownerId }) {
       type: 'feedback', parent_id: parentId,
     })
     if (error) { alert('저장 실패: ' + error.message); setReplySubmitting(false); return }
-    setReplyForms(f => ({...f, [parentId]: {nickname:'',content:'',is_private:true}}))
+    setReplyForms(f => ({...f, [parentId]: {nickname:'',content:'',is_private:false}}))
     setReplySubmitting(false); loadAll()
   }
 
@@ -950,10 +952,10 @@ export function FeedbackPublicView({ ownerId }) {
           <Mi size="sm">support_agent</Mi> 문의/피드백 안내
         </div>
         <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)', lineHeight:1.7, margin:0 }}>
-          사이트 오류, 버그, 기능 개선 요청 등을 남겨주세요.<br/>
+          사이트의 오류나 버그를 우선적으로 제보해주세요.<br/>
           따로 답장을 원하신다면 이메일 주소를 함께 남겨주시면 연락드릴게요.<br/>
-          개인이 운영하는 프로젝트라 답변 및 대응이 늦을 수 있는 점 양해 부탁드려요.<br/>
-          <strong>문의는 기본 비공개로 처리됩니다.</strong>
+          현업이 따로 있는 개인이 운영하는 프로젝트라 답변 및 대응이 늦을 수 있는 점 양해 부탁드립니다!<br/>
+          <strong>기능 개선, 버그 제보 등의 문의는 공개로 작성해주시길 부탁드립니다. 중복 문의를 예방할 수 있습니다.</strong>
         </p>
       </div>
 

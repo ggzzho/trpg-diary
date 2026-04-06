@@ -1,7 +1,7 @@
 // src/pages/BookmarkPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { bookmarksApi, bookmarkTagsApi } from '../lib/supabase'
+import { bookmarksApi, bookmarkTagsApi, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
@@ -69,7 +69,7 @@ async function fetchOgMeta(url) {
 }
 
 export function BookmarkPage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -84,6 +84,7 @@ export function BookmarkPage() {
   const [fetching, setFetching] = useState(false)
   const [fetchMsg, setFetchMsg] = useState('')
 
+  useEffect(() => { if (profile?.bookmark_sort_order) setSortOrder(profile.bookmark_sort_order) }, [profile])
   const load = async () => { const {data}=await bookmarksApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   const loadTags = async () => { const {data}=await bookmarkTagsApi.getAll(user.id); setTags(data||[]) }
   useEffect(() => { load(); loadTags() }, [user])

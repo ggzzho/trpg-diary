@@ -1,7 +1,7 @@
 // src/pages/ScenarioPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { scenariosApi } from '../lib/supabase'
+import { scenariosApi, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
@@ -12,7 +12,7 @@ const STATUS_MAP = { unplayed:{label:'미플',badge:'badge-gray'}, played:{label
 const cleanPayload = f => ({...f, purchase_date:f.purchase_date||null, parent_id:f.parent_id||null})
 
 export function ScenarioPage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -21,12 +21,13 @@ export function ScenarioPage() {
   const [confirm, setConfirm] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [sortOrder, setSortOrder] = useState('asc')
+  const [sortOrder, setSortOrder] = useState(() => 'asc')
   const [isChild, setIsChild] = useState(false)
   const [expanded, setExpanded] = useState({})
 
   const load = async () => { const {data}=await scenariosApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
+  useEffect(() => { if (profile?.scenario_sort_order) setSortOrder(profile.scenario_sort_order) }, [profile])
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const openNew = () => { setEditing(null); setForm(BLANK); setIsChild(false); setModal(true) }
@@ -128,7 +129,7 @@ export function ScenarioPage() {
       <div style={{marginBottom:16,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
         <input className="form-input" placeholder="🔍 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
         <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
-          onClick={()=>setSortOrder(o=>o==='asc'?'desc':'asc')}>
+          onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await supabase.from('profiles').update({scenario_sort_order:next}).eq('id',user.id) }}>
           가나다순 {sortOrder==='asc'?'↑':'↓'}
         </button>
       </div>

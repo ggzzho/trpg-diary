@@ -10,7 +10,7 @@ const BLANK = { name:'', nickname:'', memo:'', relations:[], first_met_date:'', 
 const cleanPayload = f => ({...f, first_met_date:f.first_met_date||null, relations:f.relations||[]})
 function calcDday(dateStr) {
   if (!dateStr) return null
-  return Math.floor((new Date()-new Date(dateStr))/(1000*60*60*24))
+  return Math.floor((new Date()-new Date(dateStr))/(1000*60*60*24)) + 1
 }
 
 const SORT_KEY = 'trpg_pair_sort_order'

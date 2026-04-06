@@ -34,7 +34,7 @@ export default function Dashboard() {
         supabase.from('notices').select('*').eq('is_active',true).order('created_at',{ascending:false})
       ])
       setStats({logs:l.data?.length||0,rulebooks:r.data?.length||0,scenarios:sc.data?.length||0,pairs:p.data?.length||0})
-      setUpcoming((s.data||[]).filter(x=>x.scheduled_date>=todayStr&&x.status!=='cancelled'&&x.status!=='completed').sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date)).slice(0,5))
+      setUpcoming((s.data||[]).filter(x=>x.entry_type!=='blocked'&&x.scheduled_date>=todayStr&&x.status!=='cancelled'&&x.status!=='completed').sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date)).slice(0,5))
       setRecentLogs((l.data||[]).slice(0,4))
       setFavorites(fav.data||[])
       const activeNotices = noticeRes.data || []

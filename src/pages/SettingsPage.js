@@ -54,6 +54,9 @@ export default function SettingsPage() {
     bg_opacity: p?.bg_opacity!==undefined ? p.bg_opacity : 1,
     is_public: p?.is_public??true,
     hidden_tabs: p?.hidden_tabs||[],
+    scenario_sort_order: p?.scenario_sort_order||'asc',
+    bookmark_sort_order: p?.bookmark_sort_order||'asc',
+    availability_sort_order: p?.availability_sort_order||'asc',
   })
 
   const [form, setForm] = useState(() => buildForm(profile))
@@ -331,6 +334,7 @@ export default function SettingsPage() {
                 {key:'availability', label:'공수표', icon:'event_available'},
                 {key:'scenarios', label:'시나리오', icon:'description'},
                 {key:'pairs', label:'페어', icon:'people'},
+                {key:'bookmarks', label:'북마크', icon:'bookmark'},
                 {key:'guestbook', label:'방명록', icon:'mail'},
               ].map(t => {
                 const isHidden = (form.hidden_tabs||[]).includes(t.key)
