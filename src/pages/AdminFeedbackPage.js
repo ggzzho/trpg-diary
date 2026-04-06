@@ -12,18 +12,24 @@ const fmtDT = (d) => {
     + ' ' + dt.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
 }
 
-function ReplyEditItem({ r, onDelete, onSaved }) {
+function ReplyEditItem({ r, onDelete, onSaved, ownerId }) {
   const [editing, setEditing] = useState(false)
   const [content, setContent] = useState(r.content)
+  const isAdmin = r.author_id === ownerId
   return (
     <div style={{padding:'10px 0', borderBottom:'1px solid var(--color-border)'}}>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
         <div style={{display:'flex', alignItems:'center', gap:8}}>
-          <div style={{width:26, height:26, borderRadius:'50%', background:'var(--color-primary)',
+          <div style={{width:26, height:26, borderRadius:'50%',
+            background: isAdmin ? 'var(--color-primary)' : 'var(--color-nav-active-bg)',
             display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:'0.68rem', fontWeight:700, color:'white', flexShrink:0}}>관</div>
+            fontSize:'0.68rem', fontWeight:700,
+            color: isAdmin ? 'white' : 'var(--color-accent)',
+            flexShrink:0, border:'1px solid var(--color-border)'}}>
+            {(r.author_name||'?')[0]}
+          </div>
           <span style={{fontWeight:700, fontSize:'0.82rem'}}>{r.author_name}</span>
-          <span className="badge badge-primary" style={{fontSize:'0.6rem'}}>관리자</span>
+          {isAdmin && <span className="badge badge-primary" style={{fontSize:'0.6rem'}}>관리자</span>}
           <span style={{fontSize:'0.68rem', color:'var(--color-text-light)'}}>{fmtDT(r.created_at)}</span>
         </div>
         <div style={{display:'flex', gap:4}}>
@@ -89,7 +95,7 @@ export default function AdminFeedbackPage() {
   }
   useEffect(() => { loadAll() }, [user])
 
-  const getReplies = (parentId) => replies.filter(r => r.parent_id === parentId)
+  const getReplies = (parentId) => replies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
 
   const removeEntry = async (id) => {
     await supabase.from('guestbook').delete().eq('id', id)
@@ -101,14 +107,14 @@ export default function AdminFeedbackPage() {
     ...f, [id]: typeof updater==='function' ? updater(f[id]||{content:''}) : updater
   }))
 
-  const submitReply = async (parentId) => {
+  const submitReply = async (parentId, parentIsPrivate = false) => {
     const form = getReplyForm(parentId)
     if (!form.content.trim()) return
     setReplySubmitting(true)
     const { error } = await supabase.from('guestbook').insert({
       owner_id: user.id, author_id: user.id,
       author_name: profile?.display_name || profile?.username || '관리자',
-      content: form.content.trim(), is_private: true,
+      content: form.content.trim(), is_private: parentIsPrivate,
       type: 'feedback', parent_id: parentId,
     })
     if (error) { alert('저장 실패: ' + error.message); setReplySubmitting(false); return }
@@ -211,7 +217,8 @@ export default function AdminFeedbackPage() {
                       {replyList.map(r => (
                         <ReplyEditItem key={r.id} r={r}
                           onDelete={(id) => setDeleteConfirm(id)}
-                          onSaved={loadAll}/>
+                          onSaved={loadAll}
+                          ownerId={user?.id}/>
                       ))}
 
                       {/* 답변 입력 */}
@@ -222,7 +229,7 @@ export default function AdminFeedbackPage() {
                           style={{minHeight:72, fontSize:'0.84rem', marginBottom:8}}/>
                         <div className="flex justify-end">
                           <button className="btn btn-primary btn-sm"
-                            onClick={() => submitReply(g.id)}
+                            onClick={() => submitReply(g.id, g.is_private)}
                             disabled={replySubmitting || !rf.content.trim()}>
                             {replySubmitting ? '등록 중...' : '답변 등록'}
                           </button>

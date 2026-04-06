@@ -1069,7 +1069,7 @@ export function FeedbackPublicView({ ownerId }) {
                                     <span className="badge badge-primary" style={{ fontSize:'0.6rem' }}>관리자</span>
                                   )}
                                   {r.is_private && <Mi size="sm" color="light">lock</Mi>}
-                                  <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)' }}>{new Date(r.created_at).toLocaleDateString('ko-KR',{year:'2-digit',month:'numeric',day:'numeric'})}</span>
+                                  <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)' }}>{new Date(r.created_at).toLocaleDateString('ko-KR',{year:'2-digit',month:'numeric',day:'numeric'})} {new Date(r.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}</span>
                                 </div>
                                 {(isOwner || r.author_id === user?.id) && (
                                   <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px', fontSize:'0.72rem' }}
