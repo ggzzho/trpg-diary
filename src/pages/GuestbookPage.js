@@ -953,8 +953,6 @@ export function FeedbackPublicView({ ownerId }) {
         </div>
         <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)', lineHeight:1.7, margin:0 }}>
           사이트의 오류나 버그를 우선적으로 제보해주세요.<br/>
-          이메일로도 답변을 받고 싶다면, 주소를 남겨주시면 연락드릴게요.<br/>
-          현업이 있는 개인이 운영하는 프로젝트라 답변 및 대응이 늦을 수 있는 점 양해 부탁드립니다!<br/>
           <strong>기능 개선, 버그 제보 등의 문의는 공개로 작성해주시길 부탁드립니다. 중복 문의를 예방할 수 있습니다.</strong>
         </p>
       </div>
@@ -981,7 +979,6 @@ export function FeedbackPublicView({ ownerId }) {
         <div className="flex justify-between items-center">
           <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.82rem', color:'var(--color-text-light)', cursor:'pointer' }}>
             <input type="checkbox" checked={form.is_private} onChange={e => setForm(f => ({...f, is_private:e.target.checked}))}/>
-            <Mi size="sm" color="light">lock</Mi> 공개 (기본값)
           </label>
           <div className="flex items-center gap-10">
             {done && <span className="text-sm" style={{ color:'#558b2f' }}>✅ 문의가 접수됐어요!</span>}
@@ -1056,13 +1053,18 @@ export function FeedbackPublicView({ ownerId }) {
                             <div key={r.id} style={{ padding:'10px 0', borderBottom:'1px solid var(--color-border)' }}>
                               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
                                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                                  <div style={{ width:26, height:26, borderRadius:'50%', background:'var(--color-nav-active-bg)',
+                                  <div style={{ width:26, height:26, borderRadius:'50%',
+                                    background: r.author_id === ownerId ? 'var(--color-primary)' : 'var(--color-nav-active-bg)',
                                     display:'flex', alignItems:'center', justifyContent:'center',
-                                    fontSize:'0.68rem', fontWeight:700, color:'var(--color-accent)', flexShrink:0,
-                                    border:'1px solid var(--color-border)' }}>
+                                    fontSize:'0.68rem', fontWeight:700,
+                                    color: r.author_id === ownerId ? 'white' : 'var(--color-accent)',
+                                    flexShrink:0, border:'1px solid var(--color-border)' }}>
                                     {(r.author_name||'?')[0]}
                                   </div>
                                   <span style={{ fontWeight:700, fontSize:'0.82rem' }}>{r.author_name || '익명'}</span>
+                                  {r.author_id === ownerId && (
+                                    <span className="badge badge-primary" style={{ fontSize:'0.6rem' }}>관리자</span>
+                                  )}
                                   {r.is_private && <Mi size="sm" color="light">lock</Mi>}
                                   <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)' }}>{new Date(r.created_at).toLocaleDateString('ko-KR',{year:'2-digit',month:'numeric',day:'numeric'})}</span>
                                 </div>
@@ -1074,6 +1076,8 @@ export function FeedbackPublicView({ ownerId }) {
                               <p style={{ fontSize:'0.84rem', color:'var(--color-text-light)', lineHeight:1.65, whiteSpace:'pre-wrap', paddingLeft:34 }}>{r.content}</p>
                             </div>
                           ))}
+                          {/* 댓글 입력폼 - 관리자 또는 해당 문의 작성자 본인만 */}
+                          {(isOwner || g.author_id === user?.id) && (
                           <div style={{ marginTop:12 }}>
                             <input className="form-input" autoComplete="off"
                               placeholder={user ? '비워두면 내 닉네임으로 등록돼요' : '닉네임 (필수)'}
@@ -1094,6 +1098,7 @@ export function FeedbackPublicView({ ownerId }) {
                               </button>
                             </div>
                           </div>
+                          )}
                         </div>
                       )}
                     </div>
