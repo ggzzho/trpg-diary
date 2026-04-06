@@ -27,7 +27,14 @@ export default function AuthPage() {
       setError('사용자명은 영문, 숫자, 밑줄(_)만 사용 가능해요.'); setLoading(false); return
     }
     const { error } = await signUp(form.email, form.password, form.username, form.displayName||form.username)
-    if (error) setError(error.message)
+    if (error) {
+      const msg = error.message || ''
+      if (msg.toLowerCase().includes('sending confirmation email') || msg.toLowerCase().includes('email') && msg.toLowerCase().includes('limit')) {
+        setError('이메일 인증 일일 한도 제한 문제로 현재 회원가입이 불가능합니다. 최대 24시간 후 재시도 해주세요.')
+      } else {
+        setError(msg)
+      }
+    }
     else setMessage('가입 확인 메일을 보냈어요! 메일을 확인해주세요. 📬')
     setLoading(false)
   }
