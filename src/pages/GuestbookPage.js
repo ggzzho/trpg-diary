@@ -953,8 +953,8 @@ export function FeedbackPublicView({ ownerId }) {
         </div>
         <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)', lineHeight:1.7, margin:0 }}>
           사이트의 오류나 버그를 우선적으로 제보해주세요.<br/>
-          따로 답장을 원하신다면 이메일 주소를 함께 남겨주시면 연락드릴게요.<br/>
-          현업이 따로 있는 개인이 운영하는 프로젝트라 답변 및 대응이 늦을 수 있는 점 양해 부탁드립니다!<br/>
+          이메일로도 답변을 받고 싶다면, 주소를 남겨주시면 연락드릴게요.<br/>
+          현업이 있는 개인이 운영하는 프로젝트라 답변 및 대응이 늦을 수 있는 점 양해 부탁드립니다!<br/>
           <strong>기능 개선, 버그 제보 등의 문의는 공개로 작성해주시길 부탁드립니다. 중복 문의를 예방할 수 있습니다.</strong>
         </p>
       </div>
@@ -981,7 +981,7 @@ export function FeedbackPublicView({ ownerId }) {
         <div className="flex justify-between items-center">
           <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.82rem', color:'var(--color-text-light)', cursor:'pointer' }}>
             <input type="checkbox" checked={form.is_private} onChange={e => setForm(f => ({...f, is_private:e.target.checked}))}/>
-            <Mi size="sm" color="light">lock</Mi> 비공개 (기본값)
+            <Mi size="sm" color="light">lock</Mi> 공개 (기본값)
           </label>
           <div className="flex items-center gap-10">
             {done && <span className="text-sm" style={{ color:'#558b2f' }}>✅ 문의가 접수됐어요!</span>}
