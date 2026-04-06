@@ -266,6 +266,13 @@ export default function Dashboard() {
               {new Date(noticeModal.created_at).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})}
             </div>
             <MarkdownRenderer content={noticeModal.content}/>
+            <div style={{marginTop:20,paddingTop:14,borderTop:'1px solid var(--color-border)',display:'flex',justifyContent:'flex-end',gap:8}}>
+              <Link to={`/notices/${noticeModal.id}`} className="btn btn-outline btn-sm"
+                onClick={()=>setNoticeModal(null)}>
+                <Mi size="sm">open_in_new</Mi> 게시글 보기
+              </Link>
+              <button className="btn btn-primary btn-sm" onClick={()=>setNoticeModal(null)}>닫기</button>
+            </div>
           </div>
         </div>
       )}
