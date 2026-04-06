@@ -925,7 +925,6 @@ export function FeedbackPublicView({ ownerId }) {
   const getReplyForm = (id) => replyForms[id] || { nickname:'', content:'', is_private:false }
   const setReplyForm = (id, updater) => setReplyForms(f => ({...f, [id]: typeof updater==='function' ? updater(f[id]||{nickname:'',content:'',is_private:false}) : updater}))
 
-  const submitReply = async (parentId) => {
   const submitReply = async (parentId, parentIsPrivate = false) => {
     const rf = getReplyForm(parentId)
     if (!rf.content.trim()) return
@@ -934,7 +933,6 @@ export function FeedbackPublicView({ ownerId }) {
     const { error } = await supabase.from('guestbook').insert({
       owner_id: ownerId, author_id: user?.id || null,
       author_name: authorName,
-      content: rf.content.trim(), is_private: rf.is_private,
       content: rf.content.trim(), is_private: parentIsPrivate,
       type: 'feedback', parent_id: parentId,
     })
@@ -983,6 +981,7 @@ export function FeedbackPublicView({ ownerId }) {
         <div className="flex justify-between items-center">
           <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.82rem', color:'var(--color-text-light)', cursor:'pointer' }}>
             <input type="checkbox" checked={form.is_private} onChange={e => setForm(f => ({...f, is_private:e.target.checked}))}/>
+            <Mi size="sm" color="light">lock</Mi> 공개 (기본값)
           </label>
           <div className="flex items-center gap-10">
             {done && <span className="text-sm" style={{ color:'#558b2f' }}>✅ 문의가 접수됐어요!</span>}
@@ -1090,14 +1089,8 @@ export function FeedbackPublicView({ ownerId }) {
                             <textarea className="form-textarea" placeholder="답변을 남겨보세요..."
                               value={rf.content} onChange={e => setReplyForm(g.id, f => ({...f, content:e.target.value}))}
                               style={{ minHeight:52, fontSize:'0.84rem', marginBottom:8 }}/>
-                            <div className="flex justify-between items-center">
-                              <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.78rem', color:'var(--color-text-light)', cursor:'pointer' }}>
-                                <input type="checkbox" checked={rf.is_private} onChange={e => setReplyForm(g.id, f => ({...f, is_private:e.target.checked}))}/>
-                                <Mi size="sm" color="light">lock</Mi> 비공개
-                              </label>
                             <div className="flex justify-end">
                               <button className="btn btn-primary btn-sm" style={{ fontSize:'0.78rem' }}
-                                onClick={() => submitReply(g.id)}
                                 onClick={() => submitReply(g.id, g.is_private)}
                                 disabled={replySubmitting || !rf.content.trim()}>
                                 {replySubmitting ? '등록 중...' : '답변 등록'}
