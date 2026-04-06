@@ -29,8 +29,13 @@ export default function AuthPage() {
     const { error } = await signUp(form.email, form.password, form.username, form.displayName||form.username)
     if (error) {
       const msg = error.message || ''
-      if (msg.toLowerCase().includes('sending confirmation email') || msg.toLowerCase().includes('email') && msg.toLowerCase().includes('limit')) {
-        setError('이메일 인증 일일 한도 제한 문제로 현재 회원가입이 불가능합니다. 최대 24시간 후 재시도 해주세요.')
+      if (msg.toLowerCase().includes('sending confirmation email') || (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('limit'))) {
+        const now = new Date()
+        const resetKST = new Date()
+        resetKST.setUTCHours(24, 0, 0, 0) // 다음 UTC 자정
+        const diffMs = resetKST - now
+        const diffHours = Math.ceil(diffMs / 1000 / 60 / 60)
+        setError(`이메일 인증 일일 한도 제한 문제로 현재 회원가입이 불가능합니다. 약 ${diffHours}시간 후(오전 9시) 재시도 해주세요.`)
       } else {
         setError(msg)
       }
