@@ -926,6 +926,7 @@ export function FeedbackPublicView({ ownerId }) {
   const setReplyForm = (id, updater) => setReplyForms(f => ({...f, [id]: typeof updater==='function' ? updater(f[id]||{nickname:'',content:'',is_private:false}) : updater}))
 
   const submitReply = async (parentId) => {
+  const submitReply = async (parentId, parentIsPrivate = false) => {
     const rf = getReplyForm(parentId)
     if (!rf.content.trim()) return
     const authorName = rf.nickname.trim() || profile?.display_name || profile?.username || '익명'
@@ -934,6 +935,7 @@ export function FeedbackPublicView({ ownerId }) {
       owner_id: ownerId, author_id: user?.id || null,
       author_name: authorName,
       content: rf.content.trim(), is_private: rf.is_private,
+      content: rf.content.trim(), is_private: parentIsPrivate,
       type: 'feedback', parent_id: parentId,
     })
     if (error) { alert('저장 실패: ' + error.message); setReplySubmitting(false); return }
@@ -953,6 +955,8 @@ export function FeedbackPublicView({ ownerId }) {
         </div>
         <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)', lineHeight:1.7, margin:0 }}>
           사이트의 오류나 버그를 우선적으로 제보해주세요.<br/>
+          이메일로도 답변을 받고 싶다면, 주소를 남겨주시면 연락드릴게요.<br/>
+          현업이 있는 개인이 운영하는 프로젝트라 답변 및 대응이 늦을 수 있는 점 양해 부탁드립니다!<br/>
           <strong>기능 개선, 버그 제보 등의 문의는 공개로 작성해주시길 부탁드립니다. 중복 문의를 예방할 수 있습니다.</strong>
         </p>
       </div>
@@ -1091,8 +1095,10 @@ export function FeedbackPublicView({ ownerId }) {
                                 <input type="checkbox" checked={rf.is_private} onChange={e => setReplyForm(g.id, f => ({...f, is_private:e.target.checked}))}/>
                                 <Mi size="sm" color="light">lock</Mi> 비공개
                               </label>
+                            <div className="flex justify-end">
                               <button className="btn btn-primary btn-sm" style={{ fontSize:'0.78rem' }}
                                 onClick={() => submitReply(g.id)}
+                                onClick={() => submitReply(g.id, g.is_private)}
                                 disabled={replySubmitting || !rf.content.trim()}>
                                 {replySubmitting ? '등록 중...' : '답변 등록'}
                               </button>
