@@ -60,7 +60,7 @@ export default function NoticePage() {
           {notice.title}
         </h1>
         <div style={{fontSize:'0.78rem',color:'var(--color-text-light)',marginBottom:24,paddingBottom:16,borderBottom:'1px solid var(--color-border)'}}>
-          {new Date(notice.created_at).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})}
+          {new Date(notice.created_at).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})} {new Date(notice.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}
           {notice.updated_at !== notice.created_at && (
             <span style={{marginLeft:8}}>(수정됨)</span>
           )}

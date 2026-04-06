@@ -53,7 +53,7 @@ export function Layout({ children }) {
             <div style={{borderTop:'1px solid var(--color-border)',margin:'8px 0',opacity:0.5}} />
             <NavLink to="/admin/notices" className={({isActive})=>`nav-item ${isActive?'active':''}`}
               style={{color:'var(--color-accent)'}}>
-              <span className="nav-icon"><span className="ms">campaign</span></span>공지사항
+              <span className="nav-icon"><span className="ms">campaign</span></span>공지사항 관리
             </NavLink>
             <NavLink to="/admin/feedback" className={({isActive})=>`nav-item ${isActive?'active':''}`}
               style={{color:'var(--color-accent)'}}>
@@ -74,6 +74,9 @@ export function Layout({ children }) {
             style={{ marginTop:4 }}>
             <span className="nav-icon"><span className="ms">support_agent</span></span>문의하기
           </a>
+          <NavLink to="/notices" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
+            <span className="nav-icon"><span className="ms">campaign</span></span>공지사항
+          </NavLink>
         </nav>
         <div className="sidebar-user">
           <div className="sidebar-user-info">

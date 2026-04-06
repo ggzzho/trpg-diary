@@ -21,6 +21,7 @@ import PrivacyPage from './pages/PrivacyPage'
 import AdminFeedbackPage from './pages/AdminFeedbackPage'
 import AdminNoticePage from './pages/AdminNoticePage'
 import NoticePage from './pages/NoticePage'
+import NoticeListPage from './pages/NoticeListPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import './index.css'
 
@@ -80,6 +81,7 @@ function AppRoutes() {
       <Route path="/settings" element={<PrivateLayout><SettingsPage/></PrivateLayout>}/>
       <Route path="/admin/feedback" element={<PrivateLayout><AdminFeedbackPage/></PrivateLayout>}/>
       <Route path="/admin/notices" element={<PrivateLayout><AdminNoticePage/></PrivateLayout>}/>
+      <Route path="/notices" element={<PrivateLayout><NoticeListPage/></PrivateLayout>}/>
       <Route path="/notices/:id" element={<PrivateLayout><NoticePage/></PrivateLayout>}/>
       <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
       <Route path="*" element={<Navigate to="/dashboard" replace/>}/>

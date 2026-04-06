@@ -228,6 +228,9 @@ export default function Dashboard() {
             <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem'}}>
               <Mi style={{marginRight:6}}>campaign</Mi>공지사항
             </h2>
+            <Link to="/notices" style={{fontSize:'0.78rem',color:'var(--color-text-light)',textDecoration:'none',display:'flex',alignItems:'center',gap:2}}>
+              전체보기 <Mi size="sm" color="light">chevron_right</Mi>
+            </Link>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
             {notices.slice(0,5).map(n => (
@@ -242,7 +245,7 @@ export default function Dashboard() {
                   {n.title}
                 </span>
                 <span style={{fontSize:'0.72rem',color:'var(--color-text-light)',flexShrink:0}}>
-                  {new Date(n.created_at).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})}
+                  {new Date(n.created_at).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})} {new Date(n.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}
                 </span>
                 <Mi size="sm" color="light">chevron_right</Mi>
               </div>
@@ -263,7 +266,7 @@ export default function Dashboard() {
               </button>
             </div>
             <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',marginBottom:14}}>
-              {new Date(noticeModal.created_at).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})}
+              {new Date(noticeModal.created_at).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})} {new Date(noticeModal.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}
             </div>
             <MarkdownRenderer content={noticeModal.content}/>
             <div style={{marginTop:20,paddingTop:14,borderTop:'1px solid var(--color-border)',display:'flex',justifyContent:'flex-end',gap:8}}>
