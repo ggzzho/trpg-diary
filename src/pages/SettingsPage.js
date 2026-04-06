@@ -131,17 +131,16 @@ export default function SettingsPage() {
     if (withdrawInput !== '탈퇴합니다') return
     setWithdrawing(true)
     try {
-      // 유저 데이터 삭제 (profiles는 cascade로 처리)
-      await supabase.auth.admin?.deleteUser?.(user.id)
-      // admin API 없으면 직접 signOut 후 안내
+      // profiles 데이터 먼저 삭제
+      await supabase.from('profiles').delete().eq('id', user.id)
+      // auth.users 삭제 (SECURITY DEFINER 함수로 처리)
+      const { error } = await supabase.rpc('delete_user')
+      if (error) throw error
       await supabase.auth.signOut()
       alert('탈퇴가 완료됐어요. 이용해주셔서 감사합니다.')
       window.location.href = '/login'
     } catch(e) {
-      // Supabase Edge Function 없이 처리 가능한 방법
-      await supabase.from('profiles').delete().eq('id', user.id)
-      await supabase.auth.signOut()
-      window.location.href = '/login'
+      alert('탈퇴 처리 중 오류가 발생했어요: ' + e.message)
     }
     setWithdrawing(false)
   }
