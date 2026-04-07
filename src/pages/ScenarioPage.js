@@ -29,6 +29,21 @@ export function ScenarioPage() {
   useEffect(() => { load() }, [user])
   useEffect(() => { if (profile?.scenario_sort_order) setSortOrder(profile.scenario_sort_order) }, [profile])
 
+  // 검색어 있을 때 하위 매칭 항목 자동 펼침
+  useEffect(() => {
+    if (!search) { setExpanded({}); return }
+    const s = search.toLowerCase()
+    const matchItem = (i) => i.title?.toLowerCase().includes(s)
+      || i.system_name?.toLowerCase().includes(s)
+      || i.author?.toLowerCase().includes(s)
+      || i.memo?.toLowerCase().includes(s)
+    const autoExpand = {}
+    parents.forEach(p => {
+      if (childMap[p.id]?.some(c => matchItem(c))) autoExpand[p.id] = true
+    })
+    setExpanded(autoExpand)
+  }, [search, parents, childMap])
+
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const openNew = () => { setEditing(null); setForm(BLANK); setIsChild(false); setModal(true) }
   const openEdit = item => { setEditing(item); setForm({...item}); setIsChild(!!item.parent_id); setModal(true) }
@@ -52,17 +67,26 @@ export function ScenarioPage() {
     return m
   }, [items])
 
-  const filteredParents = useMemo(() => parents
-    .filter(i => {
-      const matchStatus = statusFilter==='all' || i.status===statusFilter
-      const matchSearch = !search || i.title.includes(search) || i.system_name?.includes(search) || i.author?.includes(search)
-        || childMap[i.id]?.some(c => c.title.includes(search))
-      return matchStatus && matchSearch
-    })
-    .sort((a,b) => {
-      const ta=a.title.toLowerCase(), tb=b.title.toLowerCase()
-      return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
-    }), [parents, statusFilter, search, sortOrder, childMap])
+  const filteredParents = useMemo(() => {
+    const s = search.toLowerCase()
+    const matchItem = (i) => !s
+      || i.title?.toLowerCase().includes(s)
+      || i.system_name?.toLowerCase().includes(s)
+      || i.author?.toLowerCase().includes(s)
+      || i.memo?.toLowerCase().includes(s)
+
+    return parents
+      .filter(i => {
+        const matchStatus = statusFilter==='all' || i.status===statusFilter
+        const matchParent = matchItem(i)
+        const matchChild = childMap[i.id]?.some(c => matchItem(c))
+        return matchStatus && (matchParent || matchChild)
+      })
+      .sort((a,b) => {
+        const ta=a.title.toLowerCase(), tb=b.title.toLowerCase()
+        return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
+      })
+  }, [parents, statusFilter, search, sortOrder, childMap])
 
   const { paged, page, setPage, perPage, setPerPage } = usePagination(filteredParents, 20)
   const parentOptions = parents.filter(p => !editing || p.id !== editing.id)

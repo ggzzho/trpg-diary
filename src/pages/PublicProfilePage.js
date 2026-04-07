@@ -182,14 +182,14 @@ export default function PublicProfilePage() {
       const today = new Date().toISOString().split('T')[0]
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
       const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks] = await Promise.all([
-        safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).then(r=>r)),
-        safe(supabase.from('rulebooks').select('*').eq('user_id', p.id).order('title').then(r=>r)),
+        safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).limit(9000).then(r=>r)),
+        safe(supabase.from('rulebooks').select('*').eq('user_id', p.id).order('title').limit(9000).then(r=>r)),
         safe(scenariosApi.getAll(p.id)),
         safe(pairsApi.getAll(p.id)),
-        safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).then(r=>r)),
+        safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).limit(9000).then(r=>r)),
         safe(supabase.from('schedules').select('*').eq('user_id',p.id)
-          .order('scheduled_date').then(r=>r)),
-        safe(supabase.from('bookmarks').select('*').eq('user_id',p.id).order('title').then(r=>r)),
+          .order('scheduled_date').limit(9000).then(r=>r)),
+        safe(supabase.from('bookmarks').select('*').eq('user_id',p.id).order('title').limit(9000).then(r=>r)),
       ])
       const scheds = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
       const blocked = schedsAll.filter(s => s.entry_type === 'blocked')
