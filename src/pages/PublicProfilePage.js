@@ -182,7 +182,7 @@ export default function PublicProfilePage() {
       const today = new Date().toISOString().split('T')[0]
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
       const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks] = await Promise.all([
-        safe(playLogsApi.getAll(p.id)),
+        safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).then(r=>r)),
         safe(supabase.from('rulebooks').select('*').eq('user_id', p.id).order('title').then(r=>r)),
         safe(scenariosApi.getAll(p.id)),
         safe(pairsApi.getAll(p.id)),
