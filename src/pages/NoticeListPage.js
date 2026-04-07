@@ -64,9 +64,14 @@ export default function NoticeListPage() {
                           overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
                           {n.title}
                         </span>
-                        <span style={{fontSize:'0.75rem', color:'var(--color-text-light)', flexShrink:0}}>
-                          {fmtDT(n.created_at)}
-                        </span>
+                        <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
+                          <span style={{fontSize:'0.72rem',color:'var(--color-text-light)',display:'flex',alignItems:'center',gap:3}}>
+                            <Mi size="sm" color="light">visibility</Mi>{(n.view_count||0).toLocaleString()}
+                          </span>
+                          <span style={{fontSize:'0.75rem',color:'var(--color-text-light)'}}>
+                            {fmtDT(n.created_at)}
+                          </span>
+                        </div>
                         <Mi size="sm" color="light">chevron_right</Mi>
                       </div>
                     </div>
