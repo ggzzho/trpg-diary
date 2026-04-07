@@ -50,6 +50,16 @@ export default function AuthPage() {
     const withdrawnMsg = await checkWithdrawn(form.email)
     if (withdrawnMsg) { setError(withdrawnMsg); setLoading(false); return }
 
+    // username 중복 체크
+    try {
+      const { data: existing } = await supabase
+        .from('profiles').select('id').eq('username', form.username).maybeSingle()
+      if (existing) {
+        setError('이미 사용 중인 사용자명이에요. 다른 사용자명을 입력해주세요.')
+        setLoading(false); return
+      }
+    } catch { /* 조회 실패 시 계속 진행 */ }
+
     const { error } = await signUp(form.email, form.password, form.username, form.displayName||form.username)
     if (error) {
       const msg = error.message || ''
@@ -60,6 +70,14 @@ export default function AuthPage() {
         const diffMs = resetKST - now
         const diffHours = Math.ceil(diffMs / 1000 / 60 / 60)
         setError(`이메일 인증 일일 한도 제한 문제로 현재 회원가입이 불가능합니다. 약 ${diffHours}시간 후(오전 9시) 재시도 해주세요.`)
+      } else if (msg.toLowerCase().includes('database error saving new user')) {
+        setError('회원가입 처리 중 오류가 발생했어요. 잠시 후 다시 시도해주세요. 문제가 반복되면 문의해주세요.')
+      } else if (msg.toLowerCase().includes('user already registered') || msg.toLowerCase().includes('already registered')) {
+        setError('이미 가입된 이메일이에요. 로그인하거나 비밀번호 찾기를 이용해주세요.')
+      } else if (msg.toLowerCase().includes('password should be at least')) {
+        setError('비밀번호는 6자 이상이어야 해요.')
+      } else if (msg.toLowerCase().includes('invalid email')) {
+        setError('올바른 이메일 형식이 아니에요.')
       } else {
         setError(msg)
       }
