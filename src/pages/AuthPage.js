@@ -26,13 +26,30 @@ export default function AuthPage() {
     if (!form.username || !/^[a-zA-Z0-9_]+$/.test(form.username)) {
       setError('사용자명은 영문, 숫자, 밑줄(_)만 사용 가능해요.'); setLoading(false); return
     }
+    // 탈퇴 이메일 24시간 재가입 제한 체크 (최우선)
+    try {
+      const email = form.email?.toLowerCase()
+      const { data: withdrawn } = await supabase
+        .from('withdrawn_emails').select('withdrawn_at').eq('email', email).single()
+      if (withdrawn) {
+        const withdrawnAt = new Date(withdrawn.withdrawn_at)
+        const availableAt = new Date(withdrawnAt.getTime() + 24 * 60 * 60 * 1000)
+        const now = new Date()
+        if (availableAt > now) {
+          const remainHours = Math.ceil((availableAt - now) / 1000 / 60 / 60)
+          setError(`탈퇴한 계정입니다. 약 ${remainHours}시간 후 재가입이 가능합니다.`)
+          setLoading(false); return
+        }
+      }
+    } catch { /* 조회 실패 시 가입 허용 */ }
+
     const { error } = await signUp(form.email, form.password, form.username, form.displayName||form.username)
     if (error) {
       const msg = error.message || ''
       if (msg.toLowerCase().includes('sending confirmation email') || (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('limit'))) {
         const now = new Date()
         const resetKST = new Date()
-        resetKST.setUTCHours(24, 0, 0, 0) // 다음 UTC 자정
+        resetKST.setUTCHours(24, 0, 0, 0)
         const diffMs = resetKST - now
         const diffHours = Math.ceil(diffMs / 1000 / 60 / 60)
         setError(`이메일 인증 일일 한도 제한 문제로 현재 회원가입이 불가능합니다. 약 ${diffHours}시간 후(오전 9시) 재시도 해주세요.`)

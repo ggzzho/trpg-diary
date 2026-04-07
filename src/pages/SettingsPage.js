@@ -131,9 +131,13 @@ export default function SettingsPage() {
     if (withdrawInput !== '탈퇴합니다') return
     setWithdrawing(true)
     try {
-      // profiles 데이터 먼저 삭제
-      await supabase.from('profiles').delete().eq('id', user.id)
-      // auth.users 삭제 (SECURITY DEFINER 함수로 처리)
+      // 1. withdrawn_emails에 이메일 저장 (24시간 재가입 제한용) - UPSERT
+      const email = user.email?.toLowerCase()
+      await supabase.from('withdrawn_emails').upsert(
+        { email, withdrawn_at: new Date().toISOString() },
+        { onConflict: 'email' }
+      )
+      // 2. 모든 사용자 데이터 + auth.users 삭제 (SQL 함수)
       const { error } = await supabase.rpc('delete_user')
       if (error) throw error
       await supabase.auth.signOut()
