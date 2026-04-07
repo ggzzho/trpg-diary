@@ -9,7 +9,18 @@ import { ConfirmDialog } from '../components/Layout'
 // ── 간단한 마크다운 렌더러 ──
 export function MarkdownRenderer({ content, style }) {
   if (!content) return null
-  const html = content
+
+  // XSS sanitize - 위험한 태그/속성 제거
+  const sanitize = (str) => str
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<embed[^>]*>/gi, '')
+    .replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')  // onclick, onerror 등
+    .replace(/javascript\s*:/gi, '')
+    .replace(/data\s*:/gi, '')
+
+  const html = sanitize(content)
     // 이미지
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0;display:block;"/>')
     // 굵게
@@ -28,7 +39,7 @@ export function MarkdownRenderer({ content, style }) {
     .replace(/^- (.+)$/gm, '<li style="margin:3px 0;padding-left:4px;">$1</li>')
     .replace(/(<li[^>]*>.*<\/li>\n?)+/g, '<ul style="padding-left:20px;margin:6px 0;">$&</ul>')
     // 링크
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer" style="color:var(--color-primary);text-decoration:underline;">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer noopener" style="color:var(--color-primary);text-decoration:underline;">$1</a>')
     // 줄바꿈
     .replace(/\n/g, '<br/>')
 
