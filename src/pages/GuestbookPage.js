@@ -981,7 +981,7 @@ export function FeedbackPublicView({ ownerId }) {
         <div className="flex justify-between items-center">
           <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.82rem', color:'var(--color-text-light)', cursor:'pointer' }}>
             <input type="checkbox" checked={form.is_private} onChange={e => setForm(f => ({...f, is_private:e.target.checked}))}/>
-            <Mi size="sm" color="light">lock</Mi> 공개 (기본값)
+            <Mi size="sm" color="light">lock</Mi> 비밀글
           </label>
           <div className="flex items-center gap-10">
             {done && <span className="text-sm" style={{ color:'#558b2f' }}>✅ 문의가 접수됐어요!</span>}

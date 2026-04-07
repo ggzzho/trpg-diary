@@ -30,6 +30,7 @@ function ReplyEditItem({ r, onDelete, onSaved, ownerId }) {
           </div>
           <span style={{fontWeight:700, fontSize:'0.82rem'}}>{r.author_name}</span>
           {isAdmin && <span className="badge badge-primary" style={{fontSize:'0.6rem'}}>관리자</span>}
+          {r.is_private && <Mi size="sm" color="light">lock</Mi>}
           <span style={{fontSize:'0.68rem', color:'var(--color-text-light)'}}>{fmtDT(r.created_at)}</span>
         </div>
         <div style={{display:'flex', gap:4}}>
