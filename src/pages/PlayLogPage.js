@@ -12,7 +12,7 @@ const BLANK = {
   title:'', start_date:'', played_date:'', system_name:'', role:'PL',
   character_name:'', together_with:'', npc:'', memo:'',
   session_image_url:'', scenario_link:'', series_tag:'', session_log_url:'',
-  spoiler_content:'', spoiler_password:''
+  spoiler_content:'', spoiler_password:'', is_private:false
 }
 const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, played_date:f.played_date||null, start_date:f.start_date||null} }
 
@@ -162,7 +162,7 @@ export function PlayLogPage() {
   const ruleList = useMemo(()=>[...new Set(items.map(i=>i.system_name).filter(Boolean))].sort(),[items])
 
   const filtered = items.filter(i=>{
-    const ms=!search||i.title.includes(search)||i.system_name?.includes(search)||i.together_with?.includes(search)||i.series_tag?.includes(search)
+    const ms=!search||i.title.includes(search)||i.system_name?.includes(search)||i.together_with?.includes(search)||i.series_tag?.includes(search)||i.memo?.includes(search)
     const mr=ruleFilter==='all'||i.system_name===ruleFilter
     return ms&&mr
   })
@@ -235,6 +235,7 @@ export function PlayLogPage() {
                 </div>
 
                 {item.spoiler_content&&<div style={{marginTop:3,fontSize:'0.75rem',color:'#e57373'}}><Mi size='sm' color='danger'>warning</Mi> 스포일러 포함</div>}
+                {item.is_private&&<div style={{marginTop:3,fontSize:'0.75rem',color:'var(--color-text-light)'}}><Mi size='sm' color='light'>lock</Mi> 비공개</div>}
               </div>
               <div style={{padding:'8px 12px 10px',marginTop:8,borderTop:'1px solid var(--color-border)',display:'flex',gap:5,justifyContent:'flex-end'}} onClick={e=>e.stopPropagation()}>
                 <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
@@ -356,6 +357,17 @@ export function PlayLogPage() {
                 {form.spoiler_password&&<div className="text-xs text-light" style={{marginTop:4}}>현재 비밀번호: {showSpoilerPw?form.spoiler_password:'•'.repeat(form.spoiler_password.length)}</div>}
               </div>
             )}
+          </div>
+          {/* 공개 설정 */}
+          <div style={{marginTop:14,paddingTop:14,borderTop:'1px solid var(--color-border)'}}>
+            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',userSelect:'none'}}>
+              <input type="checkbox" checked={!!form.is_private}
+                onChange={e=>setForm(f=>({...f,is_private:e.target.checked}))}
+                style={{width:16,height:16,accentColor:'var(--color-primary)',cursor:'pointer'}}/>
+              <Mi size="sm" color="light">lock</Mi>
+              <span style={{fontSize:'0.88rem',fontWeight:600}}>비공개</span>
+              <span style={{fontSize:'0.75rem',color:'var(--color-text-light)'}}>공개 페이지에 노출되지 않아요</span>
+            </label>
           </div>
         </div>
       </Modal>

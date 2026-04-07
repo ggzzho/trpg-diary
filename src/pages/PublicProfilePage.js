@@ -124,7 +124,8 @@ export default function PublicProfilePage() {
   const [kakaoPopup, setKakaoPopup] = useState(false)
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
-  const logsPagination = usePagination(data.logs||[], 20)
+  const publicLogs = (data.logs||[]).filter(l => !l.is_private)
+  const logsPagination = usePagination(publicLogs, 20)
   const scenarioParents = [...(data.scenarios||[]).filter(s => !s.parent_id)].sort((a,b) => {
     const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
     return (profile?.scenario_sort_order||'asc')==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
@@ -242,7 +243,7 @@ export default function PublicProfilePage() {
   const TABS = [
     { key:'schedules', label:'일정', icon:'calendar_month', count:data.schedules?.length },
     { key:'rulebooks', label:'룰북', icon:'menu_book', count:(data.rulebooks||[]).filter(r=>!r.parent_id).length },
-    { key:'logs', label:'기록', icon:'auto_stories', count:data.logs?.length },
+    { key:'logs', label:'기록', icon:'auto_stories', count:publicLogs.length },
     { key:'availability', label:'공수표', icon:'event_available', count:data.availability?.length },
     { key:'scenarios', label:'시나리오', icon:'description', count:scenarioParents.length },
     { key:'pairs', label:'페어', icon:'people', count:data.pairs?.length },
@@ -340,7 +341,7 @@ export default function PublicProfilePage() {
           {/* 통계 */}
           <div className="flex justify-between" style={{ marginTop:16, padding:'12px 0', borderTop:'1px solid var(--color-border)', borderBottom:'1px solid var(--color-border)' }}>
             {[
-              { label:'기록', v:data.logs?.length||0 },
+              { label:'기록', v:publicLogs.length||0 },
               { label:'룰북', v:(data.rulebooks||[]).filter(r=>!r.parent_id).length },
               { label:'시나리오', v:data.scenarios?.length||0 },
               { label:'페어', v:data.pairs?.length||0 },
@@ -445,7 +446,7 @@ export default function PublicProfilePage() {
               ))
             }
           </div>
-          <Pagination total={(data.logs||[]).length} perPage={logsPagination.perPage} page={logsPagination.page} onPage={logsPagination.setPage} onPerPage={logsPagination.setPerPage}/>
+          <Pagination total={publicLogs.length} perPage={logsPagination.perPage} page={logsPagination.page} onPage={logsPagination.setPage} onPerPage={logsPagination.setPerPage}/>
           <Modal isOpen={!!selectedLog} onClose={()=>setSelectedLog(null)} title={selectedLog?.title}
             footer={<button className="btn btn-outline btn-sm" onClick={()=>setSelectedLog(null)}>닫기</button>}
           >

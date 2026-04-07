@@ -48,7 +48,7 @@ export function AvailabilityPage() {
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
-        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>event_available</Mi>공수표 목록</h1><p className="page-subtitle">플레이 가능한 날짜와 원하는 조건을 공개해요</p></div>
+        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>event_available</Mi>공수표 목록</h1><p className="page-subtitle">플레이 약속을 기록해요</p></div>
         <div className="flex gap-8">
           <button className={`btn btn-sm ${viewMode==='card'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('card')}><Mi size='sm'>grid_view</Mi> 카드</button>
           <button className={`btn btn-sm ${viewMode==='list'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('list')}><Mi size='sm'>list</Mi> 리스트</button>
@@ -129,7 +129,7 @@ export function AvailabilityPage() {
       >
         <div className="form-group"><label className="form-label">시나리오명 *</label><input className="form-input" placeholder="시나리오명" value={form.title} onChange={set('title')}/></div>
         <div className="grid-2">
-          <div className="form-group"><label className="form-label">희망</label>
+          <div className="form-group"><label className="form-label">희망/예정</label>
             <select className="form-select" value={form.role} onChange={set('role')}><option value="PL">PL</option><option value="GM">GM</option><option value="both">둘 다</option></select>
           </div>
           <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
