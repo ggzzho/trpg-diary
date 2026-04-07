@@ -29,21 +29,6 @@ export function ScenarioPage() {
   useEffect(() => { load() }, [user])
   useEffect(() => { if (profile?.scenario_sort_order) setSortOrder(profile.scenario_sort_order) }, [profile])
 
-  // 검색어 있을 때 하위 매칭 항목 자동 펼침
-  useEffect(() => {
-    if (!search) { setExpanded({}); return }
-    const s = search.toLowerCase()
-    const matchItem = (i) => i.title?.toLowerCase().includes(s)
-      || i.system_name?.toLowerCase().includes(s)
-      || i.author?.toLowerCase().includes(s)
-      || i.memo?.toLowerCase().includes(s)
-    const autoExpand = {}
-    parents.forEach(p => {
-      if (childMap[p.id]?.some(c => matchItem(c))) autoExpand[p.id] = true
-    })
-    setExpanded(autoExpand)
-  }, [search, parents, childMap])
-
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const openNew = () => { setEditing(null); setForm(BLANK); setIsChild(false); setModal(true) }
   const openEdit = item => { setEditing(item); setForm({...item}); setIsChild(!!item.parent_id); setModal(true) }
@@ -66,6 +51,23 @@ export function ScenarioPage() {
     })
     return m
   }, [items])
+
+  // 검색어 있을 때 하위 매칭 항목 자동 펼침 (parents/childMap useMemo 아래 위치)
+  useEffect(() => {
+    if (!search || !parents?.length) { setExpanded({}); return }
+    const s = search.toLowerCase()
+    const matchItem = (i) => !!(
+      i.title?.toLowerCase().includes(s)
+      || i.system_name?.toLowerCase().includes(s)
+      || i.author?.toLowerCase().includes(s)
+      || i.memo?.toLowerCase().includes(s)
+    )
+    const autoExpand = {}
+    parents.forEach(p => {
+      if (childMap[p.id]?.some(c => matchItem(c))) autoExpand[p.id] = true
+    })
+    setExpanded(autoExpand)
+  }, [search, parents, childMap])
 
   const filteredParents = useMemo(() => {
     const s = search.toLowerCase()
