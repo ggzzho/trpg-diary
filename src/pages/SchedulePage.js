@@ -1,7 +1,7 @@
 // src/pages/SchedulePage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { schedulesApi } from '../lib/supabase'
+import { schedulesApi, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
@@ -14,7 +14,7 @@ const STATUS_MAP = {
   planned:{label:'예정',badge:'badge-blue'},
   completed:{label:'완료',badge:'badge-gray'}, cancelled:{label:'취소',badge:'badge-red'},
 }
-const BLANK = { title:'', scheduled_date:'', scheduled_time:'', end_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false, is_intro:false, intro_rule:'', entry_type:'session' }
+const BLANK = { title:'', scheduled_date:'', scheduled_time:'', end_time:'', location:'', system_name:'', description:'', status:'planned', is_gm:false, is_intro:false, intro_rule:'', entry_type:'session', series_id:null }
 const BLOCKED_BLANK = { scheduled_date:'', blocked_from:'', blocked_until:'', description:'', entry_type:'blocked' }
 const fmtTime = t => t ? t.slice(0,5) : ''
 
@@ -53,6 +53,14 @@ export default function SchedulePage() {
   const [copyMode, setCopyMode] = useState('copy')
   const [copyDate, setCopyDate] = useState('')
   const [search, setSearch] = useState('')
+  const [calPopup, setCalPopup] = useState(null) // 월뷰 상세 팝업
+  const [seriesConfirm, setSeriesConfirm] = useState(null) // 시리즈 삭제 확인
+  // 반복 일정 폼 state
+  const [isRepeat, setIsRepeat] = useState(false)
+  const [repeatMode, setRepeatMode] = useState('count') // 'count' | 'date'
+  const [repeatCount, setRepeatCount] = useState(4)
+  const [repeatEndDate, setRepeatEndDate] = useState('')
+  const [repeatPreview, setRepeatPreview] = useState([])
 
   const load = async () => {
     const {data} = await schedulesApi.getAll(user.id)
@@ -62,6 +70,13 @@ export default function SchedulePage() {
     setLoading(false)
   }
   useEffect(() => { load() }, [user])
+
+  // 반복 미리보기 자동 계산
+  useEffect(() => {
+    if (!isRepeat || !form.scheduled_date) { setRepeatPreview([]); return }
+    const dates = calcRepeatDates(form.scheduled_date, repeatMode, repeatCount, repeatEndDate)
+    setRepeatPreview(dates)
+  }, [isRepeat, form.scheduled_date, repeatMode, repeatCount, repeatEndDate])
 
   const setB = k => e => setBlockedForm(f=>({...f,[k]:e.target.value}))
   const openNewBlocked = () => { setEditingBlocked(null); setBlockedForm({...BLOCKED_BLANK, scheduled_date:new Date().toISOString().split('T')[0]}); setBlockedModal(true) }
@@ -83,20 +98,66 @@ export default function SchedulePage() {
   const removeBlocked = async id => { await schedulesApi.remove(id); load() }
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
-  const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||new Date().toISOString().split('T')[0]}); setModal(true) }
-  const openEdit = item => { setEditing(item); setForm({...item}); setModal(true) }
+  const resetRepeat = () => { setIsRepeat(false); setRepeatMode('count'); setRepeatCount(4); setRepeatEndDate(''); setRepeatPreview([]) }
+  const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||new Date().toISOString().split('T')[0]}); resetRepeat(); setModal(true) }
+  const openEdit = item => { setEditing(item); setForm({...item}); resetRepeat(); setModal(true) }
+
+  const calcRepeatDates = (baseDate, mode, count, endDate) => {
+    if (!baseDate) return []
+    const base = new Date(baseDate + 'T00:00:00')
+    const dates = []
+    if (mode === 'count') {
+      for (let i = 0; i < Math.min(count, 52); i++) {
+        const d = new Date(base)
+        d.setDate(d.getDate() + i * 7)
+        dates.push(format(d, 'yyyy-MM-dd'))
+      }
+    } else {
+      if (!endDate) return []
+      let d = new Date(base)
+      const end = new Date(endDate + 'T00:00:00')
+      while (d <= end && dates.length < 52) {
+        dates.push(format(d, 'yyyy-MM-dd'))
+        d.setDate(d.getDate() + 7)
+      }
+    }
+    return dates
+  }
   const openCopy = (item,e) => { e?.stopPropagation(); setCopyTarget(item); setCopyDate(item.scheduled_date); setCopyMode('copy'); setCopyModal(true) }
 
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
-    const payload = {...form, scheduled_time:form.scheduled_time||null, end_time:form.end_time||null}
+    const { id, user_id, created_at, ...formFields } = form
+    const payload = {...formFields, scheduled_time:form.scheduled_time||null, end_time:form.end_time||null}
     let error
-    if (editing) ({ error } = await schedulesApi.update(editing.id, payload))
-    else ({ error } = await schedulesApi.create({...payload,user_id:user.id}))
+    if (editing) {
+      ;({ error } = await schedulesApi.update(editing.id, payload))
+    } else if (isRepeat && repeatPreview.length > 1) {
+      // 반복 일정 일괄 등록
+      const seriesId = crypto.randomUUID()
+      const inserts = repeatPreview.map(date => ({
+        ...payload, user_id: user.id, scheduled_date: date, series_id: seriesId
+      }))
+      const { error: e } = await supabase.from('schedules').insert(inserts)
+      error = e
+    } else {
+      ;({ error } = await schedulesApi.create({...payload, user_id:user.id}))
+    }
     if (error) { alert('저장 실패: ' + error.message); return }
     setModal(false); load()
   }
   const remove = async id => { await schedulesApi.remove(id); load() }
+  const removeSeries = async seriesId => {
+    await supabase.from('schedules').delete().eq('series_id', seriesId).eq('user_id', user.id)
+    load()
+  }
+  const handleRemove = (item) => {
+    if (item.series_id) {
+      setSeriesConfirm(item)
+    } else {
+      setConfirm(item.id)
+    }
+  }
   const executeCopyMove = async () => {
     if (!copyDate||!copyTarget) return
     if (copyMode==='copy') {
@@ -151,8 +212,9 @@ export default function SchedulePage() {
             {di.slice(0,2).map(ev=>(
               <div key={ev.id}
                 className={`calendar-event ${ev.is_gm?'gm':''} ${ev.status==='cancelled'?'cancelled':''} ${ev.status==='completed'?'completed':''}`}
-                onClick={e=>{e.stopPropagation();openEdit(ev)}} title={ev.title}
+                onClick={e=>{e.stopPropagation();setCalPopup(ev)}} title={ev.title}
               >
+                {ev.series_id && <span style={{marginRight:2}}>🔁</span>}
                 {fmtTime(ev.scheduled_time)&&<span style={{opacity:0.85,marginRight:2}}>{fmtTime(ev.scheduled_time)}</span>}
                 {ev.title}
               </div>
@@ -346,6 +408,7 @@ export default function SchedulePage() {
                   <DateBox dateStr={item.scheduled_date}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',marginBottom:3}}>
+                      {item.series_id && <span title="반복 일정">🔁</span>}
                       <span style={{fontWeight:600,fontSize:'0.88rem'}}>{item.title}</span>
                       <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{flexShrink:0}}>{STATUS_MAP[item.status]?.label}</span>
                       {item.is_gm&&<span className="badge badge-primary" style={{flexShrink:0}}>GM</span>}
@@ -361,7 +424,7 @@ export default function SchedulePage() {
                   <div style={{display:'flex',gap:4,flexShrink:0}}>
                     <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
                     <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
-                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
+                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>handleRemove(item)}>삭제</button>
                   </div>
                 </div>
               </div>
@@ -410,6 +473,56 @@ export default function SchedulePage() {
           <div className="form-group"><label className="form-label">시작 시간</label><input className="form-input" type="time" value={form.scheduled_time||''} onChange={set('scheduled_time')}/></div>
           <div className="form-group"><label className="form-label">종료 시간</label><input className="form-input" type="time" value={form.end_time||''} onChange={set('end_time')}/></div>
         </div>
+
+        {/* 반복 일정 - 새 일정 등록 시에만 표시 */}
+        {!editing && (
+          <div className="form-group">
+            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',userSelect:'none',marginBottom:8}}>
+              <input type="checkbox" checked={isRepeat} onChange={e=>{setIsRepeat(e.target.checked)}}
+                style={{width:16,height:16,accentColor:'var(--color-primary)',cursor:'pointer'}}/>
+              <span style={{fontSize:'0.88rem',fontWeight:600}}>🔁 반복 일정</span>
+            </label>
+            {isRepeat && (
+              <div style={{padding:'12px 14px',borderRadius:8,background:'var(--color-nav-active-bg)',border:'1px solid var(--color-border)'}}>
+                <div style={{display:'flex',gap:8,marginBottom:10}}>
+                  <button className={`btn btn-sm ${repeatMode==='count'?'btn-primary':'btn-outline'}`}
+                    onClick={()=>setRepeatMode('count')}>횟수로 설정</button>
+                  <button className={`btn btn-sm ${repeatMode==='date'?'btn-primary':'btn-outline'}`}
+                    onClick={()=>setRepeatMode('date')}>종료 날짜로 설정</button>
+                </div>
+                {repeatMode==='count' ? (
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <input className="form-input" type="number" min="2" max="52"
+                      value={repeatCount} onChange={e=>setRepeatCount(Number(e.target.value))}
+                      style={{width:80}}/>
+                    <span style={{fontSize:'0.85rem',color:'var(--color-text-light)'}}>주 반복 (첫 날 포함)</span>
+                  </div>
+                ) : (
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <input className="form-input" type="date" value={repeatEndDate}
+                      onChange={e=>setRepeatEndDate(e.target.value)} style={{flex:1}}/>
+                    <span style={{fontSize:'0.85rem',color:'var(--color-text-light)'}}>까지</span>
+                  </div>
+                )}
+                {repeatPreview.length > 0 && (
+                  <div style={{marginTop:10}}>
+                    <div style={{fontSize:'0.78rem',color:'var(--color-text-light)',marginBottom:6}}>
+                      📅 총 {repeatPreview.length}개 등록 예정
+                    </div>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                      {repeatPreview.map(d=>(
+                        <span key={d} style={{fontSize:'0.72rem',padding:'2px 8px',borderRadius:100,
+                          background:'var(--color-surface)',border:'1px solid var(--color-border)'}}>
+                          {format(new Date(d+'T00:00:00'),'M/d(EEE)',{locale:ko})}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         <div className="grid-2">
           <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
           <div className="form-group"><label className="form-label">사이트</label><input className="form-input" placeholder="roll20, 코코포리아..." value={form.location||''} onChange={set('location')}/></div>
@@ -475,6 +588,72 @@ export default function SchedulePage() {
         <div className="form-group"><label className="form-label">메모 (사유 등)</label><input className="form-input" placeholder="예: 시험, 출장, 개인 사정..." value={blockedForm.description||''} onChange={setB('description')} autoComplete="off"/></div>
       </Modal>
       <ConfirmDialog isOpen={!!blockedConfirm} onClose={()=>setBlockedConfirm(null)} onConfirm={()=>removeBlocked(blockedConfirm)} message="이 불가 날짜를 삭제하시겠어요?"/>
+
+      {/* 월뷰 상세 팝업 */}
+      {calPopup && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}
+          onClick={e=>e.target===e.currentTarget&&setCalPopup(null)}>
+          <div style={{background:'var(--color-surface)',borderRadius:16,padding:24,width:'100%',maxWidth:380,border:'1px solid var(--color-border)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
+              <div>
+                {calPopup.series_id && <span style={{fontSize:'0.75rem',color:'var(--color-primary)',marginBottom:4,display:'block'}}>🔁 반복 일정</span>}
+                <h3 style={{fontWeight:700,fontSize:'1rem',color:'var(--color-accent)'}}>{calPopup.title}</h3>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setCalPopup(null)}><Mi size="sm">close</Mi></button>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:16,fontSize:'0.85rem',color:'var(--color-text-light)'}}>
+              <div><Mi size="sm" color="light">calendar_month</Mi> {calPopup.scheduled_date}
+                {calPopup.scheduled_time && ` · ${fmtTime(calPopup.scheduled_time)}${calPopup.end_time?` ~ ${fmtTime(calPopup.end_time)}`:''}`}
+              </div>
+              {calPopup.system_name && <div><Mi size="sm" color="light">sports_esports</Mi> {calPopup.system_name}</div>}
+              {calPopup.location && <div><Mi size="sm" color="light">place</Mi> {calPopup.location}</div>}
+              <div style={{display:'flex',gap:8}}>
+                <span className={`badge ${STATUS_MAP[calPopup.status]?.badge||'badge-gray'}`}>{STATUS_MAP[calPopup.status]?.label}</span>
+                {calPopup.is_gm && <span className="badge badge-primary">GM</span>}
+                {calPopup.is_intro && <span className="badge badge-green">입문탁</span>}
+              </div>
+              {calPopup.description && <p style={{marginTop:4,lineHeight:1.65}}>{calPopup.description}</p>}
+            </div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:14,borderTop:'1px solid var(--color-border)'}}>
+              <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
+                onClick={()=>{ setCalPopup(null); handleRemove(calPopup) }}>
+                <Mi size="sm" color="light">delete</Mi> 삭제
+              </button>
+              <div style={{display:'flex',gap:8}}>
+                <button className="btn btn-outline btn-sm" onClick={()=>setCalPopup(null)}>닫기</button>
+                <button className="btn btn-primary btn-sm"
+                  onClick={()=>{ setCalPopup(null); openEdit(calPopup) }}>
+                  <Mi size="sm" color="white">edit</Mi> 수정
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 시리즈 삭제 confirm */}
+      {seriesConfirm && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:10000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div style={{background:'var(--color-surface)',borderRadius:16,padding:24,width:'100%',maxWidth:360,border:'1px solid var(--color-border)'}}>
+            <h3 style={{fontWeight:700,marginBottom:8,fontSize:'0.95rem'}}>일정 삭제</h3>
+            <p style={{fontSize:'0.85rem',color:'var(--color-text-light)',marginBottom:20,lineHeight:1.65}}>
+              이 일정은 반복 일정 시리즈예요.<br/>어떻게 삭제할까요?
+            </p>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <button className="btn btn-outline btn-sm" style={{justifyContent:'center'}}
+                onClick={()=>{ remove(seriesConfirm.id); setSeriesConfirm(null) }}>
+                이 일정만 삭제
+              </button>
+              <button className="btn btn-sm" style={{background:'#e57373',borderColor:'#e57373',color:'white',justifyContent:'center'}}
+                onClick={()=>{ removeSeries(seriesConfirm.series_id); setSeriesConfirm(null) }}>
+                시리즈 전체 삭제
+              </button>
+              <button className="btn btn-ghost btn-sm" style={{justifyContent:'center'}}
+                onClick={()=>setSeriesConfirm(null)}>취소</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
