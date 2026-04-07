@@ -13,8 +13,28 @@ export default function AuthPage() {
 
   const set = k => e => setForm(f => ({...f, [k]: e.target.value}))
 
+  // 탈퇴 이메일 체크 공통 함수
+  const checkWithdrawn = async (email) => {
+    try {
+      const { data } = await supabase
+        .from('withdrawn_emails').select('withdrawn_at')
+        .eq('email', email.toLowerCase()).maybeSingle()
+      if (!data) return null
+      const availableAt = new Date(new Date(data.withdrawn_at).getTime() + 24 * 60 * 60 * 1000)
+      const now = new Date()
+      if (availableAt > now) {
+        const remainHours = Math.ceil((availableAt - now) / 1000 / 60 / 60)
+        return `탈퇴한 계정입니다. 약 ${remainHours}시간 후 재가입이 가능합니다.`
+      }
+      return null
+    } catch { return null } // 조회 실패 시 허용
+  }
+
   const handleLogin = async e => {
     e.preventDefault(); setLoading(true); setError(null)
+    // 탈퇴 이메일 체크
+    const withdrawnMsg = await checkWithdrawn(form.email)
+    if (withdrawnMsg) { setError(withdrawnMsg); setLoading(false); return }
     const { error } = await signIn(form.email, form.password)
     if (error) setError('이메일 또는 비밀번호가 올바르지 않아요.')
     else navigate('/dashboard')
@@ -26,22 +46,9 @@ export default function AuthPage() {
     if (!form.username || !/^[a-zA-Z0-9_]+$/.test(form.username)) {
       setError('사용자명은 영문, 숫자, 밑줄(_)만 사용 가능해요.'); setLoading(false); return
     }
-    // 탈퇴 이메일 24시간 재가입 제한 체크 (최우선)
-    try {
-      const email = form.email?.toLowerCase()
-      const { data: withdrawn } = await supabase
-        .from('withdrawn_emails').select('withdrawn_at').eq('email', email).single()
-      if (withdrawn) {
-        const withdrawnAt = new Date(withdrawn.withdrawn_at)
-        const availableAt = new Date(withdrawnAt.getTime() + 24 * 60 * 60 * 1000)
-        const now = new Date()
-        if (availableAt > now) {
-          const remainHours = Math.ceil((availableAt - now) / 1000 / 60 / 60)
-          setError(`탈퇴한 계정입니다. 약 ${remainHours}시간 후 재가입이 가능합니다.`)
-          setLoading(false); return
-        }
-      }
-    } catch { /* 조회 실패 시 가입 허용 */ }
+    // 탈퇴 이메일 체크 (최우선)
+    const withdrawnMsg = await checkWithdrawn(form.email)
+    if (withdrawnMsg) { setError(withdrawnMsg); setLoading(false); return }
 
     const { error } = await signUp(form.email, form.password, form.username, form.displayName||form.username)
     if (error) {
