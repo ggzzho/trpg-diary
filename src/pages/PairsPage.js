@@ -7,7 +7,7 @@ import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 
 const BLANK = { name:'', nickname:'', memo:'', relations:[], first_met_date:'', pair_image_url:'' }
-const cleanPayload = f => ({...f, first_met_date:f.first_met_date||null, relations:f.relations||[]})
+const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, first_met_date:f.first_met_date||null, relations:f.relations||[]} }
 function calcDday(dateStr) {
   if (!dateStr) return null
   return Math.floor((new Date()-new Date(dateStr))/(1000*60*60*24)) + 1

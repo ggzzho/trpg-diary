@@ -14,7 +14,7 @@ const BLANK = {
   session_image_url:'', scenario_link:'', series_tag:'', session_log_url:'',
   spoiler_content:'', spoiler_password:''
 }
-const cleanPayload = f => ({...f, played_date:f.played_date||null, start_date:f.start_date||null})
+const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, played_date:f.played_date||null, start_date:f.start_date||null} }
 
 // ── 태그칩: 완전 불투명 ──
 const TAG_COLORS = {

@@ -9,7 +9,7 @@ import { RuleSelect } from '../components/RuleSelect'
 
 const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status:'unplayed', memo:'', purchase_date:'', scenario_url:'' }
 const STATUS_MAP = { unplayed:{label:'미플',badge:'badge-gray'}, played:{label:'PL 완료',badge:'badge-green'}, gm_done:{label:'GM 완료',badge:'badge-primary'}, want:{label:'위시리스트',badge:'badge-blue'} }
-const cleanPayload = f => ({...f, purchase_date:f.purchase_date||null, parent_id:f.parent_id||null})
+const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, purchase_date:f.purchase_date||null, parent_id:f.parent_id||null} }
 
 export function ScenarioPage() {
   const { user, profile } = useAuth()

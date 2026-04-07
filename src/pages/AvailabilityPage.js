@@ -38,8 +38,9 @@ export function AvailabilityPage() {
   const openEdit = item => { setEditing(item); setForm({...item}); setModal(true) }
   const save = async () => {
     if (!form.title) return
-    if (editing) await availabilityApi.update(editing.id, form)
-    else await availabilityApi.create({...form,user_id:user.id})
+    const { id, user_id, created_at, ...formFields } = form
+    if (editing) await availabilityApi.update(editing.id, formFields)
+    else await availabilityApi.create({...formFields,user_id:user.id})
     setModal(false); load()
   }
   const remove = async id => { await availabilityApi.remove(id); load() }

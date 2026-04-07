@@ -57,7 +57,8 @@ export function RulebookPage() {
 
   const save = async () => {
     if (!form.title) return
-    const payload = { ...form, parent_id: isSuppl ? (form.parent_id || null) : null }
+    const { id, user_id, created_at, ...formFields } = form
+    const payload = { ...formFields, parent_id: isSuppl ? (form.parent_id || null) : null }
     if (editing) await supabase.from('rulebooks').update(payload).eq('id', editing.id)
     else await supabase.from('rulebooks').insert({ ...payload, user_id:user.id })
     setModal(false)

@@ -117,7 +117,8 @@ export function BookmarkPage() {
   const save = async () => {
     if (!form.url) return
     const validTagNames = tags.map(t=>t.name)
-    const payload = {...form, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
+    const { id, user_id, created_at, ...formFields } = form
+    const payload = {...formFields, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
     if (editing) await bookmarksApi.update(editing.id, payload)
     else await bookmarksApi.create({...payload,user_id:user.id})
     setModal(false); load()
