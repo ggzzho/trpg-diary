@@ -26,7 +26,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 import './index.css'
 
 // vercel.app으로 접속 시 co.kr로 강제 리다이렉트
-if (typeof window !== 'undefined' &&
+/*if (typeof window !== 'undefined' &&
     window.location.hostname.includes('vercel.app')) {
   window.location.replace(
     window.location.href.replace(
@@ -34,7 +34,7 @@ if (typeof window !== 'undefined' &&
       'trpg-diary.co.kr'
     )
   )
-}
+}*/
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
