@@ -11,7 +11,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from '@dnd-kit/utilities'
 
 const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
-const FORMAT_MAP = { physical:'실물', digital:'전자', both:'둘 다' }
+const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자' }
 const DEFAULT_STATUS_TAGS = ['미플', 'PL 완료', 'GM 완료', '위시리스트']
 
 function SortableWrapper({ id, children }) {
@@ -379,7 +379,7 @@ export function ScenarioPage() {
           <div className="form-group"><label className="form-label">인원</label><input className="form-input" placeholder="3~5인, 다인, 타이..." value={form.player_count||''} onChange={set('player_count')}/></div>
           <div className="form-group"><label className="form-label">형태</label>
             <select className="form-select" value={form.format||'physical'} onChange={set('format')}>
-              <option value="physical">실물</option><option value="digital">전자</option><option value="both">둘 다</option>
+              <option value="physical">실물</option><option value="digital">전자</option><option value="both">실물+전자</option>
             </select>
           </div>
         </div>

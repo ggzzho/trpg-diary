@@ -574,7 +574,7 @@ export default function PublicProfilePage() {
                         {item.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
                         {item.author && <span className="text-xs text-light"><Mi size='sm' color='light'>edit</Mi> {item.author}</span>}
                         {item.player_count && <span className="text-xs text-light"><Mi size="sm" color="light">group</Mi> {item.player_count}</span>}
-                        {item.format && <span className="text-xs text-light"><Mi size='sm' color='light'>inventory_2</Mi> {item.format==='physical'?'실물':item.format==='digital'?'전자':'둘 다'}</span>}
+                        {item.format && <span className="text-xs text-light"><Mi size='sm' color='light'>inventory_2</Mi> {item.format==='physical'?'실물':item.format==='digital'?'전자':'실물+전자'}</span>}
                       </div>
                       {item.scenario_url && <a href={item.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:2, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
                     </div>
