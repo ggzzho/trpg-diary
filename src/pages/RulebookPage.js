@@ -94,12 +94,16 @@ export function RulebookPage() {
   const removeTagDef = async id => {
     const tag = availableTags.find(t => t.id === id)
     if (!tag) return
-    const affected = items.filter(i => i.tags?.includes(tag.name))
-    await Promise.all(
-      affected.map(i =>
-        supabase.from('rulebooks').update({ tags: i.tags.filter(t => t !== tag.name) }).eq('id', i.id)
+    // items 상태 대신 DB에서 직접 최신 데이터를 읽어 stale state 문제 방지
+    const { data: freshItems } = await supabase.from('rulebooks').select('id, tags').eq('user_id', user.id)
+    const affected = (freshItems || []).filter(i => i.tags?.includes(tag.name))
+    if (affected.length > 0) {
+      await Promise.all(
+        affected.map(i =>
+          supabase.from('rulebooks').update({ tags: i.tags.filter(t => t !== tag.name) }).eq('id', i.id)
+        )
       )
-    )
+    }
     await supabase.from('rulebook_tags').delete().eq('id', id)
     await loadTags()
     await load()
@@ -147,7 +151,7 @@ export function RulebookPage() {
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
           
-          {item.tags?.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}
+          {item.tags?.filter(t => availableTags.some(at => at.name === t)).map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}
         </div>
         {item.memo && <p className="text-xs text-light" style={{ marginTop:3 }}>{item.memo}</p>}
       </div>
@@ -210,7 +214,7 @@ export function RulebookPage() {
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                         
-                        {item.tags?.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}
+                        {item.tags?.filter(t => availableTags.some(at => at.name === t)).map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}
                       </div>
                       {item.memo && <p className="text-xs text-light" style={{ marginTop:3 }}>{item.memo}</p>}
                     </div>
