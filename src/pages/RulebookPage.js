@@ -38,8 +38,8 @@ function SortableSupplRow({ item, availableTags, onEdit, onRemove }) {
           <div style={{ fontWeight:500, fontSize:'0.88rem', marginBottom:2, display:'flex', alignItems:'center', gap:6 }}>
             {item.color && <span style={{ width:7, height:7, borderRadius:'50%', background:item.color, flexShrink:0, display:'inline-block' }}/>}
             {item.title}
+            {item.publisher && <span className="text-xs text-light" style={{ fontWeight:400 }}>{item.publisher}</span>}
           </div>
-          {item.publisher && <p className="text-xs text-light" style={{ marginBottom:2 }}>{item.publisher}</p>}
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             {item.tags?.filter(t => availableTags.some(at => at.name === t)).map(t =>
               <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>
@@ -78,13 +78,13 @@ function SortableRulebookCard({ item, suppls, isOpen, availableTags, onToggle, o
             <div style={{ fontWeight:700, fontSize:'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:8 }}>
               {item.color && <span style={{ width:8, height:8, borderRadius:'50%', background:item.color, flexShrink:0, display:'inline-block' }}/>}
               {item.title}
+              {item.publisher && <span className="text-xs text-light" style={{ fontWeight:400 }}>{item.publisher}</span>}
               {suppls.length > 0 && (
                 <button onClick={() => onToggle(item.id)} style={{ background:'none', border:'none', cursor:'pointer', padding:0, color:'var(--color-text-light)', display:'flex', alignItems:'center' }}>
                   <Mi size="sm" color="light">{isOpen ? 'expand_less' : 'expand_more'}</Mi>
                 </button>
               )}
             </div>
-            {item.publisher && <p className="text-xs text-light" style={{ marginBottom:2 }}>{item.publisher}</p>}
             <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
               {item.tags?.filter(t => availableTags.some(at => at.name === t)).map(t =>
                 <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>

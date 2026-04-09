@@ -503,8 +503,8 @@ export default function PublicProfilePage() {
               <div style={{ fontWeight: isChild ? 500 : 700, fontSize:'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:6 }}>
                 {isChild && <span style={{ fontSize:'0.65rem', color:'var(--color-text-light)', opacity:0.7 }}>└</span>}
                 {r.title}
+                {r.publisher && <span className="text-xs text-light" style={{ fontWeight:400 }}>{r.publisher}</span>}
               </div>
-              {r.publisher && <p className="text-xs text-light" style={{ marginBottom:3 }}>{r.publisher}</p>}
               {r.tags?.length > 0 && <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginTop:3 }}>{r.tags.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}</div>}
             </div>
           </div>
