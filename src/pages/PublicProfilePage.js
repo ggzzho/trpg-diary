@@ -1,5 +1,6 @@
 // src/pages/PublicProfilePage.js
 import React, { useEffect, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -156,24 +157,6 @@ export default function PublicProfilePage() {
       const { data:p, error } = await getProfile(username)
       if (error || !p) { setNotFound(true); setLoading(false); return }
       setProfile(p)
-      // 탭 제목: ✦ TRPG Diary - 닉네임 또는 @아이디
-      const displayName = p.display_name || p.username
-      document.title = `✦ TRPG Diary - ${displayName}`
-
-      // OG 메타태그 동적 업데이트
-      const ogImage = p.header_image_url || p.avatar_url || 'https://trpg-diary.co.kr/logo512.png'
-      const ogTitle = `${displayName}의 TRPG Diary`
-      const ogDesc = p.play_style || `${displayName}님의 TRPG 다이어리 - trpg-diary.co.kr`
-      const ogUrl = `https://trpg-diary.co.kr/u/${p.username}`
-      const setMeta = (prop, val, attr='property') => {
-        let el = document.querySelector(`meta[${attr}="${prop}"]`)
-        if (!el) { el = document.createElement('meta'); el.setAttribute(attr, prop); document.head.appendChild(el) }
-        el.setAttribute('content', val)
-      }
-      setMeta('og:title', ogTitle); setMeta('og:description', ogDesc)
-      setMeta('og:image', ogImage); setMeta('og:url', ogUrl)
-      setMeta('twitter:title', ogTitle, 'name'); setMeta('twitter:description', ogDesc, 'name')
-      setMeta('twitter:image', ogImage, 'name')
 
       // 페어 정렬 설정 동기화
       if (p.pair_sort_order) setPairSort(p.pair_sort_order)
@@ -265,8 +248,25 @@ export default function PublicProfilePage() {
   // 각 탭 페이지네이션 - pagedPairs 계산
   const pagedPairs = sortedPairs.slice((pairsPagination.page-1)*pairsPagination.perPage, pairsPagination.page*pairsPagination.perPage)
 
+  const ogTitle = profile ? `${profile.display_name || profile.username}의 TRPG Diary` : 'TRPG Diary ✦'
+  const ogDesc  = profile?.play_style || (profile ? `${profile.display_name || profile.username}님의 TRPG 다이어리 - trpg-diary.co.kr` : '나만의 TRPG Diary')
+  const ogImage = profile?.header_image_url || profile?.avatar_url || 'https://trpg-diary.co.kr/logo512.png'
+  const ogUrl   = `https://trpg-diary.co.kr/u/${username}`
+
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
+      <Helmet>
+        <title>{ogTitle}</title>
+        <meta property="og:type"        content="profile" />
+        <meta property="og:title"       content={ogTitle} />
+        <meta property="og:description" content={ogDesc} />
+        <meta property="og:image"       content={ogImage} />
+        <meta property="og:url"         content={ogUrl} />
+        <meta name="twitter:card"        content="summary_large_image" />
+        <meta name="twitter:title"       content={ogTitle} />
+        <meta name="twitter:description" content={ogDesc} />
+        <meta name="twitter:image"       content={ogImage} />
+      </Helmet>
 
       {/* 로그인 상태 표시 배지 - auth 로딩 완료 후 표시 */}
       {!authLoading && (
