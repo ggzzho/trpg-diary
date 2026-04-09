@@ -45,7 +45,7 @@ export default function SchedulePage() {
   const [blockedItems, setBlockedItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
-  const [blockedModal, setBlockedModal] = useState(false)
+  const [modalTab, setModalTab] = useState('session') // 'session' | 'blocked'
   const [editingBlocked, setEditingBlocked] = useState(null)
   const [blockedForm, setBlockedForm] = useState(BLOCKED_BLANK)
   const [blockedConfirm, setBlockedConfirm] = useState(null)
@@ -74,10 +74,6 @@ export default function SchedulePage() {
   const [calPopup, setCalPopup] = useState(null) // 월뷰 상세 팝업
   const [selectedDate, setSelectedDate] = useState(null) // 월뷰 날짜 선택 패널
   const [seriesConfirm, setSeriesConfirm] = useState(null) // 시리즈 삭제 확인
-  // 불가 날짜 동시 등록 (세션 모달 내)
-  const [addBlockedToo, setAddBlockedToo] = useState(false)
-  const [blockedTooFrom, setBlockedTooFrom] = useState('')
-  const [blockedTooUntil, setBlockedTooUntil] = useState('')
   const prevViewMode = React.useRef('calendar')
   // 반복 일정 폼 state
   const [isRepeat, setIsRepeat] = useState(false)
@@ -121,8 +117,8 @@ export default function SchedulePage() {
 
   const setB = k => e => setBlockedForm(f=>({...f,[k]:e.target.value}))
   const resetRepeatBlocked = () => { setIsRepeatBlocked(false); setRepeatModeBlocked('count'); setRepeatCountBlocked(4); setRepeatEndDateBlocked(''); setRepeatPreviewBlocked([]) }
-  const openNewBlocked = () => { setEditingBlocked(null); setBlockedForm({...BLOCKED_BLANK, scheduled_date:new Date().toISOString().split('T')[0]}); resetRepeatBlocked(); setBlockedModal(true) }
-  const openEditBlocked = item => { setEditingBlocked(item); setBlockedForm({...item}); resetRepeatBlocked(); setBlockedModal(true) }
+  const openNewBlocked = (date) => { setEditingBlocked(null); setBlockedForm({...BLOCKED_BLANK, scheduled_date:date||new Date().toISOString().split('T')[0]}); resetRepeatBlocked(); setModalTab('blocked'); setModal(true) }
+  const openEditBlocked = item => { setEditingBlocked(item); setBlockedForm({...item}); resetRepeatBlocked(); setModalTab('blocked'); setModal(true) }
   const saveBlocked = async () => {
     if (!blockedForm.scheduled_date) return
     const { id, user_id, created_at, ...blockedFields } = blockedForm
@@ -143,7 +139,7 @@ export default function SchedulePage() {
       error = res.error
     }
     if (error) { alert('저장 실패: ' + error.message); return }
-    setBlockedModal(false); load()
+    setModal(false); load()
   }
   const removeBlocked = async id => { await schedulesApi.remove(id); load() }
   const removeBlockedSeries = async seriesId => {
@@ -157,9 +153,8 @@ export default function SchedulePage() {
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const resetRepeat = () => { setIsRepeat(false); setRepeatMode('count'); setRepeatCount(4); setRepeatEndDate(''); setRepeatPreview([]) }
-  const resetBlockedToo = () => { setAddBlockedToo(false); setBlockedTooFrom(''); setBlockedTooUntil('') }
-  const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||new Date().toISOString().split('T')[0]}); resetRepeat(); resetBlockedToo(); setModal(true) }
-  const openEdit = item => { setEditing(item); setForm({...item}); resetRepeat(); resetBlockedToo(); setModal(true) }
+  const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||new Date().toISOString().split('T')[0]}); resetRepeat(); setModalTab('session'); setModal(true) }
+  const openEdit = item => { setEditing(item); setForm({...item}); resetRepeat(); setModalTab('session'); setModal(true) }
 
   const calcRepeatDates = (baseDate, mode, count, endDate) => {
     if (!baseDate) return []
@@ -203,16 +198,6 @@ export default function SchedulePage() {
       ;({ error } = await schedulesApi.create({...payload, user_id:user.id}))
     }
     if (error) { alert('저장 실패: ' + error.message); return }
-    // 불가 시간 동시 등록
-    if (addBlockedToo && form.scheduled_date) {
-      await schedulesApi.create({
-        user_id: user.id, title: '', entry_type: 'blocked',
-        scheduled_date: form.scheduled_date,
-        blocked_from: blockedTooFrom || null,
-        blocked_until: blockedTooUntil || null,
-        description: null,
-      })
-    }
     setModal(false); load()
   }
   const remove = async id => { await schedulesApi.remove(id); load() }
@@ -438,10 +423,8 @@ export default function SchedulePage() {
       <div className="page-header flex justify-between items-center">
         <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>calendar_month</Mi>일정 관리</h1><p className="page-subtitle">예정된 세션과 지나간 플레이 일정을 관리해요</p></div>
         <div className="flex gap-8">
-          {mainTab==='session'
-            ? <button className="btn btn-primary" onClick={()=>openNew()}><Mi size='sm' color='white'>add</Mi> 일정 추가</button>
-            : <button className="btn btn-primary" style={{background:'#e57373',borderColor:'#e57373'}} onClick={openNewBlocked}><Mi size='sm' color='white'>block</Mi> 불가 날짜 추가</button>
-          }
+          <button className="btn btn-primary" onClick={()=>openNew()}><Mi size='sm' color='white'>add</Mi> 일정 추가</button>
+          <button className="btn btn-primary" style={{background:'#e57373',borderColor:'#e57373'}} onClick={()=>openNewBlocked()}><Mi size='sm' color='white'>block</Mi> 불가 날짜 추가</button>
         </div>
       </div>
 
@@ -487,58 +470,62 @@ export default function SchedulePage() {
                     <button className="btn btn-primary btn-sm" onClick={()=>openNew(selectedDate)} title="일정 추가">
                       <Mi size='sm' color='white'>add</Mi>
                     </button>
+                    <button className="btn btn-sm" style={{background:'#e57373',borderColor:'#e57373',color:'white'}} onClick={()=>openNewBlocked(selectedDate)} title="불가 날짜 추가">
+                      <Mi size='sm' color='white'>block</Mi>
+                    </button>
                     <button className="btn btn-ghost btn-sm" onClick={()=>setSelectedDate(null)}>
                       <Mi size='sm'>close</Mi>
                     </button>
                   </div>
                 </div>
                 {(()=>{
-                  const dayItems=items.filter(x=>x.scheduled_date===selectedDate).sort((a,b)=>(a.scheduled_time||'').localeCompare(b.scheduled_time||''))
-                  const dayBlocked=blockedItems.filter(x=>x.scheduled_date===selectedDate)
-                  if(dayItems.length===0&&dayBlocked.length===0) return <p className="text-sm text-light" style={{textAlign:'center',padding:'12px 0'}}>일정이 없어요</p>
+                  const allDay = [
+                    ...items.filter(x=>x.scheduled_date===selectedDate).map(i=>({...i,_type:'session',_sortTime:i.scheduled_time||'99:99'})),
+                    ...blockedItems.filter(x=>x.scheduled_date===selectedDate).map(i=>({...i,_type:'blocked',_sortTime:i.blocked_from||'99:99'}))
+                  ].sort((a,b)=>a._sortTime.localeCompare(b._sortTime))
+                  if(allDay.length===0) return <p className="text-sm text-light" style={{textAlign:'center',padding:'12px 0'}}>일정이 없어요</p>
                   return <>
-                    {dayItems.map(item=>(
-                      <div key={item.id} style={{padding:'8px 0',borderBottom:'1px solid var(--color-border)'}}>
-                        <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
+                    {allDay.map(item=>(
+                      item._type==='blocked'
+                      ? <div key={item.id} style={{padding:'8px 0',borderBottom:'1px solid var(--color-border)',display:'flex',alignItems:'center',gap:8}}>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontWeight:600,fontSize:'0.82rem',marginBottom:4}}>{item.title}</div>
-                            <div className="text-xs text-light" style={{display:'flex',flexWrap:'wrap',gap:'2px 8px'}}>
-                              {(item.scheduled_time||item.end_time)&&(
-                                <span>🕐 {fmtTime(item.scheduled_time)}{item.end_time?` ~ ${fmtTime(item.end_time)}`:''}</span>
-                              )}
-                              {item.system_name&&<span><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}</span>}
+                            <div style={{fontWeight:600,fontSize:'0.82rem',color:'#e57373',marginBottom:2}}>
+                              🚫 {item.blocked_from?`${fmtTime(item.blocked_from)}${item.blocked_until?`~${fmtTime(item.blocked_until)}`:'~'}`:'종일 불가'}
                             </div>
-                            <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:4}}>
-                              <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`}>{STATUS_MAP[item.status]?.label}</span>
-                              {item.is_gm
-                                ? <span className="badge badge-primary">GM</span>
-                                : <span className="badge badge-blue" style={{opacity:0.8}}>PL</span>
-                              }
-                              {item.is_intro&&<span className="badge badge-green">입문탁{item.intro_rule?` · ${item.intro_rule}`:''}</span>}
-                            </div>
+                            {item.description&&<div className="text-xs text-light">{item.description}</div>}
                           </div>
                           <div style={{display:'flex',gap:4,flexShrink:0}}>
-                            <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
-                            <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}><Mi size='sm'>edit</Mi></button>
-                            <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>handleRemove(item)}><Mi size='sm'>delete</Mi></button>
+                            <button className="btn btn-ghost btn-sm" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
+                            <button className="btn btn-ghost btn-sm" onClick={()=>openEditBlocked(item)}><Mi size='sm'>edit</Mi></button>
+                            <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>handleRemoveBlocked(item)}><Mi size='sm'>delete</Mi></button>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                    {dayBlocked.map(item=>(
-                      <div key={item.id} style={{padding:'8px 0',borderBottom:'1px solid var(--color-border)',display:'flex',alignItems:'center',gap:8}}>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontWeight:600,fontSize:'0.82rem',color:'#e57373',marginBottom:2}}>
-                            🚫 {item.blocked_from?`${fmtTime(item.blocked_from)}${item.blocked_until?`~${fmtTime(item.blocked_until)}`:'~'}`:'종일 불가'}
+                      : <div key={item.id} style={{padding:'8px 0',borderBottom:'1px solid var(--color-border)'}}>
+                          <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontWeight:600,fontSize:'0.82rem',marginBottom:4}}>{item.title}</div>
+                              <div className="text-xs text-light" style={{display:'flex',flexWrap:'wrap',gap:'2px 8px'}}>
+                                {(item.scheduled_time||item.end_time)&&(
+                                  <span>🕐 {fmtTime(item.scheduled_time)}{item.end_time?` ~ ${fmtTime(item.end_time)}`:''}</span>
+                                )}
+                                {item.system_name&&<span><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}</span>}
+                              </div>
+                              <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:4}}>
+                                <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`}>{STATUS_MAP[item.status]?.label}</span>
+                                {item.is_gm
+                                  ? <span className="badge badge-primary">GM</span>
+                                  : <span className="badge badge-blue" style={{opacity:0.8}}>PL</span>
+                                }
+                                {item.is_intro&&<span className="badge badge-green">입문탁{item.intro_rule?` · ${item.intro_rule}`:''}</span>}
+                              </div>
+                            </div>
+                            <div style={{display:'flex',gap:4,flexShrink:0}}>
+                              <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
+                              <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}><Mi size='sm'>edit</Mi></button>
+                              <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>handleRemove(item)}><Mi size='sm'>delete</Mi></button>
+                            </div>
                           </div>
-                          {item.description&&<div className="text-xs text-light">{item.description}</div>}
                         </div>
-                        <div style={{display:'flex',gap:4,flexShrink:0}}>
-                          <button className="btn btn-ghost btn-sm" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
-                          <button className="btn btn-ghost btn-sm" onClick={()=>openEditBlocked(item)}><Mi size='sm'>edit</Mi></button>
-                          <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>handleRemoveBlocked(item)}><Mi size='sm'>delete</Mi></button>
-                        </div>
-                      </div>
                     ))}
                   </>
                 })()}
@@ -619,9 +606,33 @@ export default function SchedulePage() {
           </div>
       )}
 
-      <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'일정 수정':'새 일정 추가'}
-        footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
+      <Modal isOpen={modal} onClose={()=>setModal(false)}
+        title={modalTab==='session' ? (editing?'일정 수정':'새 일정 추가') : (editingBlocked?'불가 날짜 수정':'불가 날짜 추가')}
+        footer={<>
+          <button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button>
+          {modalTab==='session'
+            ? <button className="btn btn-primary btn-sm" onClick={save}>저장</button>
+            : <button className="btn btn-primary btn-sm" style={{background:'#e57373',borderColor:'#e57373'}} onClick={saveBlocked}>저장</button>
+          }
+        </>}
       >
+        {/* 탭 전환 - 수정 모드가 아닐 때만 표시 */}
+        {!editing && !editingBlocked && (
+          <div style={{display:'flex',gap:0,marginBottom:18,borderBottom:'2px solid var(--color-border)'}}>
+            <button
+              onClick={()=>setModalTab('session')}
+              style={{flex:1,padding:'8px 0',fontWeight:600,fontSize:'0.85rem',background:'none',border:'none',borderBottom:modalTab==='session'?'2px solid var(--color-primary)':'2px solid transparent',color:modalTab==='session'?'var(--color-primary)':'var(--color-text-light)',cursor:'pointer',marginBottom:-2,transition:'all 0.15s'}}>
+              <Mi size='sm' color={modalTab==='session'?'primary':'light'}>calendar_month</Mi> 세션 일정
+            </button>
+            <button
+              onClick={()=>setModalTab('blocked')}
+              style={{flex:1,padding:'8px 0',fontWeight:600,fontSize:'0.85rem',background:'none',border:'none',borderBottom:modalTab==='blocked'?'2px solid #e57373':'2px solid transparent',color:modalTab==='blocked'?'#e57373':'var(--color-text-light)',cursor:'pointer',marginBottom:-2,transition:'all 0.15s'}}>
+              <Mi size='sm' color={modalTab==='blocked'?'light':'light'}>block</Mi> 불가 날짜
+            </button>
+          </div>
+        )}
+        {/* ── 세션 폼 ── */}
+        {modalTab==='session' && <>
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
         <div className="grid-2">
           <div className="form-group"><label className="form-label">날짜 *</label><input className="form-input" type="date" value={form.scheduled_date} onChange={set('scheduled_date')}/></div>
@@ -709,29 +720,68 @@ export default function SchedulePage() {
           )}
         </div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.description||''} onChange={set('description')} style={{minHeight:72}}/></div>
-        {/* 불가 시간 동시 등록 (새 일정일 때만, 날짜가 있을 때만) */}
-        {!editing && form.scheduled_date && (
-          <div style={{borderTop:'1px solid var(--color-border)',paddingTop:12,marginTop:4}}>
-            <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:'0.85rem',marginBottom:8}}>
-              <input type="checkbox" checked={addBlockedToo} onChange={e=>setAddBlockedToo(e.target.checked)}
-                style={{width:15,height:15,accentColor:'#e57373',cursor:'pointer'}}/>
-              <span style={{fontWeight:600}}>🚫 이 날 불가 시간도 함께 등록</span>
-            </label>
-            {addBlockedToo && (
-              <div style={{display:'flex',gap:8,flexWrap:'wrap',paddingLeft:22}}>
-                <div className="form-group" style={{marginBottom:0}}>
-                  <label className="form-label">불가 시작</label>
-                  <input className="form-input" type="time" value={blockedTooFrom} onChange={e=>setBlockedTooFrom(e.target.value)}/>
-                </div>
-                <div className="form-group" style={{marginBottom:0}}>
-                  <label className="form-label">불가 종료</label>
-                  <input className="form-input" type="time" value={blockedTooUntil} onChange={e=>setBlockedTooUntil(e.target.value)}/>
-                </div>
-                <p className="text-xs text-light" style={{width:'100%',marginTop:-4}}>시간 미입력 시 종일 불가로 표시돼요</p>
-              </div>
-            )}
+        </>}
+        {/* ── 불가 날짜 폼 ── */}
+        {modalTab==='blocked' && <>
+          <div className="form-group"><label className="form-label">날짜 *</label><input className="form-input" type="date" value={blockedForm.scheduled_date} onChange={setB('scheduled_date')}/></div>
+          <div className="grid-2">
+            <div className="form-group"><label className="form-label">불가 시작 시간</label><input className="form-input" type="time" value={blockedForm.blocked_from||''} onChange={setB('blocked_from')}/></div>
+            <div className="form-group"><label className="form-label">불가 종료 시간</label><input className="form-input" type="time" value={blockedForm.blocked_until||''} onChange={setB('blocked_until')}/></div>
           </div>
-        )}
+          <p className="text-xs text-light" style={{marginTop:-8,marginBottom:12}}>시간 미입력 시 종일 불가로 표시돼요</p>
+          {/* 반복 설정 - 신규 등록 시에만 표시 */}
+          {!editingBlocked && (
+            <div className="form-group">
+              <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',userSelect:'none',marginBottom:8}}>
+                <input type="checkbox" checked={isRepeatBlocked} onChange={e=>setIsRepeatBlocked(e.target.checked)}
+                  style={{width:16,height:16,accentColor:'#e57373',cursor:'pointer'}}/>
+                <span style={{fontSize:'0.88rem',fontWeight:600}}>🔁 반복 불가 날짜</span>
+              </label>
+              {isRepeatBlocked && (
+                <div style={{padding:'12px 14px',borderRadius:8,background:'rgba(229,115,115,0.06)',border:'1px solid rgba(229,115,115,0.2)'}}>
+                  <div style={{display:'flex',gap:8,marginBottom:10}}>
+                    <button className={`btn btn-sm ${repeatModeBlocked==='count'?'btn-primary':'btn-outline'}`}
+                      style={repeatModeBlocked==='count'?{background:'#e57373',borderColor:'#e57373'}:{}}
+                      onClick={()=>setRepeatModeBlocked('count')}>횟수로 설정</button>
+                    <button className={`btn btn-sm ${repeatModeBlocked==='date'?'btn-primary':'btn-outline'}`}
+                      style={repeatModeBlocked==='date'?{background:'#e57373',borderColor:'#e57373'}:{}}
+                      onClick={()=>setRepeatModeBlocked('date')}>종료 날짜로 설정</button>
+                  </div>
+                  {repeatModeBlocked==='count' ? (
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <input className="form-input" type="number" min="2" max="52"
+                        value={repeatCountBlocked} onChange={e=>setRepeatCountBlocked(Number(e.target.value))}
+                        style={{width:80}}/>
+                      <span style={{fontSize:'0.85rem',color:'var(--color-text-light)'}}>주 반복 (첫 날 포함)</span>
+                    </div>
+                  ) : (
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <input className="form-input" type="date" value={repeatEndDateBlocked}
+                        onChange={e=>setRepeatEndDateBlocked(e.target.value)} style={{flex:1}}/>
+                      <span style={{fontSize:'0.85rem',color:'var(--color-text-light)'}}>까지</span>
+                    </div>
+                  )}
+                  {repeatPreviewBlocked.length > 0 && (
+                    <div style={{marginTop:10}}>
+                      <div style={{fontSize:'0.78rem',color:'var(--color-text-light)',marginBottom:6}}>
+                        📅 총 {repeatPreviewBlocked.length}개 등록 예정
+                      </div>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                        {repeatPreviewBlocked.map(d=>(
+                          <span key={d} style={{fontSize:'0.72rem',padding:'2px 8px',borderRadius:100,
+                            background:'var(--color-surface)',border:'1px solid rgba(229,115,115,0.3)'}}>
+                            {format(new Date(d+'T00:00:00'),'M/d(EEE)',{locale:ko})}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <div className="form-group"><label className="form-label">메모 (사유 등)</label><input className="form-input" placeholder="예: 시험, 출장, 개인 사정..." value={blockedForm.description||''} onChange={setB('description')} autoComplete="off"/></div>
+        </>}
       </Modal>
 
       <Modal isOpen={copyModal} onClose={()=>setCopyModal(false)} title="일정 복사 / 이동"
@@ -752,72 +802,6 @@ export default function SchedulePage() {
       </Modal>
 
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 일정을 삭제하시겠어요?"/>
-
-      {/* 불가 날짜 모달 */}
-      <Modal isOpen={blockedModal} onClose={()=>setBlockedModal(false)} title={editingBlocked?'불가 날짜 수정':'불가 날짜 추가'}
-        footer={<><button className="btn btn-outline btn-sm" onClick={()=>setBlockedModal(false)}>취소</button><button className="btn btn-primary btn-sm" style={{background:'#e57373',borderColor:'#e57373'}} onClick={saveBlocked}>저장</button></>}
-      >
-        <div className="form-group"><label className="form-label">날짜 *</label><input className="form-input" type="date" value={blockedForm.scheduled_date} onChange={setB('scheduled_date')}/></div>
-        <div className="grid-2">
-          <div className="form-group"><label className="form-label">불가 시작 시간</label><input className="form-input" type="time" value={blockedForm.blocked_from||''} onChange={setB('blocked_from')}/></div>
-          <div className="form-group"><label className="form-label">불가 종료 시간</label><input className="form-input" type="time" value={blockedForm.blocked_until||''} onChange={setB('blocked_until')}/></div>
-        </div>
-        <p className="text-xs text-light" style={{marginTop:-8,marginBottom:12}}>시간 미입력 시 종일 불가로 표시돼요</p>
-
-        {/* 반복 설정 - 신규 등록 시에만 표시 */}
-        {!editingBlocked && (
-          <div className="form-group">
-            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',userSelect:'none',marginBottom:8}}>
-              <input type="checkbox" checked={isRepeatBlocked} onChange={e=>setIsRepeatBlocked(e.target.checked)}
-                style={{width:16,height:16,accentColor:'#e57373',cursor:'pointer'}}/>
-              <span style={{fontSize:'0.88rem',fontWeight:600}}>🔁 반복 불가 날짜</span>
-            </label>
-            {isRepeatBlocked && (
-              <div style={{padding:'12px 14px',borderRadius:8,background:'rgba(229,115,115,0.06)',border:'1px solid rgba(229,115,115,0.2)'}}>
-                <div style={{display:'flex',gap:8,marginBottom:10}}>
-                  <button className={`btn btn-sm ${repeatModeBlocked==='count'?'btn-primary':'btn-outline'}`}
-                    style={repeatModeBlocked==='count'?{background:'#e57373',borderColor:'#e57373'}:{}}
-                    onClick={()=>setRepeatModeBlocked('count')}>횟수로 설정</button>
-                  <button className={`btn btn-sm ${repeatModeBlocked==='date'?'btn-primary':'btn-outline'}`}
-                    style={repeatModeBlocked==='date'?{background:'#e57373',borderColor:'#e57373'}:{}}
-                    onClick={()=>setRepeatModeBlocked('date')}>종료 날짜로 설정</button>
-                </div>
-                {repeatModeBlocked==='count' ? (
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <input className="form-input" type="number" min="2" max="52"
-                      value={repeatCountBlocked} onChange={e=>setRepeatCountBlocked(Number(e.target.value))}
-                      style={{width:80}}/>
-                    <span style={{fontSize:'0.85rem',color:'var(--color-text-light)'}}>주 반복 (첫 날 포함)</span>
-                  </div>
-                ) : (
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <input className="form-input" type="date" value={repeatEndDateBlocked}
-                      onChange={e=>setRepeatEndDateBlocked(e.target.value)} style={{flex:1}}/>
-                    <span style={{fontSize:'0.85rem',color:'var(--color-text-light)'}}>까지</span>
-                  </div>
-                )}
-                {repeatPreviewBlocked.length > 0 && (
-                  <div style={{marginTop:10}}>
-                    <div style={{fontSize:'0.78rem',color:'var(--color-text-light)',marginBottom:6}}>
-                      📅 총 {repeatPreviewBlocked.length}개 등록 예정
-                    </div>
-                    <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
-                      {repeatPreviewBlocked.map(d=>(
-                        <span key={d} style={{fontSize:'0.72rem',padding:'2px 8px',borderRadius:100,
-                          background:'var(--color-surface)',border:'1px solid rgba(229,115,115,0.3)'}}>
-                          {format(new Date(d+'T00:00:00'),'M/d(EEE)',{locale:ko})}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="form-group"><label className="form-label">메모 (사유 등)</label><input className="form-input" placeholder="예: 시험, 출장, 개인 사정..." value={blockedForm.description||''} onChange={setB('description')} autoComplete="off"/></div>
-      </Modal>
       <ConfirmDialog isOpen={!!blockedConfirm} onClose={()=>setBlockedConfirm(null)} onConfirm={()=>removeBlocked(blockedConfirm)} message="이 불가 날짜를 삭제하시겠어요?"/>
 
       {/* 불가 날짜 시리즈 삭제 confirm */}
