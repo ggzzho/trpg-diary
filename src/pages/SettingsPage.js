@@ -141,7 +141,7 @@ export default function SettingsPage() {
     else { setPwMsg('비밀번호가 변경됐어요! ✅'); setPwForm({current:'',next:'',confirm:''}) }
   }
 
-  const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'dashboard',label:'홈화면',icon:'dashboard'},{key:'theme',label:'테마',icon:'palette'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'},{key:'withdraw',label:'회원 탈퇴',icon:'person_remove'}]
+  const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'theme',label:'테마',icon:'palette'},{key:'dashboard',label:'홈화면',icon:'dashboard'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'},{key:'withdraw',label:'회원 탈퇴',icon:'person_remove'}]
 
   const handleWithdraw = async () => {
     if (withdrawInput !== '탈퇴합니다') return

@@ -139,6 +139,7 @@ export default function PublicProfilePage() {
   const [rulebookExpanded, setRulebookExpanded] = useState({})
   const [scenarioExpanded, setScenarioExpanded] = useState({})
   const [kakaoPopup, setKakaoPopup] = useState(false)
+  const [viewDark, setViewDark] = useState(false)
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
   const publicLogs = (data.logs||[]).filter(l => !l.is_private)
@@ -184,8 +185,10 @@ export default function PublicProfilePage() {
 
       // 페어 정렬 설정 동기화
       if (p.pair_sort_order) setPairSort(p.pair_sort_order)
-      applyTheme(p.theme_color||'#c8a96e', p.theme_bg_color||'#faf6f0', p.theme_accent||'#8b6f47')
-      applyBackground(p.background_image_url||'', p.bg_opacity !== undefined ? p.bg_opacity : 1)
+
+      // 방문자 뷰 모드: localStorage 우선, 없으면 오너 dark_mode 기본값
+      const saved = localStorage.getItem(`trpg_view_${username}`)
+      setViewDark(saved !== null ? saved === 'dark' : (p.dark_mode || false))
 
       const today = new Date().toISOString().split('T')[0]
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
@@ -223,6 +226,24 @@ export default function PublicProfilePage() {
     }
     load()
   }, [username])
+
+  // profile 또는 viewDark 변경 시 테마 재적용 (오너 설정 + 방문자 뷰모드 반영)
+  useEffect(() => {
+    if (!profile) return
+    applyTheme(
+      profile.theme_color||'#c8a96e',
+      profile.theme_bg_color||'#faf6f0',
+      profile.theme_accent||'#8b6f47',
+      profile.theme_text_color||null,
+      viewDark
+    )
+    applyBackground(
+      profile.background_image_url||'',
+      profile.bg_opacity !== undefined ? profile.bg_opacity : 1,
+      viewDark,
+      profile.theme_color||'#c8a96e'
+    )
+  }, [profile, viewDark])
 
   // 페이지 떠날 때 탭 제목 복원
   useEffect(() => {
@@ -298,6 +319,33 @@ export default function PublicProfilePage() {
         <meta name="twitter:description" content={ogDesc} />
         <meta name="twitter:image"       content={ogImage} />
       </Helmet>
+
+      {/* 다크/라이트 모드 토글 - 방문자가 직접 선택 */}
+      {profile && (
+        <div
+          onClick={() => {
+            const next = !viewDark
+            setViewDark(next)
+            localStorage.setItem(`trpg_view_${username}`, next ? 'dark' : 'light')
+          }}
+          style={{
+            position:'fixed', bottom:68, right:20, zIndex:9999,
+            width:36, height:36, borderRadius:'50%',
+            background: viewDark ? 'rgba(30,30,30,0.75)' : 'var(--color-primary)',
+            color:'white', cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            boxShadow:'0 2px 12px rgba(0,0,0,0.2)',
+            backdropFilter:'blur(8px)',
+            transition:'opacity 0.15s',
+            border: viewDark ? '1px solid rgba(255,255,255,0.15)' : 'none',
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity='0.8'}
+          onMouseLeave={e => e.currentTarget.style.opacity='1'}
+          title={viewDark ? '라이트 모드로 보기' : '다크 모드로 보기'}
+        >
+          <Mi size='sm' color='white'>{viewDark ? 'light_mode' : 'dark_mode'}</Mi>
+        </div>
+      )}
 
       {/* 로그인 상태 표시 배지 - auth 로딩 완료 후 표시 */}
       {!authLoading && (
