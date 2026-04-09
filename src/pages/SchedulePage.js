@@ -339,7 +339,7 @@ export default function SchedulePage() {
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
           {Array.from({length:12},(_,m)=>{
-            const mi=yearItems.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===yearView&&getMonth(d)===m})
+            const mi=yearItems.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===yearView&&getMonth(d)===m}).sort((a,b)=>{const dc=a.scheduled_date.localeCompare(b.scheduled_date);return dc!==0?dc:(a.scheduled_time||'').localeCompare(b.scheduled_time||'')})
             const cPlanned=mi.filter(i=>i.status!=='completed'&&i.status!=='cancelled').length
             const cDone=mi.filter(i=>i.status==='completed').length
             const cCancel=mi.filter(i=>i.status==='cancelled').length
@@ -360,6 +360,7 @@ export default function SchedulePage() {
                   const textColor = evColor && isPast ? hexToRgba(evColor,0.85) : 'white'
                   return (
                     <div key={i.id} style={{fontSize:'0.6rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:bg,color:textColor,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      <span style={{opacity:0.85,marginRight:3}}>{format(new Date(i.scheduled_date+'T00:00:00'),'d일',{locale:ko})}</span>
                       {fmtTime(i.scheduled_time)&&<span style={{opacity:0.85,marginRight:3}}>{fmtTime(i.scheduled_time)}</span>}
                       {i.status==='cancelled'?'[취소] ':''}{i.title}
                     </div>
