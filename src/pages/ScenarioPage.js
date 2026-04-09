@@ -80,8 +80,8 @@ export function ScenarioPage() {
   }, [user])
   useEffect(() => { if (profile?.scenario_sort_order) setSortOrder(profile.scenario_sort_order) }, [profile])
 
-  const addStatusTag    = async name => { await supabase.from('scenario_status_tags').insert({ user_id:user.id, name }); loadStatusTags() }
-  const editStatusTag   = async (id, name) => { await supabase.from('scenario_status_tags').update({ name }).eq('id', id); loadStatusTags() }
+  const addStatusTag    = async (name, color) => { await supabase.from('scenario_status_tags').insert({ user_id:user.id, name, color:color||null }); loadStatusTags() }
+  const editStatusTag   = async (id, name, color) => { await supabase.from('scenario_status_tags').update({ name, color:color||null }).eq('id', id); loadStatusTags() }
   const removeStatusTag = async id => {
     const tag = statusTags.find(t => t.id === id)
     if (!tag) return
@@ -213,12 +213,16 @@ export function ScenarioPage() {
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontWeight: isChildItem ? 500 : 700,fontSize:'0.9rem',marginBottom:3,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
           {item.title}
-          {(item.status_tags||[]).map(t => (
-            <span key={t} style={{padding:'1px 7px',borderRadius:100,fontSize:'0.65rem',fontWeight:600,
-              background:'var(--color-nav-active-bg)',color:'var(--color-accent)',border:'1px solid var(--color-border)',whiteSpace:'nowrap'}}>
-              {t}
-            </span>
-          ))}
+          {(item.status_tags||[]).map(t => {
+            const tagDef = statusTags.find(st => st.name === t)
+            const c = tagDef?.color
+            return (
+              <span key={t} style={{padding:'1px 7px',borderRadius:100,fontSize:'0.65rem',fontWeight:600,whiteSpace:'nowrap',
+                ...(c ? {background:c, color:'white', border:`1px solid ${c}`}
+                      : {background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)'})
+              }}>{t}</span>
+            )
+          })}
         </div>
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
           {item.system_name&&<span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
@@ -264,11 +268,18 @@ export function ScenarioPage() {
       {/* 상태 태그 필터 */}
       <div className="flex gap-8" style={{marginBottom:12,flexWrap:'wrap'}}>
         <button className={`btn btn-sm ${statusFilter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setStatusFilter('all')}>전체</button>
-        {statusTags.map(t => (
-          <button key={t.id} className={`btn btn-sm ${statusFilter===t.name?'btn-primary':'btn-outline'}`} onClick={()=>setStatusFilter(t.name)}>
-            {t.name}
-          </button>
-        ))}
+        {statusTags.map(t => {
+          const isActive = statusFilter === t.name
+          return (
+            <button key={t.id}
+              className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-outline'}`}
+              style={t.color && isActive ? {background:t.color, borderColor:t.color} :
+                     t.color && !isActive ? {borderColor:t.color, color:t.color} : {}}
+              onClick={()=>setStatusFilter(t.name)}>
+              {t.name}
+            </button>
+          )
+        })}
       </div>
 
       <div style={{marginBottom:16,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
@@ -390,13 +401,18 @@ export function ScenarioPage() {
             <button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button>
           </label>
           <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-            {statusTags.map(tag => (
-              <button key={tag.id} type="button"
-                className={`btn btn-sm ${(form.status_tags||[]).includes(tag.name)?'btn-primary':'btn-outline'}`}
-                onClick={()=>toggleStatusTag(tag.name)}>
-                {tag.name}
-              </button>
-            ))}
+            {statusTags.map(tag => {
+              const isSelected = (form.status_tags||[]).includes(tag.name)
+              return (
+                <button key={tag.id} type="button"
+                  className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline'}`}
+                  style={tag.color && isSelected ? {background:tag.color, borderColor:tag.color} :
+                         tag.color && !isSelected ? {borderColor:tag.color, color:tag.color} : {}}
+                  onClick={()=>toggleStatusTag(tag.name)}>
+                  {tag.name}
+                </button>
+              )
+            })}
             {statusTags.length === 0 && <span className="text-xs text-light">태그를 먼저 추가해주세요</span>}
           </div>
         </div>
@@ -409,7 +425,7 @@ export function ScenarioPage() {
       <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 시나리오 상태 태그 관리"
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
       >
-        <TagManager tags={statusTags} onAdd={addStatusTag} onEdit={editStatusTag} onRemove={removeStatusTag} placeholder="미플, PL 완료, GM 완료, 위시리스트..."/>
+        <TagManager tags={statusTags} onAdd={addStatusTag} onEdit={editStatusTag} onRemove={removeStatusTag} placeholder="미플, PL 완료, GM 완료, 위시리스트..." withColor/>
       </Modal>
 
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 시나리오를 삭제하시겠어요?"/>

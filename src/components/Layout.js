@@ -207,29 +207,69 @@ export function ConfirmDialog({ isOpen, onClose, onConfirm, message }) {
   )
 }
 
-export function TagManager({ tags, onAdd, onEdit, onRemove, placeholder }) {
+export function TagManager({ tags, onAdd, onEdit, onRemove, placeholder, withColor = false }) {
   const [newTag, setNewTag] = React.useState('')
+  const [newColor, setNewColor] = React.useState('')
   const [editingId, setEditingId] = React.useState(null)
   const [editValue, setEditValue] = React.useState('')
+  const [editColor, setEditColor] = React.useState('')
+
+  const handleAdd = () => {
+    if (!newTag.trim()) return
+    onAdd(newTag.trim(), withColor ? (newColor||null) : undefined)
+    setNewTag(''); setNewColor('')
+  }
+
+  const handleSave = (tag) => {
+    onEdit(tag.id, editValue, withColor ? (editColor||null) : undefined)
+    setEditingId(null)
+  }
+
+  const ColorDot = ({ color, onChange, size=22 }) => (
+    <label style={{position:'relative',flexShrink:0,cursor:'pointer'}} title="색 선택">
+      <div style={{
+        width:size, height:size, borderRadius:'50%', flexShrink:0,
+        background: color || 'var(--color-surface)',
+        border: color ? `2px solid ${color}` : '2px dashed var(--color-border)',
+        display:'flex', alignItems:'center', justifyContent:'center',
+      }}>
+        {!color && <span style={{fontSize:10, color:'var(--color-text-light)', lineHeight:1}}>+</span>}
+      </div>
+      <input type="color" value={color||'#888888'} onChange={e=>onChange(e.target.value)}
+        style={{position:'absolute',opacity:0,width:0,height:0,pointerEvents:'none'}}/>
+    </label>
+  )
+
   return (
     <div>
-      <div style={{display:'flex',gap:8,marginBottom:12}}>
-        <input className="form-input" placeholder={placeholder||'태그 이름...'} value={newTag} onChange={e=>setNewTag(e.target.value)} onKeyDown={e=>e.key==='Enter'&&newTag.trim()&&(onAdd(newTag.trim()),setNewTag(''))} style={{flex:1}} />
-        <button className="btn btn-primary btn-sm" onClick={()=>{if(newTag.trim()){onAdd(newTag.trim());setNewTag('')}}}>추가</button>
+      <div style={{display:'flex',gap:8,marginBottom:12,alignItems:'center'}}>
+        {withColor && <ColorDot color={newColor} onChange={setNewColor}/>}
+        <input className="form-input" placeholder={placeholder||'태그 이름...'} value={newTag}
+          onChange={e=>setNewTag(e.target.value)}
+          onKeyDown={e=>e.key==='Enter'&&handleAdd()}
+          style={{flex:1}} />
+        <button className="btn btn-primary btn-sm" onClick={handleAdd}>추가</button>
       </div>
       {tags.length===0
         ?<div className="text-sm text-light" style={{textAlign:'center',padding:'12px 0'}}>아직 태그가 없어요</div>
         :<div style={{display:'flex',flexDirection:'column',gap:6}}>
           {tags.map(tag=>(
-            <div key={tag.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 12px',borderRadius:8,background:'var(--color-nav-active-bg)',border:'1px solid var(--color-border)'}}>
+            <div key={tag.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 12px',borderRadius:8,background:'var(--color-nav-active-bg)',border:'1px solid var(--color-border)',gap:8}}>
+              {withColor && (
+                editingId===tag.id
+                  ? <ColorDot color={editColor} onChange={setEditColor}/>
+                  : <div style={{width:16,height:16,borderRadius:'50%',flexShrink:0,background:tag.color||'var(--color-surface)',border:tag.color?`2px solid ${tag.color}`:'2px dashed var(--color-border)'}}/>
+              )}
               {editingId===tag.id
-                ?<input className="form-input" value={editValue} onChange={e=>setEditValue(e.target.value)} style={{flex:1,marginRight:8,fontSize:'0.85rem'}} autoFocus onKeyDown={e=>{if(e.key==='Enter'){onEdit(tag.id,editValue);setEditingId(null)}if(e.key==='Escape')setEditingId(null)}} />
+                ?<input className="form-input" value={editValue} onChange={e=>setEditValue(e.target.value)}
+                  style={{flex:1,marginRight:8,fontSize:'0.85rem'}} autoFocus
+                  onKeyDown={e=>{if(e.key==='Enter')handleSave(tag);if(e.key==='Escape')setEditingId(null)}} />
                 :<span style={{fontSize:'0.88rem',flex:1}}>{tag.name}</span>
               }
               <div className="flex gap-6">
                 {editingId===tag.id
-                  ?<><button className="btn btn-primary btn-sm" style={{padding:'2px 8px'}} onClick={()=>{onEdit(tag.id,editValue);setEditingId(null)}}>저장</button><button className="btn btn-ghost btn-sm" style={{padding:'2px 6px'}} onClick={()=>setEditingId(null)}>취소</button></>
-                  :<><button className="btn btn-ghost btn-sm" style={{padding:'2px 8px'}} onClick={()=>{setEditingId(tag.id);setEditValue(tag.name)}}>수정</button><button className="btn btn-ghost btn-sm" style={{color:'#e57373',padding:'2px 8px'}} onClick={()=>onRemove(tag.id)}>삭제</button></>
+                  ?<><button className="btn btn-primary btn-sm" style={{padding:'2px 8px'}} onClick={()=>handleSave(tag)}>저장</button><button className="btn btn-ghost btn-sm" style={{padding:'2px 6px'}} onClick={()=>setEditingId(null)}>취소</button></>
+                  :<><button className="btn btn-ghost btn-sm" style={{padding:'2px 8px'}} onClick={()=>{setEditingId(tag.id);setEditValue(tag.name);setEditColor(tag.color||'')}}>수정</button><button className="btn btn-ghost btn-sm" style={{color:'#e57373',padding:'2px 8px'}} onClick={()=>onRemove(tag.id)}>삭제</button></>
                 }
               </div>
             </div>
