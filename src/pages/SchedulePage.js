@@ -74,6 +74,11 @@ export default function SchedulePage() {
   const [calPopup, setCalPopup] = useState(null) // 월뷰 상세 팝업
   const [selectedDate, setSelectedDate] = useState(null) // 월뷰 날짜 선택 패널
   const [seriesConfirm, setSeriesConfirm] = useState(null) // 시리즈 삭제 확인
+  // 불가 날짜 동시 등록 (세션 모달 내)
+  const [addBlockedToo, setAddBlockedToo] = useState(false)
+  const [blockedTooFrom, setBlockedTooFrom] = useState('')
+  const [blockedTooUntil, setBlockedTooUntil] = useState('')
+  const prevViewMode = React.useRef('calendar')
   // 반복 일정 폼 state
   const [isRepeat, setIsRepeat] = useState(false)
   const [repeatMode, setRepeatMode] = useState('count') // 'count' | 'date'
@@ -96,6 +101,16 @@ export default function SchedulePage() {
     const dates = calcRepeatDates(form.scheduled_date, repeatMode, repeatCount, repeatEndDate)
     setRepeatPreview(dates)
   }, [isRepeat, form.scheduled_date, repeatMode, repeatCount, repeatEndDate])
+
+  // 검색 활성화 시 자동으로 목록뷰로 전환
+  useEffect(() => {
+    if (search && viewMode !== 'list') {
+      prevViewMode.current = viewMode
+      setViewMode('list')
+    } else if (!search && viewMode === 'list') {
+      setViewMode(prevViewMode.current)
+    }
+  }, [search])
 
   // 불가 날짜 반복 미리보기 자동 계산 (세션과 완전 독립)
   useEffect(() => {
@@ -142,8 +157,9 @@ export default function SchedulePage() {
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const resetRepeat = () => { setIsRepeat(false); setRepeatMode('count'); setRepeatCount(4); setRepeatEndDate(''); setRepeatPreview([]) }
-  const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||new Date().toISOString().split('T')[0]}); resetRepeat(); setModal(true) }
-  const openEdit = item => { setEditing(item); setForm({...item}); resetRepeat(); setModal(true) }
+  const resetBlockedToo = () => { setAddBlockedToo(false); setBlockedTooFrom(''); setBlockedTooUntil('') }
+  const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||new Date().toISOString().split('T')[0]}); resetRepeat(); resetBlockedToo(); setModal(true) }
+  const openEdit = item => { setEditing(item); setForm({...item}); resetRepeat(); resetBlockedToo(); setModal(true) }
 
   const calcRepeatDates = (baseDate, mode, count, endDate) => {
     if (!baseDate) return []
@@ -187,6 +203,16 @@ export default function SchedulePage() {
       ;({ error } = await schedulesApi.create({...payload, user_id:user.id}))
     }
     if (error) { alert('저장 실패: ' + error.message); return }
+    // 불가 시간 동시 등록
+    if (addBlockedToo && form.scheduled_date) {
+      await schedulesApi.create({
+        user_id: user.id, title: '', entry_type: 'blocked',
+        scheduled_date: form.scheduled_date,
+        blocked_from: blockedTooFrom || null,
+        blocked_until: blockedTooUntil || null,
+        description: null,
+      })
+    }
     setModal(false); load()
   }
   const remove = async id => { await schedulesApi.remove(id); load() }
@@ -674,6 +700,29 @@ export default function SchedulePage() {
           )}
         </div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.description||''} onChange={set('description')} style={{minHeight:72}}/></div>
+        {/* 불가 시간 동시 등록 (새 일정일 때만, 날짜가 있을 때만) */}
+        {!editing && form.scheduled_date && (
+          <div style={{borderTop:'1px solid var(--color-border)',paddingTop:12,marginTop:4}}>
+            <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:'0.85rem',marginBottom:8}}>
+              <input type="checkbox" checked={addBlockedToo} onChange={e=>setAddBlockedToo(e.target.checked)}
+                style={{width:15,height:15,accentColor:'#e57373',cursor:'pointer'}}/>
+              <span style={{fontWeight:600}}>🚫 이 날 불가 시간도 함께 등록</span>
+            </label>
+            {addBlockedToo && (
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',paddingLeft:22}}>
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="form-label">불가 시작</label>
+                  <input className="form-input" type="time" value={blockedTooFrom} onChange={e=>setBlockedTooFrom(e.target.value)}/>
+                </div>
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="form-label">불가 종료</label>
+                  <input className="form-input" type="time" value={blockedTooUntil} onChange={e=>setBlockedTooUntil(e.target.value)}/>
+                </div>
+                <p className="text-xs text-light" style={{width:'100%',marginTop:-4}}>시간 미입력 시 종일 불가로 표시돼요</p>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
 
       <Modal isOpen={copyModal} onClose={()=>setCopyModal(false)} title="일정 복사 / 이동"

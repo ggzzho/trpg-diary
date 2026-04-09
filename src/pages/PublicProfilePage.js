@@ -191,8 +191,14 @@ export default function PublicProfilePage() {
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
       const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks] = await Promise.all([
         safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).limit(9000).then(r=>r)),
-        safe(supabase.from('rulebooks').select('*').eq('user_id', p.id).order('title').limit(9000).then(r=>r)),
-        safe(scenariosApi.getAll(p.id)),
+        safe(supabase.from('rulebooks').select('*').eq('user_id', p.id)
+          .order('sort_order', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: false })
+          .limit(9000).then(r=>r)),
+        safe(supabase.from('scenarios').select('*').eq('user_id', p.id)
+          .order('sort_order', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: true })
+          .limit(9000).then(r=>r)),
         safe(pairsApi.getAll(p.id)),
         safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).limit(9000).then(r=>r)),
         safe(supabase.from('schedules').select('*').eq('user_id',p.id)

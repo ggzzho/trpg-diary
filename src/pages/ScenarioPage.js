@@ -48,7 +48,7 @@ export function ScenarioPage() {
   const load = async () => {
     const { data } = await supabase.from('scenarios').select('*').eq('user_id', user.id)
       .order('sort_order', { ascending: true, nullsFirst: false })
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true }) // 새 항목이 아래로 쌓임
     setItems(data || [])
     setLoading(false)
   }
@@ -67,9 +67,15 @@ export function ScenarioPage() {
   }
   const save = async () => {
     if (!form.title) return
-    const payload = cleanPayload({...form, parent_id: isChild ? (form.parent_id||null) : null})
-    if (editing) await scenariosApi.update(editing.id, payload)
-    else await scenariosApi.create({...payload, user_id:user.id})
+    const parentId = isChild ? (form.parent_id||null) : null
+    const payload = cleanPayload({...form, parent_id: parentId})
+    if (editing) {
+      await scenariosApi.update(editing.id, payload)
+    } else {
+      // 새 자식 항목: sort_order를 형제 수로 설정 → 맨 아래로 배치
+      const sortOrder = parentId ? (childMap[parentId]?.length || 0) : undefined
+      await scenariosApi.create({...payload, user_id:user.id, ...(sortOrder !== undefined ? {sort_order:sortOrder} : {})})
+    }
     setModal(false); load()
   }
   const remove = async id => { await scenariosApi.remove(id); load() }
@@ -82,16 +88,8 @@ export function ScenarioPage() {
     const activeItem = items.find(i => i.id === active.id)
     const overItem   = items.find(i => i.id === over.id)
     if (!activeItem || !overItem) return
-
-    if (!activeItem.parent_id && !overItem.parent_id) {
-      const oldIdx = parents.findIndex(i => i.id === active.id)
-      const newIdx = parents.findIndex(i => i.id === over.id)
-      const reordered = arrayMove(parents, oldIdx, newIdx)
-      setItems(prev => [...reordered, ...prev.filter(i => i.parent_id)])
-      await Promise.all(reordered.map((item, idx) =>
-        supabase.from('scenarios').update({ sort_order: idx }).eq('id', item.id)
-      ))
-    } else if (activeItem.parent_id && overItem.parent_id && activeItem.parent_id === overItem.parent_id) {
+    // 자식 항목 간 드래그만 허용 (같은 부모 내)
+    if (activeItem.parent_id && overItem.parent_id && activeItem.parent_id === overItem.parent_id) {
       const siblings = childMap[activeItem.parent_id] || []
       const oldIdx = siblings.findIndex(i => i.id === active.id)
       const newIdx = siblings.findIndex(i => i.id === over.id)
@@ -231,44 +229,38 @@ export function ScenarioPage() {
         ?<EmptyState icon="description" title="시나리오가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
         :<>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={paged.map(i=>i.id)} strategy={verticalListSortingStrategy}>
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              {paged.map(item => {
-                const children = childMap[item.id] || []
-                const isOpen = !!expanded[item.id]
-                return (
-                  <SortableWrapper key={item.id} id={item.id}>
-                    {dragHandle => (
-                      <div className="card" style={{padding:0,overflow:'hidden'}}>
-                        {renderItem(item, false, dragHandle)}
-                        {children.length > 0 && (
-                          <button style={{width:'100%',background:'none',border:'none',
-                            borderTop:'1px solid var(--color-border)',
-                            padding:'5px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:4,
-                            color:'var(--color-text-light)',fontSize:'0.78rem'}}
-                            onClick={()=>toggleExpand(item.id)}>
-                            <Mi size='sm' color='light'>{isOpen?'expand_less':'expand_more'}</Mi>
-                            {isOpen ? '접기' : `시나리오 ${children.length}개 보기`}
-                          </button>
-                        )}
-                        {isOpen && (
-                          <div style={{borderTop:'1px solid var(--color-border)'}}>
-                            <SortableContext items={children.map(c=>c.id)} strategy={verticalListSortingStrategy}>
-                              {children.map(c => (
-                                <SortableWrapper key={c.id} id={c.id}>
-                                  {childDragHandle => renderItem(c, true, childDragHandle)}
-                                </SortableWrapper>
-                              ))}
-                            </SortableContext>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </SortableWrapper>
-                )
-              })}
-              </div>
-            </SortableContext>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {paged.map(item => {
+              const children = childMap[item.id] || []
+              const isOpen = !!expanded[item.id]
+              return (
+                <div key={item.id} className="card" style={{padding:0,overflow:'hidden'}}>
+                  {renderItem(item, false, null)}
+                  {children.length > 0 && (
+                    <button style={{width:'100%',background:'none',border:'none',
+                      borderTop:'1px solid var(--color-border)',
+                      padding:'5px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:4,
+                      color:'var(--color-text-light)',fontSize:'0.78rem'}}
+                      onClick={()=>toggleExpand(item.id)}>
+                      <Mi size='sm' color='light'>{isOpen?'expand_less':'expand_more'}</Mi>
+                      {isOpen ? '접기' : `시나리오 ${children.length}개 보기`}
+                    </button>
+                  )}
+                  {isOpen && (
+                    <div style={{borderTop:'1px solid var(--color-border)'}}>
+                      <SortableContext items={children.map(c=>c.id)} strategy={verticalListSortingStrategy}>
+                        {children.map(c => (
+                          <SortableWrapper key={c.id} id={c.id}>
+                            {childDragHandle => renderItem(c, true, childDragHandle)}
+                          </SortableWrapper>
+                        ))}
+                      </SortableContext>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            </div>
           </DndContext>
           <Pagination total={filteredParents.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
         </>
