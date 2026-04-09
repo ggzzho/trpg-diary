@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(find /c/Users/배인혜/Documents/GitHub/trpg-diary/src -type f \\\\\\( -name \"*.js\" -o -name \"*.jsx\" \\\\\\) -exec grep -l \"localStorage\\\\|sessionStorage\\\\|fetch\\\\|supabase.storage\" {} \\\\;)"
-    ]
-  }
-}
