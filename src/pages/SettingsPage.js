@@ -69,6 +69,8 @@ export default function SettingsPage() {
     bookmark_sort_order: p?.bookmark_sort_order||'asc',
     availability_sort_order: p?.availability_sort_order||'asc',
     dashboard_cards: p?.dashboard_cards || ['logs','rulebooks','scenarios','pairs'],
+    theme_text_color: p?.theme_text_color || '',
+    dark_mode: p?.dark_mode || false,
   })
 
   const [form, setForm] = useState(() => buildForm(profile))
@@ -99,10 +101,12 @@ export default function SettingsPage() {
     })
   }
 
-  const applyPreset = p => { setForm(f=>({...f,theme_color:p.primary,theme_bg_color:p.bg,theme_accent:p.accent})); applyTheme(p.primary,p.bg,p.accent) }
-  const handleColorChange = (key,value) => { const u={...form,[key]:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent) }
-  const handleOpacityChange = value => { const o=parseFloat(value); setForm(f=>({...f,bg_opacity:o})); applyBackground(form.background_image_url,o) }
-  const handleBgUrlChange = value => { setForm(f=>({...f,background_image_url:value})); applyBackground(value,form.bg_opacity) }
+  const applyPreset = p => { setForm(f=>({...f,theme_color:p.primary,theme_bg_color:p.bg,theme_accent:p.accent})); applyTheme(p.primary,p.bg,p.accent,form.theme_text_color||null,form.dark_mode) }
+  const handleColorChange = (key,value) => { const u={...form,[key]:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent,u.theme_text_color||null,u.dark_mode) }
+  const handleOpacityChange = value => { const o=parseFloat(value); setForm(f=>({...f,bg_opacity:o})); applyBackground(form.background_image_url,o,form.dark_mode) }
+  const handleBgUrlChange = value => { setForm(f=>({...f,background_image_url:value})); applyBackground(value,form.bg_opacity,form.dark_mode) }
+  const handleTextColorChange = value => { const u={...form,theme_text_color:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent,value||null,u.dark_mode) }
+  const handleDarkModeToggle = value => { const u={...form,dark_mode:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent,u.theme_text_color||null,value); applyBackground(u.background_image_url,u.bg_opacity,value) }
 
   const save = async () => {
     setSaving(true)
@@ -110,8 +114,8 @@ export default function SettingsPage() {
     if (!error) {
       await refreshProfile()
       setSaved(true); setTimeout(()=>setSaved(false),2500)
-      applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent)
-      applyBackground(form.background_image_url,form.bg_opacity)
+      applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent,form.theme_text_color||null,form.dark_mode)
+      applyBackground(form.background_image_url,form.bg_opacity,form.dark_mode)
     }
     setSaving(false)
   }
@@ -331,7 +335,7 @@ export default function SettingsPage() {
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.background_image_url} onChange={e=>handleBgUrlChange(e.target.value)} style={{flex:1}} />
               </div>
-              {form.background_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} /><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1)}}>제거</button></div>}
+              {form.background_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} /><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1,form.dark_mode)}}>제거</button></div>}
             </div>
             {form.background_image_url&&(
               <div className="form-group">
@@ -343,6 +347,29 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+            {/* 폰트 색상 */}
+            <div className="form-group">
+              <label className="form-label">폰트 색상 <span className="text-xs text-light" style={{fontWeight:400}}>(비어 있으면 강조 컬러 기반 자동)</span></label>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <input type="color" value={form.theme_text_color||'#5a4a3a'} onChange={e=>handleTextColorChange(e.target.value)} style={{width:36,height:32,border:'none',cursor:'pointer',borderRadius:5,padding:2}} />
+                <input className="form-input" value={form.theme_text_color||''} onChange={e=>handleTextColorChange(e.target.value)} style={{flex:1,fontFamily:'monospace',fontSize:'0.75rem'}} placeholder="자동" />
+                {form.theme_text_color&&<button className="btn btn-ghost btn-sm" style={{flexShrink:0}} onClick={()=>handleTextColorChange('')}>초기화</button>}
+              </div>
+            </div>
+
+            {/* 다크 모드 */}
+            <div className="card" style={{marginBottom:16,background:'var(--color-nav-active-bg)'}}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <div style={{fontWeight:600,marginBottom:3,fontSize:'0.9rem'}}>다크 모드</div>
+                  <div className="text-sm text-light">배경을 어둡게 전환해요. 메인/강조 컬러는 유지돼요.</div>
+                </div>
+                <div onClick={()=>handleDarkModeToggle(!form.dark_mode)} style={{width:40,height:22,borderRadius:11,background:form.dark_mode?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
+                  <div style={{position:'absolute',top:2,left:form.dark_mode?20:2,width:18,height:18,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
+                </div>
+              </div>
+            </div>
+
             <div style={{padding:14,borderRadius:8,background:form.theme_bg_color,border:`2px solid ${form.theme_color}30`}}>
               <div style={{color:form.theme_accent,fontSize:'0.85rem',fontWeight:700,marginBottom:6}}>✦ 미리보기</div>
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>

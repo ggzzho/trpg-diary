@@ -11,26 +11,36 @@ function hexToRgb(hex) {
   } catch { return [200, 169, 110] }
 }
 
-export function applyTheme(primary, bg, accent) {
+export function applyTheme(primary, bg, accent, textColor = null, darkMode = false) {
   const root = document.documentElement
   const [pr, pg, pb] = hexToRgb(primary)
   const [ar, ag, ab] = hexToRgb(accent)
-  const [br, bgG, bb] = hexToRgb(bg)
 
   root.style.setProperty('--color-primary', primary)
-  root.style.setProperty('--color-bg', bg)
   root.style.setProperty('--color-accent', accent)
-  root.style.setProperty('--color-border', `rgba(${pr}, ${pg}, ${pb}, 0.3)`)
   root.style.setProperty('--color-shadow', `rgba(${ar}, ${ag}, ${ab}, 0.08)`)
-  root.style.setProperty('--color-surface',
-    `rgba(${Math.min(255,br+10)}, ${Math.min(255,bgG+8)}, ${Math.min(255,bb+5)}, 0.92)`)
   root.style.setProperty('--color-nav-active-bg', `rgba(${pr}, ${pg}, ${pb}, 0.12)`)
   root.style.setProperty('--color-btn-shadow', `rgba(${pr}, ${pg}, ${pb}, 0.35)`)
-  root.style.setProperty('--color-text',
-    `rgb(${Math.max(0,ar-30)}, ${Math.max(0,ag-20)}, ${Math.max(0,ab-10)})`)
-  root.style.setProperty('--color-text-light',
-    `rgb(${Math.min(180,ar+30)}, ${Math.min(160,ag+20)}, ${Math.min(140,ab+20)})`)
-  document.body.style.backgroundColor = bg
+
+  if (darkMode) {
+    root.style.setProperty('--color-bg', '#1a1a1a')
+    root.style.setProperty('--color-surface', 'rgba(38, 35, 30, 0.97)')
+    root.style.setProperty('--color-border', `rgba(${pr}, ${pg}, ${pb}, 0.22)`)
+    root.style.setProperty('--color-text', textColor || '#e2d9ce')
+    root.style.setProperty('--color-text-light', '#8a7e72')
+    document.body.style.backgroundColor = '#1a1a1a'
+  } else {
+    const [br, bgG, bb] = hexToRgb(bg)
+    root.style.setProperty('--color-bg', bg)
+    root.style.setProperty('--color-border', `rgba(${pr}, ${pg}, ${pb}, 0.3)`)
+    root.style.setProperty('--color-surface',
+      `rgba(${Math.min(255,br+10)}, ${Math.min(255,bgG+8)}, ${Math.min(255,bb+5)}, 0.92)`)
+    root.style.setProperty('--color-text',
+      textColor || `rgb(${Math.max(0,ar-30)}, ${Math.max(0,ag-20)}, ${Math.max(0,ab-10)})`)
+    root.style.setProperty('--color-text-light',
+      `rgb(${Math.min(180,ar+30)}, ${Math.min(160,ag+20)}, ${Math.min(140,ab+20)})`)
+    document.body.style.backgroundColor = bg
+  }
 
   // 동적 파비콘 - 테마 컬러로 ✦ 심벌 생성
   try {
@@ -53,7 +63,7 @@ export function applyTheme(primary, bg, accent) {
 }
 
 // 배경 이미지 + 불투명도 적용
-export function applyBackground(imageUrl, opacity = 1) {
+export function applyBackground(imageUrl, opacity = 1, darkMode = false) {
   // 기존 오버레이 제거
   const existing = document.getElementById('bg-overlay')
   if (existing) existing.remove()
@@ -69,13 +79,13 @@ export function applyBackground(imageUrl, opacity = 1) {
   document.body.style.backgroundAttachment = 'fixed'
   document.body.style.backgroundPosition = 'center'
 
-  // 반투명 오버레이로 불투명도 조절 (흰색 오버레이로 배경을 흐리게)
+  // 반투명 오버레이로 불투명도 조절 (다크모드: 어두운 오버레이, 라이트: 흰 오버레이)
   const overlay = document.createElement('div')
   overlay.id = 'bg-overlay'
   overlay.style.cssText = `
     position: fixed;
     inset: 0;
-    background: white;
+    background: ${darkMode ? '#1a1a1a' : 'white'};
     opacity: ${1 - opacity};
     pointer-events: none;
     z-index: 0;
@@ -92,11 +102,14 @@ export function ThemeProvider({ children, overrideProfile }) {
     applyTheme(
       profile.theme_color || '#c8a96e',
       profile.theme_bg_color || '#faf6f0',
-      profile.theme_accent || '#8b6f47'
+      profile.theme_accent || '#8b6f47',
+      profile.theme_text_color || null,
+      profile.dark_mode || false
     )
     applyBackground(
       profile.background_image_url || '',
-      profile.bg_opacity !== undefined ? profile.bg_opacity : 1
+      profile.bg_opacity !== undefined ? profile.bg_opacity : 1,
+      profile.dark_mode || false
     )
   }, [profile])
 
