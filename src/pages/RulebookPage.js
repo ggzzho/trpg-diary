@@ -5,6 +5,7 @@ import { rulebooksApi, uploadFile, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
+import { useRules } from '../context/RuleContext'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -113,6 +114,7 @@ const DEFAULT_TAG_NAMES = ['GM','주력','미숙','관심','초보','입문','�
 
 export function RulebookPage() {
   const { user } = useAuth()
+  const { reload: reloadRules } = useRules()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -176,6 +178,7 @@ export function RulebookPage() {
     else await supabase.from('rulebooks').insert({ ...payload, user_id:user.id })
     setModal(false)
     load()
+    reloadRules() // 다른 페이지의 룰 선택 즉시 갱신
   }
   const remove = async id => {
     // 서플리먼트도 같이 삭제 (ON DELETE CASCADE 없으면 수동 처리)

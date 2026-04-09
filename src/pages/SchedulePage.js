@@ -262,7 +262,7 @@ export default function SchedulePage() {
               const colorStyle = evColor && ev.status !== 'cancelled' ? {
                 background: isPast
                   ? hexToRgba(evColor, 0.3)
-                  : ev.is_gm ? hexToRgba(evColor, 1.0) : hexToRgba(evColor, 0.8),
+                  : ev.is_gm ? hexToRgba(evColor, 1.0) : hexToRgba(evColor, 0.7),
                 color: isPast ? hexToRgba(evColor, 0.85) : 'white',
               } : {}
               return (
@@ -288,16 +288,6 @@ export default function SchedulePage() {
                 🚫 {b.blocked_from?`${fmtTime(b.blocked_from)}${b.blocked_until?`~${fmtTime(b.blocked_until)}`:'~'}`:'종일'}
               </div>
             ))}
-            {/* 복사/이동 버튼 */}
-            {di.length>0&&(
-              <div style={{position:'absolute',top:2,right:2}} onClick={e=>e.stopPropagation()}>
-                <button
-                  style={{fontSize:'0.58rem',background:'rgba(255,255,255,0.8)',border:'none',cursor:'pointer',padding:'1px 3px',borderRadius:3,lineHeight:1}}
-                  title="복사/이동"
-                  onClick={e=>openCopy(di[0],e)}
-                ><Mi size='sm'>content_copy</Mi></button>
-              </div>
-            )}
           </div>
         )
         day=addDays(day,1)
@@ -322,12 +312,7 @@ export default function SchedulePage() {
   }
 
   const renderYear = () => {
-    const yearItems=items.filter(i=>{
-      if(filter==='upcoming') return i.scheduled_date>=today&&i.status!=='cancelled'&&i.status!=='completed'
-      if(filter==='completed') return i.status==='completed'
-      if(filter==='cancelled') return i.status==='cancelled'
-      return true
-    })
+    const yearItems = items // 필터 없이 전체 데이터
     return (
       <div>
         <div className="flex justify-between items-center" style={{marginBottom:16}}>
@@ -341,13 +326,22 @@ export default function SchedulePage() {
             return (
               <div key={m} className="card card-sm" style={{cursor:'pointer'}} onClick={()=>{setCalendarDate(new Date(yearView,m,1));setViewMode('calendar')}}>
                 <div style={{fontWeight:700,fontSize:'0.85rem',color:'var(--color-accent)',marginBottom:6}}>{m+1}월 <span className="text-xs text-light">({mi.length})</span></div>
-                {/* 모든 일정 표시 (3개 제한 없앰) + 제목+시간 */}
-                {mi.map(i=>(
-                  <div key={i.id} style={{fontSize:'0.6rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:i.status==='cancelled'?'#e57373':i.is_gm?'var(--color-accent)':'var(--color-primary)',color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                    {fmtTime(i.scheduled_time)&&<span style={{opacity:0.85,marginRight:3}}>{fmtTime(i.scheduled_time)}</span>}
-                    {i.status==='cancelled'?'[취소] ':''}{i.title}
-                  </div>
-                ))}
+                {mi.map(i=>{
+                  const evColor = colorMap?.[i.system_name]
+                  const isPast = i.scheduled_date < today
+                  const bg = i.status==='cancelled'
+                    ? '#e57373'
+                    : evColor
+                      ? isPast ? hexToRgba(evColor,0.3) : i.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7)
+                      : i.is_gm ? 'var(--color-accent)' : 'var(--color-primary)'
+                  const textColor = evColor && isPast ? hexToRgba(evColor,0.85) : 'white'
+                  return (
+                    <div key={i.id} style={{fontSize:'0.6rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:bg,color:textColor,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      {fmtTime(i.scheduled_time)&&<span style={{opacity:0.85,marginRight:3}}>{fmtTime(i.scheduled_time)}</span>}
+                      {i.status==='cancelled'?'[취소] ':''}{i.title}
+                    </div>
+                  )
+                })}
               </div>
             )
           })}
@@ -432,20 +426,7 @@ export default function SchedulePage() {
           onChange={e=>setSearch(e.target.value)} autoComplete="off" style={{maxWidth:320}}/>
         {search && <span className="text-xs text-light">({filtered.length}건)</span>}
       </div>
-      <div className="flex justify-between items-center" style={{marginBottom:18,flexWrap:'wrap',gap:8}}>
-        {viewMode!=='summary'&&(
-          <div className="flex gap-8">
-            {[
-              {k:'upcoming',l:'예정'},
-              {k:'completed',l:'완료'},
-              {k:'cancelled',l:'취소'},
-              {k:'all',l:'전체'}
-            ].map(f=>(
-              <button key={f.k} className={`btn btn-sm ${filter===f.k?'btn-primary':'btn-outline'}`} onClick={()=>setFilter(f.k)}>{f.l}</button>
-            ))}
-          </div>
-        )}
-        {viewMode==='summary'&&<div/>}
+      <div className="flex justify-end items-center" style={{marginBottom:18,flexWrap:'wrap',gap:8}}>
         <div className="flex gap-8">
           <button className={`btn btn-sm ${viewMode==='calendar'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('calendar')}><Mi size='sm'>calendar_month</Mi> 월</button>
           <button className={`btn btn-sm ${viewMode==='year'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('year')}><Mi size='sm'>calendar_view_month</Mi> 연</button>
@@ -479,16 +460,30 @@ export default function SchedulePage() {
                   if(dayItems.length===0&&dayBlocked.length===0) return <p className="text-sm text-light" style={{textAlign:'center',padding:'12px 0'}}>일정이 없어요</p>
                   return <>
                     {dayItems.map(item=>(
-                      <div key={item.id} style={{padding:'8px 0',borderBottom:'1px solid var(--color-border)',display:'flex',alignItems:'center',gap:8}}>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontWeight:600,fontSize:'0.82rem',marginBottom:2}}>{item.title}</div>
-                          <div className="text-xs text-light">
-                            {item.scheduled_time&&fmtTime(item.scheduled_time)}{item.system_name&&` · ${item.system_name}`}
+                      <div key={item.id} style={{padding:'8px 0',borderBottom:'1px solid var(--color-border)'}}>
+                        <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontWeight:600,fontSize:'0.82rem',marginBottom:4}}>{item.title}</div>
+                            <div className="text-xs text-light" style={{display:'flex',flexWrap:'wrap',gap:'2px 8px'}}>
+                              {(item.scheduled_time||item.end_time)&&(
+                                <span>🕐 {fmtTime(item.scheduled_time)}{item.end_time?` ~ ${fmtTime(item.end_time)}`:''}</span>
+                              )}
+                              {item.system_name&&<span><Mi size="sm" color="light">sports_esports</Mi> {item.system_name}</span>}
+                            </div>
+                            <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:4}}>
+                              <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`}>{STATUS_MAP[item.status]?.label}</span>
+                              {item.is_gm
+                                ? <span className="badge badge-primary">GM</span>
+                                : <span className="badge badge-blue" style={{opacity:0.8}}>PL</span>
+                              }
+                              {item.is_intro&&<span className="badge badge-green">입문탁{item.intro_rule?` · ${item.intro_rule}`:''}</span>}
+                            </div>
                           </div>
-                        </div>
-                        <div style={{display:'flex',gap:4,flexShrink:0}}>
-                          <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}><Mi size='sm'>edit</Mi></button>
-                          <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>handleRemove(item)}><Mi size='sm'>delete</Mi></button>
+                          <div style={{display:'flex',gap:4,flexShrink:0}}>
+                            <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
+                            <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}><Mi size='sm'>edit</Mi></button>
+                            <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>handleRemove(item)}><Mi size='sm'>delete</Mi></button>
+                          </div>
                         </div>
                       </div>
                     ))}

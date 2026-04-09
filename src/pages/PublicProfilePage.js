@@ -73,7 +73,7 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
           {dayScheds.slice(0,2).map((s,idx) => {
             const evColor = colorMap?.[s.system_name]
             const colorStyle = evColor ? {
-              background: s.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.8),
+              background: s.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7),
               color: 'white',
             } : {}
             return (
@@ -168,6 +168,14 @@ export default function PublicProfilePage() {
 
   const pairsPagination = usePagination(data.pairs||[], 20)
 
+  // 공개 캘린더용 colorMap: 해당 유저의 룰북 title → color
+  // ⚠️ Hook이므로 early return 전에 선언 필수
+  const publicColorMap = useMemo(() => {
+    const m = {}
+    ;(data.rulebooks||[]).filter(r => !r.parent_id && r.color).forEach(r => { m[r.title] = r.color })
+    return m
+  }, [data.rulebooks])
+
   useEffect(() => {
     const load = async () => {
       const { data:p, error } = await getProfile(username)
@@ -237,13 +245,6 @@ export default function PublicProfilePage() {
     if (profile.extra_info) l.push({ label:'기타 사항', value:profile.extra_info })
     return l
   })()
-
-  // 공개 캘린더용 colorMap: 해당 유저의 룰북 title → color
-  const publicColorMap = useMemo(() => {
-    const m = {}
-    ;(data.rulebooks||[]).filter(r => !r.parent_id && r.color).forEach(r => { m[r.title] = r.color })
-    return m
-  }, [data.rulebooks])
 
   const hiddenTabs = profile?.hidden_tabs || []
   const TABS = [
