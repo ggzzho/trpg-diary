@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { scenariosApi, supabase } from '../lib/supabase'
-import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
+import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination, TagManager } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
@@ -10,7 +10,9 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status:'unplayed', memo:'', purchase_date:'', scenario_url:'' }
+const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
+const FORMAT_MAP = { physical:'실물', digital:'전자', both:'둘 다' }
+const DEFAULT_STATUS_TAGS = ['미플', 'PL 완료', 'GM 완료', '위시리스트']
 
 function SortableWrapper({ id, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
@@ -26,8 +28,11 @@ function SortableWrapper({ id, children }) {
     </div>
   )
 }
-const STATUS_MAP = { unplayed:{label:'미플',badge:'badge-gray'}, played:{label:'PL 완료',badge:'badge-green'}, gm_done:{label:'GM 완료',badge:'badge-primary'}, want:{label:'위시리스트',badge:'badge-blue'} }
-const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, purchase_date:f.purchase_date||null, parent_id:f.parent_id||null} }
+
+const cleanPayload = f => {
+  const { id, user_id, created_at, status, ...rest } = f
+  return { ...rest, purchase_date:f.purchase_date||null, parent_id:f.parent_id||null, status_tags:f.status_tags||[] }
+}
 
 export function ScenarioPage() {
   const { user, profile } = useAuth()
@@ -44,21 +49,68 @@ export function ScenarioPage() {
   const [expanded, setExpanded] = useState({})
   const [parentSearchText, setParentSearchText] = useState('')
   const [showParentDrop, setShowParentDrop] = useState(false)
+  const [statusTags, setStatusTags] = useState([])       // 사용자 정의 상태 태그 목록
+  const [tagModal, setTagModal] = useState(false)        // 태그 관리 모달
 
   const load = async () => {
     const { data } = await supabase.from('scenarios').select('*').eq('user_id', user.id)
       .order('sort_order', { ascending: true, nullsFirst: false })
-      .order('created_at', { ascending: true }) // 새 항목이 아래로 쌓임
+      .order('created_at', { ascending: true })
     setItems(data || [])
     setLoading(false)
   }
-  useEffect(() => { load() }, [user])
+  const loadStatusTags = async () => {
+    const { data } = await supabase.from('scenario_status_tags').select('*').eq('user_id', user.id).order('created_at')
+    setStatusTags(data || [])
+    return data || []
+  }
+
+  useEffect(() => {
+    const init = async () => {
+      load()
+      const tags = await loadStatusTags()
+      if (tags.length === 0) {
+        await supabase.from('scenario_status_tags').insert(
+          DEFAULT_STATUS_TAGS.map(name => ({ user_id: user.id, name }))
+        )
+        await loadStatusTags()
+      }
+    }
+    init()
+  }, [user])
   useEffect(() => { if (profile?.scenario_sort_order) setSortOrder(profile.scenario_sort_order) }, [profile])
 
+  const addStatusTag    = async name => { await supabase.from('scenario_status_tags').insert({ user_id:user.id, name }); loadStatusTags() }
+  const editStatusTag   = async (id, name) => { await supabase.from('scenario_status_tags').update({ name }).eq('id', id); loadStatusTags() }
+  const removeStatusTag = async id => {
+    const tag = statusTags.find(t => t.id === id)
+    if (!tag) return
+    // 해당 태그를 사용 중인 시나리오에서 제거
+    const { data: fresh } = await supabase.from('scenarios').select('id, status_tags').eq('user_id', user.id)
+    const affected = (fresh || []).filter(i => (i.status_tags||[]).includes(tag.name))
+    if (affected.length > 0) {
+      await Promise.all(affected.map(i =>
+        supabase.from('scenarios').update({ status_tags: (i.status_tags||[]).filter(t => t !== tag.name) }).eq('id', i.id)
+      ))
+    }
+    await supabase.from('scenario_status_tags').delete().eq('id', id)
+    await loadStatusTags()
+    await load()
+  }
+
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
+  const toggleStatusTag = tag => setForm(f => ({
+    ...f,
+    status_tags: (f.status_tags||[]).includes(tag)
+      ? (f.status_tags||[]).filter(t => t !== tag)
+      : [...(f.status_tags||[]), tag]
+  }))
+
   const openNew = () => { setEditing(null); setForm(BLANK); setIsChild(false); setParentSearchText(''); setModal(true) }
   const openEdit = item => {
-    setEditing(item); setForm({...item}); setIsChild(!!item.parent_id)
+    setEditing(item)
+    setForm({ ...item, status_tags: item.status_tags || [] })
+    setIsChild(!!item.parent_id)
     if (item.parent_id) {
       const parent = parents.find(p => p.id === item.parent_id)
       setParentSearchText(parent?.title || '')
@@ -72,9 +124,8 @@ export function ScenarioPage() {
     if (editing) {
       await scenariosApi.update(editing.id, payload)
     } else {
-      // 새 자식 항목: sort_order를 형제 수로 설정 → 맨 아래로 배치
-      const sortOrder = parentId ? (childMap[parentId]?.length || 0) : undefined
-      await scenariosApi.create({...payload, user_id:user.id, ...(sortOrder !== undefined ? {sort_order:sortOrder} : {})})
+      const so = parentId ? (childMap[parentId]?.length || 0) : undefined
+      await scenariosApi.create({...payload, user_id:user.id, ...(so !== undefined ? {sort_order:so} : {})})
     }
     setModal(false); load()
   }
@@ -88,7 +139,6 @@ export function ScenarioPage() {
     const activeItem = items.find(i => i.id === active.id)
     const overItem   = items.find(i => i.id === over.id)
     if (!activeItem || !overItem) return
-    // 자식 항목 간 드래그만 허용 (같은 부모 내)
     if (activeItem.parent_id && overItem.parent_id && activeItem.parent_id === overItem.parent_id) {
       const siblings = childMap[activeItem.parent_id] || []
       const oldIdx = siblings.findIndex(i => i.id === active.id)
@@ -111,36 +161,29 @@ export function ScenarioPage() {
     return m
   }, [items])
 
-  // 검색어 있을 때 하위 매칭 항목 자동 펼침 (parents/childMap useMemo 아래 위치)
   useEffect(() => {
-    if (!search || !parents?.length) { return }
+    if (!search || !parents?.length) return
     const s = search.toLowerCase()
-    const matchItem = (i) => !!(
-      i.title?.toLowerCase().includes(s)
-      || i.system_name?.toLowerCase().includes(s)
-      || i.author?.toLowerCase().includes(s)
-      || i.memo?.toLowerCase().includes(s)
+    const matchItem = i => !!(
+      i.title?.toLowerCase().includes(s) || i.system_name?.toLowerCase().includes(s)
+      || i.author?.toLowerCase().includes(s) || i.memo?.toLowerCase().includes(s)
     )
     const autoExpand = {}
-    parents.forEach(p => {
-      if (childMap[p.id]?.some(c => matchItem(c))) autoExpand[p.id] = true
-    })
+    parents.forEach(p => { if (childMap[p.id]?.some(c => matchItem(c))) autoExpand[p.id] = true })
     setExpanded(prev => ({ ...prev, ...autoExpand }))
   }, [search, parents, childMap])
 
   const filteredParents = useMemo(() => {
     const s = search.toLowerCase()
-    const matchItem = (i) => !s
-      || i.title?.toLowerCase().includes(s)
-      || i.system_name?.toLowerCase().includes(s)
-      || i.author?.toLowerCase().includes(s)
-      || i.memo?.toLowerCase().includes(s)
+    const matchItem = i => !s
+      || i.title?.toLowerCase().includes(s) || i.system_name?.toLowerCase().includes(s)
+      || i.author?.toLowerCase().includes(s) || i.memo?.toLowerCase().includes(s)
 
     return parents
       .filter(i => {
-        const matchStatus = statusFilter==='all' || i.status===statusFilter
+        const matchStatus = statusFilter === 'all' || (i.status_tags||[]).includes(statusFilter)
         const matchParent = matchItem(i)
-        const matchChild = childMap[i.id]?.some(c => matchItem(c))
+        const matchChild  = childMap[i.id]?.some(c => matchItem(c))
         return matchStatus && (matchParent || matchChild)
       })
       .sort((a,b) => {
@@ -168,14 +211,20 @@ export function ScenarioPage() {
           : <span style={{fontSize:'1.1rem',opacity:0.35}}><Mi size="lg" color="light">description</Mi></span>}
       </div>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontWeight: isChildItem ? 500 : 700,fontSize:'0.9rem',marginBottom:3,display:'flex',alignItems:'center',gap:8}}>
+        <div style={{fontWeight: isChildItem ? 500 : 700,fontSize:'0.9rem',marginBottom:3,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
           {item.title}
-          <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{fontSize:'0.65rem'}}>{STATUS_MAP[item.status]?.label}</span>
+          {(item.status_tags||[]).map(t => (
+            <span key={t} style={{padding:'1px 7px',borderRadius:100,fontSize:'0.65rem',fontWeight:600,
+              background:'var(--color-nav-active-bg)',color:'var(--color-accent)',border:'1px solid var(--color-border)',whiteSpace:'nowrap'}}>
+              {t}
+            </span>
+          ))}
         </div>
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
           {item.system_name&&<span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
           {item.author&&<span className="text-xs text-light"><Mi size='sm' color='light'>person</Mi> {item.author}</span>}
           {item.player_count&&<span className="text-xs text-light"><Mi size='sm' color='light'>group</Mi> {item.player_count}</span>}
+          {item.format&&<span className="text-xs text-light"><Mi size='sm' color='light'>inventory_2</Mi> {FORMAT_MAP[item.format]||item.format}</span>}
         </div>
         {item.scenario_url&&<a href={item.scenario_url} target="_blank" rel="noreferrer" style={{fontSize:'0.7rem',color:'var(--color-primary)',marginTop:2,display:'block'}}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
         {item.memo&&<p className="text-xs text-light" style={{marginTop:2}}>{item.memo}</p>}
@@ -206,16 +255,22 @@ export function ScenarioPage() {
           <h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>description</Mi>시나리오 목록</h1>
           <p className="page-subtitle">보유/위시 TRPG 시나리오 목록이예요 ({items.length}개)</p>
         </div>
-        <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 시나리오 추가</button>
+        <div className="flex gap-8">
+          <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}><Mi size='sm'>sell</Mi> 상태 태그 관리</button>
+          <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 시나리오 추가</button>
+        </div>
       </div>
 
+      {/* 상태 태그 필터 */}
       <div className="flex gap-8" style={{marginBottom:12,flexWrap:'wrap'}}>
-        {['all','unplayed','played','gm_done','want'].map(s=>(
-          <button key={s} className={`btn btn-sm ${statusFilter===s?'btn-primary':'btn-outline'}`} onClick={()=>setStatusFilter(s)}>
-            {s==='all'?'전체':STATUS_MAP[s]?.label}
+        <button className={`btn btn-sm ${statusFilter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setStatusFilter('all')}>전체</button>
+        {statusTags.map(t => (
+          <button key={t.id} className={`btn btn-sm ${statusFilter===t.name?'btn-primary':'btn-outline'}`} onClick={()=>setStatusFilter(t.name)}>
+            {t.name}
           </button>
         ))}
       </div>
+
       <div style={{marginBottom:16,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
         <input className="form-input" placeholder="🔍 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
         {search && <span className="text-xs text-light">({filteredParents.length}건)</span>}
@@ -266,6 +321,7 @@ export function ScenarioPage() {
         </>
       }
 
+      {/* 추가/수정 모달 */}
       <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'시나리오 수정':'시나리오 추가'}
         footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
@@ -321,16 +377,39 @@ export function ScenarioPage() {
         </div>
         <div className="grid-2">
           <div className="form-group"><label className="form-label">인원</label><input className="form-input" placeholder="3~5인, 다인, 타이..." value={form.player_count||''} onChange={set('player_count')}/></div>
-          <div className="form-group"><label className="form-label">형태</label><select className="form-select" value={form.format} onChange={set('format')}><option value="physical">실물</option><option value="digital">전자</option><option value="both">둘 다</option></select></div>
+          <div className="form-group"><label className="form-label">형태</label>
+            <select className="form-select" value={form.format||'physical'} onChange={set('format')}>
+              <option value="physical">실물</option><option value="digital">전자</option><option value="both">둘 다</option>
+            </select>
+          </div>
         </div>
-        <div className="form-group"><label className="form-label">상태</label>
-          <select className="form-select" value={form.status} onChange={set('status')}>
-            <option value="unplayed">미플</option><option value="played">PL 완료</option><option value="gm_done">GM 완료</option><option value="want">위시리스트</option>
-          </select>
+        {/* 상태 태그 다중 선택 */}
+        <div className="form-group">
+          <label className="form-label">
+            상태
+            <button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button>
+          </label>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            {statusTags.map(tag => (
+              <button key={tag.id} type="button"
+                className={`btn btn-sm ${(form.status_tags||[]).includes(tag.name)?'btn-primary':'btn-outline'}`}
+                onClick={()=>toggleStatusTag(tag.name)}>
+                {tag.name}
+              </button>
+            ))}
+            {statusTags.length === 0 && <span className="text-xs text-light">태그를 먼저 추가해주세요</span>}
+          </div>
         </div>
         <div className="form-group"><label className="form-label">시나리오 URL</label><input className="form-input" placeholder="https://..." value={form.scenario_url||''} onChange={set('scenario_url')}/></div>
         <div className="form-group"><label className="form-label">표지 이미지 URL</label><input className="form-input" placeholder="https://..." value={form.cover_image_url||''} onChange={set('cover_image_url')}/></div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{minHeight:64}}/></div>
+      </Modal>
+
+      {/* 상태 태그 관리 모달 */}
+      <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 시나리오 상태 태그 관리"
+        footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
+      >
+        <TagManager tags={statusTags} onAdd={addStatusTag} onEdit={editStatusTag} onRemove={removeStatusTag} placeholder="미플, PL 완료, GM 완료, 위시리스트..."/>
       </Modal>
 
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 시나리오를 삭제하시겠어요?"/>

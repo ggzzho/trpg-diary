@@ -561,14 +561,20 @@ export default function PublicProfilePage() {
                         : <span style={{ fontSize:'1.1rem', opacity:0.35 }}><Mi size='lg' color='light'>description</Mi></span>}
                     </div>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontWeight: isChild ? 500 : 700, fontSize:isChild?'0.85rem':'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:8 }}>
+                      <div style={{ fontWeight: isChild ? 500 : 700, fontSize:isChild?'0.85rem':'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
                         {item.title}
-                        <span className="badge badge-gray" style={{fontSize:'0.65rem'}}>{SCENARIO_STATUS[item.status]}</span>
+                        {(item.status_tags||[]).map(t => (
+                          <span key={t} style={{padding:'1px 7px',borderRadius:100,fontSize:'0.65rem',fontWeight:600,
+                            background:'var(--color-nav-active-bg)',color:'var(--color-accent)',border:'1px solid var(--color-border)',whiteSpace:'nowrap'}}>
+                            {t}
+                          </span>
+                        ))}
                       </div>
                       <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
                         {item.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
                         {item.author && <span className="text-xs text-light"><Mi size='sm' color='light'>edit</Mi> {item.author}</span>}
                         {item.player_count && <span className="text-xs text-light"><Mi size="sm" color="light">group</Mi> {item.player_count}</span>}
+                        {item.format && <span className="text-xs text-light"><Mi size='sm' color='light'>inventory_2</Mi> {item.format==='physical'?'실물':item.format==='digital'?'전자':'둘 다'}</span>}
                       </div>
                       {item.scenario_url && <a href={item.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:2, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
                     </div>
