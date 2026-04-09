@@ -31,13 +31,22 @@ export function RulebookPage() {
   }
   const loadTags = async () => {
     const { data } = await supabase.from('rulebook_tags').select('*').eq('user_id', user.id).order('name')
-    if (data && data.length === 0) {
-      await supabase.from('rulebook_tags').insert(DEFAULT_TAG_NAMES.map(name => ({ user_id:user.id, name })))
-      const { data:d2 } = await supabase.from('rulebook_tags').select('*').eq('user_id', user.id).order('name')
-      setAvailableTags(d2 || [])
-    } else setAvailableTags(data || [])
+    setAvailableTags(data || [])
   }
-  useEffect(() => { load(); loadTags() }, [user])
+  useEffect(() => {
+    const init = async () => {
+      load()
+      const { data } = await supabase.from('rulebook_tags').select('*').eq('user_id', user.id).order('name')
+      if (data && data.length === 0) {
+        await supabase.from('rulebook_tags').insert(DEFAULT_TAG_NAMES.map(name => ({ user_id:user.id, name })))
+        const { data:d2 } = await supabase.from('rulebook_tags').select('*').eq('user_id', user.id).order('name')
+        setAvailableTags(d2 || [])
+      } else {
+        setAvailableTags(data || [])
+      }
+    }
+    init()
+  }, [user])
 
   const set = k => e => setForm(f => ({ ...f, [k]:e.target.value }))
   const toggleTag = tag => setForm(f => ({ ...f, tags:f.tags?.includes(tag) ? f.tags.filter(t=>t!==tag) : [...(f.tags||[]), tag] }))
@@ -92,7 +101,8 @@ export function RulebookPage() {
       )
     )
     await supabase.from('rulebook_tags').delete().eq('id', id)
-    loadTags(); load()
+    await loadTags()
+    await load()
   }
 
   const toggleExpand = id => setExpanded(e => ({ ...e, [id]:!e[id] }))

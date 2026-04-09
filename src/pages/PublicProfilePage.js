@@ -52,7 +52,7 @@ function PublicCalendar({ schedules, blocked = [] }) {
     for (let i = 0; i < 7; i++) {
       const d = new Date(day)
       const dStr = format(d, 'yyyy-MM-dd')
-      const dayScheds = schedules.filter(s => s.scheduled_date === dStr)
+      const dayScheds = schedules.filter(s => s.scheduled_date === dStr).sort((a,b) => (a.scheduled_time||'').localeCompare(b.scheduled_time||''))
       const dayBlocked = blocked.filter(b => b.scheduled_date === dStr)
       const hasBlocked = dayBlocked.length > 0
       week.push(

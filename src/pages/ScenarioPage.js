@@ -75,7 +75,7 @@ export function ScenarioPage() {
     parents.forEach(p => {
       if (childMap[p.id]?.some(c => matchItem(c))) autoExpand[p.id] = true
     })
-    setExpanded(autoExpand)
+    setExpanded(prev => ({ ...prev, ...autoExpand }))
   }, [search, parents, childMap])
 
   const filteredParents = useMemo(() => {
@@ -104,8 +104,8 @@ export function ScenarioPage() {
 
   const renderItem = (item, isChildItem=false) => (
     <div key={item.id}
-      style={{display:'flex',alignItems:'center',gap:14,padding:'10px 14px',
-        background: isChildItem ? 'var(--color-nav-active-bg)' : undefined,
+      style={{display:'flex',alignItems:'center',gap:14,
+        padding: isChildItem ? '8px 14px 8px 56px' : '10px 14px',
         borderTop: isChildItem ? '1px solid var(--color-border)' : undefined,
       }}>
       <div style={{width:40,height:40,borderRadius:7,overflow:'hidden',flexShrink:0,
@@ -116,7 +116,7 @@ export function ScenarioPage() {
           : <span style={{fontSize:'1.1rem',opacity:0.35}}><Mi size="lg" color="light">description</Mi></span>}
       </div>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontWeight:700,fontSize:isChildItem?'0.85rem':'0.9rem',marginBottom:3,display:'flex',alignItems:'center',gap:8}}>
+        <div style={{fontWeight: isChildItem ? 500 : 700,fontSize:'0.9rem',marginBottom:3,display:'flex',alignItems:'center',gap:8}}>
           {item.title}
           <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{fontSize:'0.65rem'}}>{STATUS_MAP[item.status]?.label}</span>
         </div>
