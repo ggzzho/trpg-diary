@@ -54,7 +54,7 @@ export function ScenarioPage() {
 
   // 검색어 있을 때 하위 매칭 항목 자동 펼침 (parents/childMap useMemo 아래 위치)
   useEffect(() => {
-    if (!search || !parents?.length) { setExpanded({}); return }
+    if (!search || !parents?.length) { return }
     const s = search.toLowerCase()
     const matchItem = (i) => !!(
       i.title?.toLowerCase().includes(s)
@@ -91,7 +91,7 @@ export function ScenarioPage() {
   }, [parents, statusFilter, search, sortOrder, childMap])
 
   const { paged, page, setPage, perPage, setPerPage } = usePagination(filteredParents, 20)
-  const parentOptions = parents.filter(p => !editing || p.id !== editing.id)
+  const parentOptions = parents.filter(p => !editing || p.id !== editing.id).sort((a,b) => a.title.localeCompare(b.title, 'ko'))
 
   const renderItem = (item, isChildItem=false) => (
     <div key={item.id}
@@ -108,7 +108,6 @@ export function ScenarioPage() {
       </div>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontWeight:700,fontSize:isChildItem?'0.85rem':'0.9rem',marginBottom:3,display:'flex',alignItems:'center',gap:8}}>
-          {isChildItem && <Mi size="sm" color="light">subdirectory_arrow_right</Mi>}
           {item.title}
           <span className={`badge ${STATUS_MAP[item.status]?.badge||'badge-gray'}`} style={{fontSize:'0.65rem'}}>{STATUS_MAP[item.status]?.label}</span>
         </div>
@@ -154,6 +153,7 @@ export function ScenarioPage() {
       </div>
       <div style={{marginBottom:16,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
         <input className="form-input" placeholder="🔍 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
+        {search && <span className="text-xs text-light">({filteredParents.length}건)</span>}
         <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
           onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await supabase.from('profiles').update({scenario_sort_order:next}).eq('id',user.id) }}>
           가나다순 {sortOrder==='asc'?'↑':'↓'}
@@ -200,7 +200,7 @@ export function ScenarioPage() {
         <div className="form-group" style={{marginBottom:8}}>
           <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:'0.85rem'}}>
             <input type="checkbox" checked={isChild} onChange={e=>{setIsChild(e.target.checked);if(!e.target.checked)setForm(f=>({...f,parent_id:null}))}}/>
-            이 시나리오는 시나리오집에 포함된 시나리오예요
+            수록/후속 시나리오 (하위 항목 체크)
           </label>
         </div>
         {isChild && (

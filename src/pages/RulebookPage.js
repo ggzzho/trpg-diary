@@ -82,7 +82,18 @@ export function RulebookPage() {
 
   const addTag = async name => { await supabase.from('rulebook_tags').insert({ user_id:user.id, name }); loadTags() }
   const editTag = async (id, name) => { await supabase.from('rulebook_tags').update({ name }).eq('id', id); loadTags() }
-  const removeTagDef = async id => { await supabase.from('rulebook_tags').delete().eq('id', id); loadTags() }
+  const removeTagDef = async id => {
+    const tag = availableTags.find(t => t.id === id)
+    if (!tag) return
+    const affected = items.filter(i => i.tags?.includes(tag.name))
+    await Promise.all(
+      affected.map(i =>
+        supabase.from('rulebooks').update({ tags: i.tags.filter(t => t !== tag.name) }).eq('id', i.id)
+      )
+    )
+    await supabase.from('rulebook_tags').delete().eq('id', id)
+    loadTags(); load()
+  }
 
   const toggleExpand = id => setExpanded(e => ({ ...e, [id]:!e[id] }))
 
@@ -122,7 +133,6 @@ export function RulebookPage() {
       </div>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontWeight: isChild ? 500 : 700, fontSize:'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:6 }}>
-          {isChild && <span style={{ fontSize:'0.65rem', color:'var(--color-text-light)', opacity:0.7 }}>└</span>}
           {item.title}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>

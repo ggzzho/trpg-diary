@@ -210,7 +210,11 @@ export default function SchedulePage() {
       : true
     const matchSearch = !search || i.title?.includes(search) || i.system_name?.includes(search) || i.location?.includes(search)
     return matchTab && matchSearch
-  }).sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date))
+  }).sort((a,b) => {
+    const dateComp = a.scheduled_date.localeCompare(b.scheduled_date)
+    if (dateComp !== 0) return dateComp
+    return (a.scheduled_time||'').localeCompare(b.scheduled_time||'')
+  })
 
   const { paged: pagedSchedule, page: schedulePage, setPage: setSchedulePage, perPage: schedulePerPage, setPerPage: setSchedulePerPage } = usePagination(filtered, 20)
 
@@ -233,7 +237,7 @@ export default function SchedulePage() {
       const week=[]
       for (let i=0;i<7;i++) {
         const d=new Date(day), dateStr=format(d,'yyyy-MM-dd')
-        const di=items.filter(x=>x.scheduled_date===dateStr)
+        const di=items.filter(x=>x.scheduled_date===dateStr).sort((a,b)=>(a.scheduled_time||'').localeCompare(b.scheduled_time||''))
         const bl=blockedItems.filter(x=>x.scheduled_date===dateStr)
         week.push(
           <div key={dateStr} className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,calendarDate)?'other-month':''}`}
@@ -400,9 +404,10 @@ export default function SchedulePage() {
 
       {/* ── 세션 일정 탭 ── */}
       {mainTab==='session' && (<>
-      <div style={{marginBottom:12}}>
+      <div style={{marginBottom:12,display:'flex',alignItems:'center',gap:8}}>
         <input className="form-input" placeholder="🔍 제목, 룰, 장소로 검색..." value={search}
           onChange={e=>setSearch(e.target.value)} autoComplete="off" style={{maxWidth:320}}/>
+        {search && <span className="text-xs text-light">({filtered.length}건)</span>}
       </div>
       <div className="flex justify-between items-center" style={{marginBottom:18,flexWrap:'wrap',gap:8}}>
         {viewMode!=='summary'&&(
