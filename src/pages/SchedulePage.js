@@ -322,13 +322,16 @@ export default function SchedulePage() {
     }
     return (
       <div>
-        <div className="flex justify-between items-center" style={{marginBottom:14}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',marginBottom:14}}>
+          <div/>
           <div className="flex items-center" style={{gap:4}}>
             <button className="btn btn-ghost btn-sm" onClick={()=>setCalendarDate(subMonths(calendarDate,1))}>‹</button>
             <span style={{fontWeight:700,fontSize:'1rem',color:'var(--color-accent)',padding:'0 4px'}}>{format(calendarDate,'yyyy년 M월',{locale:ko})}</span>
             <button className="btn btn-ghost btn-sm" onClick={()=>setCalendarDate(addMonths(calendarDate,1))}>›</button>
           </div>
-          <button className="btn btn-sm btn-outline" onClick={()=>setCalendarDate(new Date())}>오늘</button>
+          <div style={{display:'flex',justifyContent:'flex-end'}}>
+            <button className="btn btn-sm btn-outline" onClick={()=>setCalendarDate(new Date())}>오늘</button>
+          </div>
         </div>
         <div className="calendar-grid" style={{marginBottom:3}}>
           {['일','월','화','수','목','금','토'].map((d,i)=>(
@@ -352,9 +355,15 @@ export default function SchedulePage() {
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
           {Array.from({length:12},(_,m)=>{
             const mi=yearItems.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===yearView&&getMonth(d)===m})
+            const cPlanned=mi.filter(i=>i.status!=='completed'&&i.status!=='cancelled').length
+            const cDone=mi.filter(i=>i.status==='completed').length
+            const cCancel=mi.filter(i=>i.status==='cancelled').length
             return (
               <div key={m} className="card card-sm" style={{cursor:'pointer'}} onClick={()=>{setCalendarDate(new Date(yearView,m,1));setViewMode('calendar')}}>
-                <div style={{fontWeight:700,fontSize:'0.85rem',color:'var(--color-accent)',marginBottom:6}}>{m+1}월 <span className="text-xs text-light">({mi.length})</span></div>
+                <div style={{marginBottom:6}}>
+                  <span style={{fontWeight:700,fontSize:'0.85rem',color:'var(--color-accent)'}}>{m+1}월</span>
+                  {mi.length>0&&<span className="text-xs text-light" style={{marginLeft:5}}>예정 {cPlanned} / 완료 {cDone} / 취소 {cCancel}</span>}
+                </div>
                 {mi.map(i=>{
                   const evColor = colorMap?.[i.system_name]
                   const isPast = i.scheduled_date < today
