@@ -19,3 +19,6 @@ yarn-error.log*
 # misc
 .DS_Store
 .vscode/
+
+# Claude Code
+.claude/
