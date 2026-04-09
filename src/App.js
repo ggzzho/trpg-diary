@@ -1,5 +1,5 @@
 // src/App.js
-import React, { Suspense } from 'react'
+import React, { Suspense, Component } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -37,6 +37,29 @@ const PageLoader = () => (
     </div>
   </div>
 )
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null } }
+  static getDerivedStateFromError(error) { return { hasError: true, error } }
+  render() {
+    if (this.state.hasError) return (
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+        <div style={{textAlign:'center',maxWidth:480}}>
+          <div style={{fontSize:'2rem',marginBottom:12}}>⚠️</div>
+          <h2 style={{marginBottom:8,color:'#c62828'}}>페이지를 불러올 수 없어요</h2>
+          <p style={{color:'#666',fontSize:'0.85rem',marginBottom:16}}>
+            {this.state.error?.message || '알 수 없는 오류가 발생했습니다.'}
+          </p>
+          <button onClick={()=>window.location.reload()}
+            style={{padding:'8px 20px',borderRadius:8,border:'1px solid #ccc',cursor:'pointer',background:'white'}}>
+            새로고침
+          </button>
+        </div>
+      </div>
+    )
+    return this.props.children
+  }
+}
 
 // vercel.app으로 접속 시 co.kr로 강제 리다이렉트
 /*if (typeof window !== 'undefined' &&
@@ -76,6 +99,7 @@ function PrivateLayout({ children }) {
 
 function AppRoutes() {
   return (
+    <ErrorBoundary>
     <Suspense fallback={<PageLoader/>}>
       <Routes>
         <Route path="/login" element={<AuthPage/>}/>
@@ -100,6 +124,7 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
       </Routes>
     </Suspense>
+    </ErrorBoundary>
   )
 }
 
