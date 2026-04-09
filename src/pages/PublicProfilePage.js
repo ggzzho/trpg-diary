@@ -1,5 +1,5 @@
 // src/pages/PublicProfilePage.js
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
@@ -40,8 +40,17 @@ function Chip({ type, label }) {
   )
 }
 
+// hex → rgba 변환
+const hexToRgba = (hex, alpha) => {
+  const h = hex.replace('#','')
+  const r = parseInt(h.slice(0,2),16)
+  const g = parseInt(h.slice(2,4),16)
+  const b = parseInt(h.slice(4,6),16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
 // ── 미니 캘린더 ──
-function PublicCalendar({ schedules, blocked = [] }) {
+function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
   const [cal, setCal] = useState(new Date())
   const startDate = startOfWeek(startOfMonth(cal), { weekStartsOn:0 })
   const endDate = endOfWeek(endOfMonth(cal), { weekStartsOn:0 })
@@ -61,12 +70,19 @@ function PublicCalendar({ schedules, blocked = [] }) {
           style={{ cursor:'default', outline: hasBlocked ? '2px solid #e57373' : 'none', outlineOffset:'-2px' }}
         >
           <div className="calendar-date">{format(d,'d')}</div>
-          {dayScheds.slice(0,2).map((s,idx) => (
-            <div key={idx} className={`calendar-event${s.is_gm?' gm':''}`} title={s.title}>
-              {s.scheduled_time && <span style={{ opacity:0.85, marginRight:2 }}>{s.scheduled_time.slice(0,5)}</span>}
-              {s.title}
-            </div>
-          ))}
+          {dayScheds.slice(0,2).map((s,idx) => {
+            const evColor = colorMap?.[s.system_name]
+            const colorStyle = evColor ? {
+              background: s.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.8),
+              color: 'white',
+            } : {}
+            return (
+              <div key={idx} className={`calendar-event${!evColor&&s.is_gm?' gm':''}`} style={colorStyle} title={s.title}>
+                {s.scheduled_time && <span style={{ opacity:0.85, marginRight:2 }}>{s.scheduled_time.slice(0,5)}</span>}
+                {s.title}
+              </div>
+            )
+          })}
           {dayScheds.length > 2 && (
             <div style={{ fontSize:'0.55rem', color:'var(--color-text-light)', paddingLeft:2 }}>+{dayScheds.length-2}개 더</div>
           )}
@@ -221,6 +237,13 @@ export default function PublicProfilePage() {
     if (profile.extra_info) l.push({ label:'기타 사항', value:profile.extra_info })
     return l
   })()
+
+  // 공개 캘린더용 colorMap: 해당 유저의 룰북 title → color
+  const publicColorMap = useMemo(() => {
+    const m = {}
+    ;(data.rulebooks||[]).filter(r => !r.parent_id && r.color).forEach(r => { m[r.title] = r.color })
+    return m
+  }, [data.rulebooks])
 
   const hiddenTabs = profile?.hidden_tabs || []
   const TABS = [
@@ -393,7 +416,7 @@ export default function PublicProfilePage() {
       </div>
 
       {/* ── 일정 (캘린더) ── */}
-      {activeTab==='schedules' && <PublicCalendar schedules={data.schedules||[]} blocked={data.blocked||[]}/>}
+      {activeTab==='schedules' && <PublicCalendar schedules={data.schedules||[]} blocked={data.blocked||[]} colorMap={publicColorMap}/>}
 
       {/* ── 기록 (카드 + 팝업) ── */}
       {activeTab==='logs' && (

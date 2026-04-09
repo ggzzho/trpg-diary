@@ -6,6 +6,7 @@ import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '..
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
+import { useRules } from '../context/RuleContext'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, isSameMonth, isToday, addMonths, subMonths, getYear, getMonth } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -28,8 +29,18 @@ function DateBox({ dateStr }) {
   )
 }
 
+// hex → rgba 변환 헬퍼
+const hexToRgba = (hex, alpha) => {
+  const h = hex.replace('#','')
+  const r = parseInt(h.slice(0,2),16)
+  const g = parseInt(h.slice(2,4),16)
+  const b = parseInt(h.slice(4,6),16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
 export default function SchedulePage() {
   const { user } = useAuth()
+  const { colorMap } = useRules()
   const [items, setItems] = useState([])
   const [blockedItems, setBlockedItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -245,16 +256,27 @@ export default function SchedulePage() {
             style={{position:'relative', outline: bl.length>0 ? '2px solid #e57373' : 'none', outlineOffset:'-2px'}}
             onClick={()=>setSelectedDate(prev => prev===dateStr ? null : dateStr)}>
             <div className="calendar-date">{format(d,'d')}</div>
-            {di.slice(0,2).map(ev=>(
-              <div key={ev.id}
-                className={`calendar-event ${ev.is_gm?'gm':''} ${ev.status==='cancelled'?'cancelled':''} ${ev.status==='completed'?'completed':''}`}
-                onClick={e=>{e.stopPropagation();setCalPopup(ev)}} title={ev.title}
-              >
-                {ev.series_id && <span style={{marginRight:2}}>🔁</span>}
-                {fmtTime(ev.scheduled_time)&&<span style={{opacity:0.85,marginRight:2}}>{fmtTime(ev.scheduled_time)}</span>}
-                {ev.title}
-              </div>
-            ))}
+            {di.slice(0,2).map(ev=>{
+              const evColor = colorMap?.[ev.system_name]
+              const isPast = dateStr < today
+              const colorStyle = evColor && ev.status !== 'cancelled' ? {
+                background: isPast
+                  ? hexToRgba(evColor, 0.3)
+                  : ev.is_gm ? hexToRgba(evColor, 1.0) : hexToRgba(evColor, 0.8),
+                color: isPast ? hexToRgba(evColor, 0.85) : 'white',
+              } : {}
+              return (
+                <div key={ev.id}
+                  className={`calendar-event ${evColor?'':''}${ev.is_gm&&!evColor?'gm':''} ${ev.status==='cancelled'?'cancelled':''} ${ev.status==='completed'&&!evColor?'completed':''}`}
+                  style={colorStyle}
+                  onClick={e=>{e.stopPropagation();setCalPopup(ev)}} title={ev.title}
+                >
+                  {ev.series_id && <span style={{marginRight:2}}>🔁</span>}
+                  {fmtTime(ev.scheduled_time)&&<span style={{opacity:0.85,marginRight:2}}>{fmtTime(ev.scheduled_time)}</span>}
+                  {ev.title}
+                </div>
+              )
+            })}
             {di.length>2&&<div style={{fontSize:'0.55rem',color:'var(--color-text-light)',paddingLeft:2}}>+{di.length-2}개 더</div>}
             {/* 불가 날짜 표시 */}
             {bl.map((b,i)=>(
