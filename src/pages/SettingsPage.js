@@ -103,10 +103,10 @@ export default function SettingsPage() {
 
   const applyPreset = p => { setForm(f=>({...f,theme_color:p.primary,theme_bg_color:p.bg,theme_accent:p.accent})); applyTheme(p.primary,p.bg,p.accent,form.theme_text_color||null,form.dark_mode) }
   const handleColorChange = (key,value) => { const u={...form,[key]:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent,u.theme_text_color||null,u.dark_mode) }
-  const handleOpacityChange = value => { const o=parseFloat(value); setForm(f=>({...f,bg_opacity:o})); applyBackground(form.background_image_url,o,form.dark_mode) }
-  const handleBgUrlChange = value => { setForm(f=>({...f,background_image_url:value})); applyBackground(value,form.bg_opacity,form.dark_mode) }
+  const handleOpacityChange = value => { const o=parseFloat(value); setForm(f=>({...f,bg_opacity:o})); applyBackground(form.background_image_url,o,form.dark_mode,form.theme_color) }
+  const handleBgUrlChange = value => { setForm(f=>({...f,background_image_url:value})); applyBackground(value,form.bg_opacity,form.dark_mode,form.theme_color) }
   const handleTextColorChange = value => { const u={...form,theme_text_color:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent,value||null,u.dark_mode) }
-  const handleDarkModeToggle = value => { const u={...form,dark_mode:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent,u.theme_text_color||null,value); applyBackground(u.background_image_url,u.bg_opacity,value) }
+  const handleDarkModeToggle = value => { const u={...form,dark_mode:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent,u.theme_text_color||null,value); applyBackground(u.background_image_url,u.bg_opacity,value,u.theme_color) }
 
   const save = async () => {
     setSaving(true)
@@ -115,7 +115,7 @@ export default function SettingsPage() {
       await refreshProfile()
       setSaved(true); setTimeout(()=>setSaved(false),2500)
       applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent,form.theme_text_color||null,form.dark_mode)
-      applyBackground(form.background_image_url,form.bg_opacity,form.dark_mode)
+      applyBackground(form.background_image_url,form.bg_opacity,form.dark_mode,form.theme_color)
     }
     setSaving(false)
   }
@@ -335,7 +335,7 @@ export default function SettingsPage() {
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.background_image_url} onChange={e=>handleBgUrlChange(e.target.value)} style={{flex:1}} />
               </div>
-              {form.background_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} /><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1,form.dark_mode)}}>제거</button></div>}
+              {form.background_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} /><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1,form.dark_mode,form.theme_color)}}>제거</button></div>}
             </div>
             {form.background_image_url&&(
               <div className="form-group">
