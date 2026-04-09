@@ -150,11 +150,18 @@ export const guestbookApi = {
 }
 
 // ── Storage helpers ───────────────────────────────────────────
-const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
-// Canvas로 이미지 압축 (아바타용: 500px, 품질 0.82 → 평균 100~300KB)
-const compressImage = (file, maxSize = 500, quality = 0.82) => {
+// 버킷별 압축 설정 (maxBytes는 DB 버킷 제한과 동일하게 유지)
+const BUCKET_CONFIG = {
+  'avatars':      { maxBytes: 1 * 1024 * 1024,         maxPx: 500,  quality: 0.85 },
+  'covers':       { maxBytes: 1 * 1024 * 1024,         maxPx: 600,  quality: 0.85 },
+  'play-images':  { maxBytes: 2.5 * 1024 * 1024,       maxPx: 1600, quality: 0.85 },
+  'backgrounds':  { maxBytes: 2.5 * 1024 * 1024,       maxPx: 1920, quality: 0.85 },
+}
+
+// Canvas로 이미지 압축
+const compressImage = (file, maxPx, quality) => {
   return new Promise((resolve) => {
     const img = new Image()
     const url = URL.createObjectURL(file)
@@ -163,19 +170,17 @@ const compressImage = (file, maxSize = 500, quality = 0.82) => {
       const canvas = document.createElement('canvas')
       let { width, height } = img
       if (width > height) {
-        if (width > maxSize) { height = Math.round(height * maxSize / width); width = maxSize }
+        if (width > maxPx) { height = Math.round(height * maxPx / width); width = maxPx }
       } else {
-        if (height > maxSize) { width = Math.round(width * maxSize / height); height = maxSize }
+        if (height > maxPx) { width = Math.round(width * maxPx / height); height = maxPx }
       }
       canvas.width = width
       canvas.height = height
       const ctx = canvas.getContext('2d')
-      // 투명 배경 처리: 테마 배경색으로 채우기
       const themeBg = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf6f0'
       ctx.fillStyle = themeBg
       ctx.fillRect(0, 0, width, height)
       ctx.drawImage(img, 0, 0, width, height)
-      // PNG/GIF는 투명도 유지를 위해 png로, 나머지는 jpeg
       const isPng = file.type === 'image/png' || file.type === 'image/gif'
       const mimeType = isPng ? 'image/png' : 'image/jpeg'
       canvas.toBlob(blob => resolve(blob || file), mimeType, isPng ? 1 : quality)
@@ -185,22 +190,47 @@ const compressImage = (file, maxSize = 500, quality = 0.82) => {
   })
 }
 
+// 버킷 제한에 맞게 자동 압축 (초과 시 품질 단계적으로 낮춤)
+const compressToFit = async (file, bucket) => {
+  const config = BUCKET_CONFIG[bucket] || { maxBytes: 2.5 * 1024 * 1024, maxPx: 1920, quality: 0.85 }
+  const { maxBytes, maxPx, quality } = config
+  const isPngGif = file.type === 'image/png' || file.type === 'image/gif'
+
+  let blob = await compressImage(file, maxPx, quality)
+
+  // JPEG/WebP: 품질을 0.1씩 낮춰가며 목표 크기 이하로
+  if (!isPngGif && blob.size > maxBytes) {
+    let q = quality - 0.1
+    while (blob.size > maxBytes && q >= 0.3) {
+      blob = await compressImage(file, maxPx, q)
+      q -= 0.1
+    }
+  }
+
+  // PNG/GIF: 해상도를 절반으로 줄여 재시도
+  if (isPngGif && blob.size > maxBytes) {
+    blob = await compressImage(file, Math.round(maxPx / 2), 1)
+  }
+
+  return blob
+}
+
 export const uploadFile = async (bucket, path, file, options = {}) => {
   // 파일 형식 검증
   if (!ALLOWED_TYPES.includes(file.type)) {
     return { url: null, error: { message: 'JPG, PNG, GIF, WebP 형식만 업로드 가능해요.' } }
   }
-  // 파일 크기 검증 (2MB 제한)
-  if (file.size > MAX_FILE_SIZE) {
-    return { url: null, error: { message: `파일 크기가 너무 커요. 2MB 이하의 이미지를 사용해주세요. (현재: ${(file.size/1024/1024).toFixed(1)}MB)` } }
+  // 버킷 설정에 맞게 자동 압축 (크기 초과 여부와 무관하게 항상 적용)
+  const uploadTarget = await compressToFit(file, bucket)
+
+  // 압축 후에도 제한 초과 시 업로드 차단
+  const config = BUCKET_CONFIG[bucket]
+  if (config && uploadTarget.size > config.maxBytes) {
+    return { url: null, error: { message: `이미지를 최대한 압축했지만 크기 제한을 초과해요. 더 작은 이미지를 사용해주세요.` } }
   }
-  // 압축 옵션이 있으면 Canvas 압축 적용
-  let uploadTarget = file
-  if (options.compress) {
-    uploadTarget = await compressImage(file, options.maxSize || 500, options.quality || 0.82)
-  }
+
   const isPngGif = file.type === 'image/png' || file.type === 'image/gif'
-  const uploadContentType = options.compress ? (isPngGif ? 'image/png' : 'image/jpeg') : file.type
+  const uploadContentType = isPngGif ? 'image/png' : 'image/jpeg'
   const { data, error } = await supabase.storage.from(bucket).upload(path, uploadTarget, { upsert: true, contentType: uploadContentType })
   if (error) return { url: null, error }
   const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path)
