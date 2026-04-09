@@ -554,8 +554,7 @@ export default function PublicProfilePage() {
                         : <span style={{ fontSize:'1.1rem', opacity:0.35 }}><Mi size='lg' color='light'>description</Mi></span>}
                     </div>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:700, fontSize:isChild?'0.85rem':'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:8 }}>
-                        {isChild && <Mi size="sm" color="light">subdirectory_arrow_right</Mi>}
+                      <div style={{ fontWeight: isChild ? 500 : 700, fontSize:isChild?'0.85rem':'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:8 }}>
                         {item.title}
                         <span className="badge badge-gray" style={{fontSize:'0.65rem'}}>{SCENARIO_STATUS[item.status]}</span>
                       </div>

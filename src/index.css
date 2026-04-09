@@ -123,6 +123,7 @@ body::before {
     padding: 60px 16px 20px;
   }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .cal-panel { flex: 1 1 100% !important; width: 100% !important; }
 }
 
 /* ── 사이드바 내용 ────────────────────────────────────────── */

@@ -27,7 +27,7 @@ function SortableSupplRow({ item, availableTags, onEdit, onRemove }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
   return (
     <div ref={setNodeRef} style={{ transform:CSS.Transform.toString(transform), transition, opacity:isDragging?0.4:1, zIndex:isDragging?10:'auto' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px 8px 14px', borderTop:'1px solid var(--color-border)' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px 8px 14px', borderTop:'1px solid var(--color-border)', background:'var(--color-nav-active-bg)' }}>
         <DragHandle listeners={listeners} attributes={attributes}/>
         <div style={{ width:36, height:36, borderRadius:7, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
           {item.cover_image_url

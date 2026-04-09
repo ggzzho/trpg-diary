@@ -297,9 +297,12 @@ export default function SchedulePage() {
     return (
       <div>
         <div className="flex justify-between items-center" style={{marginBottom:14}}>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setCalendarDate(subMonths(calendarDate,1))}>‹ 이전</button>
-          <span style={{fontWeight:700,fontSize:'1rem',color:'var(--color-accent)'}}>{format(calendarDate,'yyyy년 M월',{locale:ko})}</span>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setCalendarDate(addMonths(calendarDate,1))}>다음 ›</button>
+          <div className="flex items-center" style={{gap:4}}>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setCalendarDate(subMonths(calendarDate,1))}>‹</button>
+            <span style={{fontWeight:700,fontSize:'1rem',color:'var(--color-accent)',padding:'0 4px'}}>{format(calendarDate,'yyyy년 M월',{locale:ko})}</span>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setCalendarDate(addMonths(calendarDate,1))}>›</button>
+          </div>
+          <button className="btn btn-sm btn-outline" onClick={()=>setCalendarDate(new Date())}>오늘</button>
         </div>
         <div className="calendar-grid" style={{marginBottom:3}}>
           {['일','월','화','수','목','금','토'].map((d,i)=>(
@@ -439,7 +442,7 @@ export default function SchedulePage() {
             <div className="card">{renderCalendar()}</div>
           </div>
           {selectedDate&&(
-            <div style={{flex:'0 0 260px',minWidth:0}}>
+            <div className="cal-panel" style={{flex:'0 0 300px',minWidth:0}}>
               <div className="card">
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
                   <span style={{fontWeight:700,fontSize:'0.9rem',color:'var(--color-accent)'}}>

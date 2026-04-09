@@ -159,6 +159,7 @@ export function ScenarioPage() {
       style={{display:'flex',alignItems:'center',gap:isChildItem?8:10,
         padding: isChildItem ? '8px 14px 8px 14px' : '10px 14px',
         borderTop: isChildItem ? '1px solid var(--color-border)' : undefined,
+        background: isChildItem ? 'var(--color-nav-active-bg)' : undefined,
       }}>
       {dragHandle}
       <div style={{width:40,height:40,borderRadius:7,overflow:'hidden',flexShrink:0,
