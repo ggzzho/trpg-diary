@@ -24,14 +24,23 @@ export function ScenarioPage() {
   const [sortOrder, setSortOrder] = useState(() => 'asc')
   const [isChild, setIsChild] = useState(false)
   const [expanded, setExpanded] = useState({})
+  const [parentSearchText, setParentSearchText] = useState('')
+  const [showParentDrop, setShowParentDrop] = useState(false)
 
   const load = async () => { const {data}=await scenariosApi.getAll(user.id); setItems(data||[]); setLoading(false) }
   useEffect(() => { load() }, [user])
   useEffect(() => { if (profile?.scenario_sort_order) setSortOrder(profile.scenario_sort_order) }, [profile])
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
-  const openNew = () => { setEditing(null); setForm(BLANK); setIsChild(false); setModal(true) }
-  const openEdit = item => { setEditing(item); setForm({...item}); setIsChild(!!item.parent_id); setModal(true) }
+  const openNew = () => { setEditing(null); setForm(BLANK); setIsChild(false); setParentSearchText(''); setModal(true) }
+  const openEdit = item => {
+    setEditing(item); setForm({...item}); setIsChild(!!item.parent_id)
+    if (item.parent_id) {
+      const parent = parents.find(p => p.id === item.parent_id)
+      setParentSearchText(parent?.title || '')
+    } else { setParentSearchText('') }
+    setModal(true)
+  }
   const save = async () => {
     if (!form.title) return
     const payload = cleanPayload({...form, parent_id: isChild ? (form.parent_id||null) : null})
@@ -121,6 +130,10 @@ export function ScenarioPage() {
       </div>
       {!isChildItem && (
         <div className="flex gap-8" style={{flexShrink:0}}>
+          <button className="btn btn-ghost btn-sm" style={{color:'var(--color-primary)'}} title="수록 시나리오 추가"
+            onClick={()=>{ setEditing(null); setForm({...BLANK, parent_id:item.id}); setIsChild(true); setParentSearchText(item.title); setModal(true) }}>
+            <Mi size="sm">add</Mi>
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
           <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
         </div>
@@ -204,12 +217,42 @@ export function ScenarioPage() {
           </label>
         </div>
         {isChild && (
-          <div className="form-group">
+          <div className="form-group" style={{position:'relative'}}>
             <label className="form-label">시나리오집 선택</label>
-            <select className="form-select" value={form.parent_id||''} onChange={e=>setForm(f=>({...f,parent_id:e.target.value||null}))}>
-              <option value="">선택해주세요</option>
-              {parentOptions.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}
-            </select>
+            <input
+              className="form-input"
+              placeholder="시나리오집 이름으로 검색..."
+              value={parentSearchText}
+              autoComplete="off"
+              onChange={e=>{ setParentSearchText(e.target.value); setShowParentDrop(true); if(!e.target.value) setForm(f=>({...f,parent_id:null})) }}
+              onFocus={()=>setShowParentDrop(true)}
+              onBlur={()=>setTimeout(()=>setShowParentDrop(false),150)}
+            />
+            {form.parent_id && !showParentDrop && (
+              <div className="text-xs text-light" style={{marginTop:4}}>
+                선택됨: {parentOptions.find(p=>p.id===form.parent_id)?.title}
+              </div>
+            )}
+            {showParentDrop && (
+              <div style={{position:'absolute',top:'100%',left:0,right:0,zIndex:100,
+                background:'var(--color-surface)',border:'1px solid var(--color-border)',
+                borderRadius:8,maxHeight:180,overflowY:'auto',
+                boxShadow:'0 4px 12px rgba(0,0,0,0.12)'}}>
+                {parentOptions.filter(p=>!parentSearchText||p.title.toLowerCase().includes(parentSearchText.toLowerCase())).length===0
+                  ? <div className="text-sm text-light" style={{padding:'10px 12px'}}>검색 결과 없음</div>
+                  : parentOptions
+                      .filter(p=>!parentSearchText||p.title.toLowerCase().includes(parentSearchText.toLowerCase()))
+                      .map(p=>(
+                        <div key={p.id}
+                          style={{padding:'8px 12px',cursor:'pointer',fontSize:'0.88rem',
+                            background:form.parent_id===p.id?'var(--color-nav-active-bg)':'transparent'}}
+                          onMouseDown={()=>{ setForm(f=>({...f,parent_id:p.id})); setParentSearchText(p.title); setShowParentDrop(false) }}>
+                          {p.title}
+                        </div>
+                      ))
+                }
+              </div>
+            )}
           </div>
         )}
         <div className="grid-2">

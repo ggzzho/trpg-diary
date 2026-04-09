@@ -50,7 +50,7 @@ export default function SchedulePage() {
   const [confirm, setConfirm] = useState(null)
   const [filter, setFilter] = useState('upcoming')
   const [mainTab, setMainTab] = useState('session')
-  const [viewMode, setViewMode] = useState('list')
+  const [viewMode, setViewMode] = useState('calendar')
   const [calendarDate, setCalendarDate] = useState(new Date())
   const [yearView, setYearView] = useState(new Date().getFullYear())
   const [summaryPeriod, setSummaryPeriod] = useState('month')
@@ -61,6 +61,7 @@ export default function SchedulePage() {
   const [copyDate, setCopyDate] = useState('')
   const [search, setSearch] = useState('')
   const [calPopup, setCalPopup] = useState(null) // 월뷰 상세 팝업
+  const [selectedDate, setSelectedDate] = useState(null) // 월뷰 날짜 선택 패널
   const [seriesConfirm, setSeriesConfirm] = useState(null) // 시리즈 삭제 확인
   // 반복 일정 폼 state
   const [isRepeat, setIsRepeat] = useState(false)
@@ -242,7 +243,7 @@ export default function SchedulePage() {
         week.push(
           <div key={dateStr} className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,calendarDate)?'other-month':''}`}
             style={{position:'relative', outline: bl.length>0 ? '2px solid #e57373' : 'none', outlineOffset:'-2px'}}
-            onClick={()=>openNew(dateStr)}>
+            onClick={()=>setSelectedDate(prev => prev===dateStr ? null : dateStr)}>
             <div className="calendar-date">{format(d,'d')}</div>
             {di.slice(0,2).map(ev=>(
               <div key={ev.id}
@@ -258,8 +259,8 @@ export default function SchedulePage() {
             {/* 불가 날짜 표시 */}
             {bl.map((b,i)=>(
               <div key={`bl${i}`}
-                style={{fontSize:'0.58rem',padding:'1px 3px',borderRadius:3,marginBottom:2,background:'rgba(229,115,115,0.15)',color:'#e57373',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'default'}}
-                onClick={e=>e.stopPropagation()}
+                style={{fontSize:'0.58rem',padding:'1px 3px',borderRadius:3,marginBottom:2,background:'rgba(229,115,115,0.15)',color:'#e57373',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer'}}
+                onClick={e=>{e.stopPropagation();setCalPopup(b)}}
                 title={[b.blocked_from&&b.blocked_until?`${fmtTime(b.blocked_from)}~${fmtTime(b.blocked_until)}`:b.blocked_from?`${fmtTime(b.blocked_from)}~`:'', b.description].filter(Boolean).join(' ')}
               >
                 🚫 {b.blocked_from?`${fmtTime(b.blocked_from)}${b.blocked_until?`~${fmtTime(b.blocked_until)}`:'~'}`:'종일'}
@@ -424,13 +425,73 @@ export default function SchedulePage() {
         )}
         {viewMode==='summary'&&<div/>}
         <div className="flex gap-8">
-          <button className={`btn btn-sm ${viewMode==='list'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('list')}><Mi size='sm'>list</Mi> 리스트</button>
           <button className={`btn btn-sm ${viewMode==='calendar'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('calendar')}><Mi size='sm'>calendar_month</Mi> 월</button>
           <button className={`btn btn-sm ${viewMode==='year'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('year')}><Mi size='sm'>calendar_view_month</Mi> 연</button>
           <button className={`btn btn-sm ${viewMode==='summary'?'btn-primary':'btn-outline'}`} onClick={()=>setViewMode('summary')}><Mi size='sm'>bar_chart</Mi> 결산</button>
         </div>
       </div>
-      {viewMode==='calendar'&&<div className="card">{renderCalendar()}</div>}
+      {viewMode==='calendar'&&(
+        <div style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
+          <div style={{flex:'1 1 320px',minWidth:0}}>
+            <div className="card">{renderCalendar()}</div>
+          </div>
+          {selectedDate&&(
+            <div style={{flex:'0 0 260px',minWidth:0}}>
+              <div className="card">
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                  <span style={{fontWeight:700,fontSize:'0.9rem',color:'var(--color-accent)'}}>
+                    {format(new Date(selectedDate+'T00:00:00'),'M월 d일 (EEE)',{locale:ko})}
+                  </span>
+                  <div style={{display:'flex',gap:6}}>
+                    <button className="btn btn-primary btn-sm" onClick={()=>openNew(selectedDate)} title="일정 추가">
+                      <Mi size='sm' color='white'>add</Mi>
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>setSelectedDate(null)}>
+                      <Mi size='sm'>close</Mi>
+                    </button>
+                  </div>
+                </div>
+                {(()=>{
+                  const dayItems=items.filter(x=>x.scheduled_date===selectedDate).sort((a,b)=>(a.scheduled_time||'').localeCompare(b.scheduled_time||''))
+                  const dayBlocked=blockedItems.filter(x=>x.scheduled_date===selectedDate)
+                  if(dayItems.length===0&&dayBlocked.length===0) return <p className="text-sm text-light" style={{textAlign:'center',padding:'12px 0'}}>일정이 없어요</p>
+                  return <>
+                    {dayItems.map(item=>(
+                      <div key={item.id} style={{padding:'8px 0',borderBottom:'1px solid var(--color-border)',display:'flex',alignItems:'center',gap:8}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:600,fontSize:'0.82rem',marginBottom:2}}>{item.title}</div>
+                          <div className="text-xs text-light">
+                            {item.scheduled_time&&fmtTime(item.scheduled_time)}{item.system_name&&` · ${item.system_name}`}
+                          </div>
+                        </div>
+                        <div style={{display:'flex',gap:4,flexShrink:0}}>
+                          <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}><Mi size='sm'>edit</Mi></button>
+                          <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>handleRemove(item)}><Mi size='sm'>delete</Mi></button>
+                        </div>
+                      </div>
+                    ))}
+                    {dayBlocked.map(item=>(
+                      <div key={item.id} style={{padding:'8px 0',borderBottom:'1px solid var(--color-border)',display:'flex',alignItems:'center',gap:8}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:600,fontSize:'0.82rem',color:'#e57373',marginBottom:2}}>
+                            🚫 {item.blocked_from?`${fmtTime(item.blocked_from)}${item.blocked_until?`~${fmtTime(item.blocked_until)}`:'~'}`:'종일 불가'}
+                          </div>
+                          {item.description&&<div className="text-xs text-light">{item.description}</div>}
+                        </div>
+                        <div style={{display:'flex',gap:4,flexShrink:0}}>
+                          <button className="btn btn-ghost btn-sm" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
+                          <button className="btn btn-ghost btn-sm" onClick={()=>openEditBlocked(item)}><Mi size='sm'>edit</Mi></button>
+                          <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>handleRemoveBlocked(item)}><Mi size='sm'>delete</Mi></button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                })()}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {viewMode==='year'&&renderYear()}
       {viewMode==='summary'&&renderSummary()}
       {viewMode==='list'&&(
@@ -494,6 +555,7 @@ export default function SchedulePage() {
                   {item.description&&<p className="text-sm text-light">{item.description}</p>}
                 </div>
                 <div className="flex gap-8" style={{flexShrink:0}}>
+                  <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
                   <button className="btn btn-ghost btn-sm" onClick={()=>openEditBlocked(item)}>수정</button>
                   <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>handleRemoveBlocked(item)}>삭제</button>
                 </div>
@@ -711,36 +773,65 @@ export default function SchedulePage() {
           <div style={{background:'var(--color-surface)',borderRadius:16,padding:24,width:'100%',maxWidth:380,border:'1px solid var(--color-border)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
               <div>
-                {calPopup.series_id && <span style={{fontSize:'0.75rem',color:'var(--color-primary)',marginBottom:4,display:'block'}}>🔁 반복 일정</span>}
-                <h3 style={{fontWeight:700,fontSize:'1rem',color:'var(--color-accent)'}}>{calPopup.title}</h3>
+                {calPopup.entry_type==='blocked'
+                  ? <><span style={{fontSize:'0.75rem',color:'#e57373',marginBottom:4,display:'block'}}>🚫 세션 불가{calPopup.series_id&&' 🔁'}</span>
+                      <h3 style={{fontWeight:700,fontSize:'1rem',color:'#e57373'}}>
+                        {calPopup.blocked_from?`${fmtTime(calPopup.blocked_from)}${calPopup.blocked_until?`~${fmtTime(calPopup.blocked_until)}`:'~'}`:'종일'}
+                      </h3></>
+                  : <>{calPopup.series_id&&<span style={{fontSize:'0.75rem',color:'var(--color-primary)',marginBottom:4,display:'block'}}>🔁 반복 일정</span>}
+                      <h3 style={{fontWeight:700,fontSize:'1rem',color:'var(--color-accent)'}}>{calPopup.title}</h3></>
+                }
               </div>
               <button className="btn btn-ghost btn-sm" onClick={()=>setCalPopup(null)}><Mi size="sm">close</Mi></button>
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:16,fontSize:'0.85rem',color:'var(--color-text-light)'}}>
-              <div><Mi size="sm" color="light">calendar_month</Mi> {calPopup.scheduled_date}
-                {calPopup.scheduled_time && ` · ${fmtTime(calPopup.scheduled_time)}${calPopup.end_time?` ~ ${fmtTime(calPopup.end_time)}`:''}`}
-              </div>
-              {calPopup.system_name && <div><Mi size="sm" color="light">sports_esports</Mi> {calPopup.system_name}</div>}
-              {calPopup.location && <div><Mi size="sm" color="light">place</Mi> {calPopup.location}</div>}
-              <div style={{display:'flex',gap:8}}>
-                <span className={`badge ${STATUS_MAP[calPopup.status]?.badge||'badge-gray'}`}>{STATUS_MAP[calPopup.status]?.label}</span>
-                {calPopup.is_gm && <span className="badge badge-primary">GM</span>}
-                {calPopup.is_intro && <span className="badge badge-green">입문탁</span>}
-              </div>
-              {calPopup.description && <p style={{marginTop:4,lineHeight:1.65}}>{calPopup.description}</p>}
+              <div><Mi size="sm" color="light">calendar_month</Mi> {calPopup.scheduled_date}</div>
+              {calPopup.entry_type==='blocked'
+                ? <>{calPopup.description&&<p style={{lineHeight:1.65}}>{calPopup.description}</p>}</>
+                : <>{calPopup.scheduled_time&&<div>🕐 {fmtTime(calPopup.scheduled_time)}{calPopup.end_time?` ~ ${fmtTime(calPopup.end_time)}`:''}</div>}
+                    {calPopup.system_name&&<div><Mi size="sm" color="light">sports_esports</Mi> {calPopup.system_name}</div>}
+                    {calPopup.location&&<div><Mi size="sm" color="light">place</Mi> {calPopup.location}</div>}
+                    <div style={{display:'flex',gap:8}}>
+                      <span className={`badge ${STATUS_MAP[calPopup.status]?.badge||'badge-gray'}`}>{STATUS_MAP[calPopup.status]?.label}</span>
+                      {calPopup.is_gm&&<span className="badge badge-primary">GM</span>}
+                      {calPopup.is_intro&&<span className="badge badge-green">입문탁</span>}
+                    </div>
+                    {calPopup.description&&<p style={{marginTop:4,lineHeight:1.65}}>{calPopup.description}</p>}
+                  </>
+              }
             </div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:14,borderTop:'1px solid var(--color-border)'}}>
-              <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
-                onClick={()=>{ setCalPopup(null); handleRemove(calPopup) }}>
-                <Mi size="sm" color="light">delete</Mi> 삭제
-              </button>
-              <div style={{display:'flex',gap:8}}>
-                <button className="btn btn-outline btn-sm" onClick={()=>setCalPopup(null)}>닫기</button>
-                <button className="btn btn-primary btn-sm"
-                  onClick={()=>{ setCalPopup(null); openEdit(calPopup) }}>
-                  <Mi size="sm" color="white">edit</Mi> 수정
-                </button>
-              </div>
+              {calPopup.entry_type==='blocked'
+                ? <>
+                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
+                      onClick={()=>{ setCalPopup(null); handleRemoveBlocked(calPopup) }}>
+                      <Mi size="sm" color="light">delete</Mi> 삭제
+                    </button>
+                    <div style={{display:'flex',gap:8}}>
+                      <button className="btn btn-outline btn-sm" onClick={()=>setCalPopup(null)}>닫기</button>
+                      <button className="btn btn-outline btn-sm" onClick={()=>{ setCalPopup(null); openCopy(calPopup) }}>
+                        <Mi size="sm">content_copy</Mi> 복사
+                      </button>
+                      <button className="btn btn-primary btn-sm" style={{background:'#e57373',borderColor:'#e57373'}}
+                        onClick={()=>{ setCalPopup(null); openEditBlocked(calPopup) }}>
+                        <Mi size="sm" color="white">edit</Mi> 수정
+                      </button>
+                    </div>
+                  </>
+                : <>
+                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
+                      onClick={()=>{ setCalPopup(null); handleRemove(calPopup) }}>
+                      <Mi size="sm" color="light">delete</Mi> 삭제
+                    </button>
+                    <div style={{display:'flex',gap:8}}>
+                      <button className="btn btn-outline btn-sm" onClick={()=>setCalPopup(null)}>닫기</button>
+                      <button className="btn btn-primary btn-sm"
+                        onClick={()=>{ setCalPopup(null); openEdit(calPopup) }}>
+                        <Mi size="sm" color="white">edit</Mi> 수정
+                      </button>
+                    </div>
+                  </>
+              }
             </div>
           </div>
         </div>
