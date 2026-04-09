@@ -1,7 +1,7 @@
 // src/pages/PairsPage.js
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { pairsApi, uploadFile, supabase } from '../lib/supabase'
+import { pairsApi, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
@@ -23,7 +23,6 @@ export function PairsPage() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(BLANK)
   const [confirm, setConfirm] = useState(null)
-  const [imgUploading, setImgUploading] = useState(false)
   const [relationTags, setRelationTags] = useState([])
   const [tagModal, setTagModal] = useState(false)
   const [tagFilter, setTagFilter] = useState('all')
@@ -61,14 +60,6 @@ export function PairsPage() {
   }
   const remove = async id => { await pairsApi.remove(id); load() }
 
-  const handleImgUpload = async e => {
-    const file=e.target.files?.[0]; if(!file) return
-    setImgUploading(true)
-    const {url,error}=await uploadFile('avatars',`${user.id}/pair-${Date.now()}`,file)
-    if(url) setForm(f=>({...f,pair_image_url:url}))
-    else alert(error?.message||'업로드 실패')
-    setImgUploading(false)
-  }
 
   const addTag = async name => { await supabase.from('pair_relations').insert({user_id:user.id,name}); loadTags() }
   const editTag = async (id,name) => {
@@ -159,10 +150,7 @@ export function PairsPage() {
         <div className="form-group"><label className="form-label">페어명 *</label><input className="form-input" value={form.name} onChange={set('name')}/></div>
         <div className="form-group">
           <label className="form-label">페어 이미지</label>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-            <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.pair_image_url||''} onChange={set('pair_image_url')} style={{flex:1}}/>
-            <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>{imgUploading?'업로드 중...':'📁 업로드'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleImgUpload} disabled={imgUploading}/></label>
-          </div>
+          <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.pair_image_url||''} onChange={set('pair_image_url')}/>
           {form.pair_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.pair_image_url} alt="preview" style={{width:52,height:52,objectFit:'cover',borderRadius:8,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,pair_image_url:''}))}>제거</button></div>}
         </div>
         <div className="form-group">
