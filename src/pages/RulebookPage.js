@@ -10,7 +10,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-const BLANK = { title:'', system_name:'', cover_image_url:'', memo:'', tags:[], parent_id:null, color:'' }
+const BLANK = { title:'', publisher:'', system_name:'', cover_image_url:'', memo:'', tags:[], parent_id:null, color:'' }
 const COLOR_PALETTE = ['#e74c3c','#e67e22','#f1c40f','#27ae60','#1abc9c','#3498db','#2980b9','#9b59b6','#e91e63','#795548','#607d8b','#95a5a6']
 
 function DragHandle({ listeners, attributes }) {
@@ -39,6 +39,7 @@ function SortableSupplRow({ item, availableTags, onEdit, onRemove }) {
             {item.color && <span style={{ width:7, height:7, borderRadius:'50%', background:item.color, flexShrink:0, display:'inline-block' }}/>}
             {item.title}
           </div>
+          {item.publisher && <p className="text-xs text-light" style={{ marginBottom:2 }}>{item.publisher}</p>}
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             {item.tags?.filter(t => availableTags.some(at => at.name === t)).map(t =>
               <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>
@@ -83,6 +84,7 @@ function SortableRulebookCard({ item, suppls, isOpen, availableTags, onToggle, o
                 </button>
               )}
             </div>
+            {item.publisher && <p className="text-xs text-light" style={{ marginBottom:2 }}>{item.publisher}</p>}
             <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
               {item.tags?.filter(t => availableTags.some(at => at.name === t)).map(t =>
                 <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>
@@ -266,8 +268,8 @@ export function RulebookPage() {
   }, [items])
 
   const filteredParents = parents.filter(i =>
-    !search || i.title.includes(search) ||
-    supplMap[i.id]?.some(s => s.title.includes(search))
+    !search || i.title.includes(search) || i.publisher?.includes(search) ||
+    supplMap[i.id]?.some(s => s.title.includes(search) || s.publisher?.includes(search))
   )
 
   const { paged: pagedRulebooks, page: rbPage, setPage: setRbPage, perPage: rbPerPage, setPerPage: setRbPerPage } = usePagination(filteredParents, 20)
@@ -373,6 +375,7 @@ export function RulebookPage() {
         )}
 
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" value={form.title} onChange={set('title')}/></div>
+        <div className="form-group"><label className="form-label">출판사</label><input className="form-input" placeholder="예: KADOKAWA, 아크라이트, 스튜디오 아발론..." value={form.publisher||''} onChange={set('publisher')} autoComplete="off"/></div>
         <div className="form-group">
           <label className="form-label">컬러 <span className="text-xs text-light">(일정 월뷰에 표시)</span></label>
           <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
