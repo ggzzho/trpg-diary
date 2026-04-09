@@ -18,6 +18,17 @@ function hexToRgb(hex) {
   try { return [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)] }
   catch { return [200,169,110] }
 }
+const WIDGET_OPTIONS = [
+  {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
+  {key:'rulebooks', label:'보유 룰북', icon:'menu_book'},
+  {key:'scenarios', label:'시나리오 목록', icon:'description'},
+  {key:'pairs', label:'페어 목록', icon:'people'},
+  {key:'schedule', label:'일정 관리', icon:'calendar_month'},
+  {key:'availability', label:'공수표', icon:'event_available'},
+  {key:'guestbook', label:'방명록', icon:'mail'},
+  {key:'bookmarks', label:'북마크', icon:'bookmark'},
+]
+
 const DEFAULT_SECTIONS = [
   {id:'play_style', label:'플레이 스타일', value:''},
   {id:'caution', label:'주의 사항', value:''},
@@ -57,6 +68,7 @@ export default function SettingsPage() {
     scenario_sort_order: p?.scenario_sort_order||'asc',
     bookmark_sort_order: p?.bookmark_sort_order||'asc',
     availability_sort_order: p?.availability_sort_order||'asc',
+    dashboard_cards: p?.dashboard_cards || ['logs','rulebooks','scenarios','pairs'],
   })
 
   const [form, setForm] = useState(() => buildForm(profile))
@@ -125,7 +137,7 @@ export default function SettingsPage() {
     else { setPwMsg('비밀번호가 변경됐어요! ✅'); setPwForm({current:'',next:'',confirm:''}) }
   }
 
-  const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'theme',label:'테마',icon:'palette'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'},{key:'withdraw',label:'회원 탈퇴',icon:'person_remove'}]
+  const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'dashboard',label:'홈화면',icon:'dashboard'},{key:'theme',label:'테마',icon:'palette'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'},{key:'withdraw',label:'회원 탈퇴',icon:'person_remove'}]
 
   const handleWithdraw = async () => {
     if (withdrawInput !== '탈퇴합니다') return
@@ -252,6 +264,39 @@ export default function SettingsPage() {
                 <button className="btn btn-outline btn-sm" onClick={addLink}>추가</button>
               </div>
             </div>
+          </>
+        )}
+
+        {/* ── 홈화면 위젯 ── */}
+        {tab==='dashboard'&&(
+          <>
+            <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:8,fontSize:'1rem'}}>홈화면 위젯 선택</h2>
+            <p className="text-sm text-light" style={{marginBottom:20}}>홈화면 상단에 표시할 위젯 4개를 선택하세요.</p>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {WIDGET_OPTIONS.map(w=>{
+                const isSelected=(form.dashboard_cards||[]).includes(w.key)
+                const canAdd=(form.dashboard_cards||[]).length<4
+                return (
+                  <div key={w.key} className="card" style={{padding:'10px 14px',background:'var(--color-nav-active-bg)',opacity:(!isSelected&&!canAdd)?0.45:1,transition:'opacity 0.15s'}}>
+                    <div className="flex justify-between items-center">
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <Mi size='sm' color={isSelected?'accent':'light'}>{w.icon}</Mi>
+                        <span style={{fontSize:'0.88rem',fontWeight:500,color:isSelected?'var(--color-text)':'var(--color-text-light)'}}>{w.label}</span>
+                      </div>
+                      <div
+                        onClick={()=>{
+                          if(isSelected) setForm(f=>({...f,dashboard_cards:(f.dashboard_cards||[]).filter(k=>k!==w.key)}))
+                          else if(canAdd) setForm(f=>({...f,dashboard_cards:[...(f.dashboard_cards||[]),w.key]}))
+                        }}
+                        style={{width:36,height:20,borderRadius:10,background:isSelected?'var(--color-primary)':'#ccc',position:'relative',cursor:(!isSelected&&!canAdd)?'not-allowed':'pointer',transition:'background 0.2s',flexShrink:0}}>
+                        <div style={{position:'absolute',top:2,left:isSelected?18:2,width:16,height:16,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-sm text-light" style={{marginTop:12,textAlign:'right'}}>{(form.dashboard_cards||[]).length}/4 선택됨</p>
           </>
         )}
 

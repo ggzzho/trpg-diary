@@ -189,7 +189,7 @@ export default function PublicProfilePage() {
 
       const today = new Date().toISOString().split('T')[0]
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
-      const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks] = await Promise.all([
+      const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks, guestbook] = await Promise.all([
         safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).limit(9000).then(r=>r)),
         safe(supabase.from('rulebooks').select('*').eq('user_id', p.id)
           .order('sort_order', { ascending: true, nullsFirst: false })
@@ -204,10 +204,11 @@ export default function PublicProfilePage() {
         safe(supabase.from('schedules').select('*').eq('user_id',p.id)
           .order('scheduled_date').limit(9000).then(r=>r)),
         safe(supabase.from('bookmarks').select('*').eq('user_id',p.id).order('title').limit(9000).then(r=>r)),
+        safe(supabase.from('guestbook').select('id').eq('owner_id',p.id).limit(9000).then(r=>r)),
       ])
       const scheds = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
       const blocked = schedsAll.filter(s => s.entry_type === 'blocked')
-      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked, bookmarks })
+      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked, bookmarks, guestbook })
 
       // hidden_tabs가 있으면 초기 탭이 숨겨져 있을 수 있으므로 첫 번째 보이는 탭으로 조정
       const hidden = p.hidden_tabs || []
@@ -369,19 +370,30 @@ export default function PublicProfilePage() {
           <p className="text-sm text-light">@{profile.username}</p>
 
           {/* 통계 */}
-          <div className="flex justify-between" style={{ marginTop:16, padding:'12px 0', borderTop:'1px solid var(--color-border)', borderBottom:'1px solid var(--color-border)' }}>
-            {[
-              { label:'기록', v:publicLogs.length||0 },
-              { label:'룰북', v:(data.rulebooks||[]).filter(r=>!r.parent_id).length },
-              { label:'시나리오', v:data.scenarios?.length||0 },
-              { label:'페어', v:data.pairs?.length||0 },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign:'center', flex:1 }}>
-                <div style={{ fontSize:'1.3rem', color:'var(--color-accent)', fontWeight:700 }}>{s.v}</div>
-                <div className="text-xs text-light">{s.label}</div>
+          {(() => {
+            const ALL_PUBLIC_STATS = [
+              {key:'logs', label:'기록', v:publicLogs.length||0},
+              {key:'rulebooks', label:'룰북', v:(data.rulebooks||[]).filter(r=>!r.parent_id).length},
+              {key:'scenarios', label:'시나리오', v:data.scenarios?.length||0},
+              {key:'pairs', label:'페어', v:data.pairs?.length||0},
+              {key:'schedule', label:'일정', v:data.schedules?.length||0},
+              {key:'availability', label:'공수표', v:data.availability?.length||0},
+              {key:'guestbook', label:'방명록', v:data.guestbook?.length||0},
+              {key:'bookmarks', label:'북마크', v:data.bookmarks?.length||0},
+            ]
+            const dashCards = profile?.dashboard_cards || ['logs','rulebooks','scenarios','pairs']
+            const publicStats = ALL_PUBLIC_STATS.filter(s=>dashCards.includes(s.key))
+            return (
+              <div className="flex justify-between" style={{ marginTop:16, padding:'12px 0', borderTop:'1px solid var(--color-border)', borderBottom:'1px solid var(--color-border)' }}>
+                {publicStats.map(s => (
+                  <div key={s.key} style={{ textAlign:'center', flex:1 }}>
+                    <div style={{ fontSize:'1.3rem', color:'var(--color-accent)', fontWeight:700 }}>{s.v}</div>
+                    <div className="text-xs text-light">{s.label}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )
+          })()}
 
           {/* 프로필 소개 */}
           {sections.filter(s=>s.value).length > 0 && (
