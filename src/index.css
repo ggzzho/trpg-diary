@@ -482,7 +482,7 @@ body::before {
 .calendar-cell.today .calendar-date { color: var(--color-accent); }
 
 .calendar-event {
-  font-size: 0.62rem;
+  font-size: 0.65rem;
   padding: 1px 4px;
   border-radius: 3px;
   background: var(--color-primary);
