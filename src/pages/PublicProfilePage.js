@@ -97,7 +97,7 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
           {cellItems.slice(0,3).map((item,idx) => {
             if (item._kind === 'blocked') return (
               <div key={`bl${idx}`}
-                style={{ fontSize:'0.58rem', padding:'1px 3px', borderRadius:3, marginBottom:2,
+                style={{ fontSize:'0.65rem', padding:'1px 3px', borderRadius:3, marginBottom:2,
                   background:'rgba(229,115,115,0.15)', color:'#e57373',
                   overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}
                 title={item.blocked_from && item.blocked_until ? `${item.blocked_from.slice(0,5)}~${item.blocked_until.slice(0,5)}` : item.blocked_from ? `${item.blocked_from.slice(0,5)}~` : ''}

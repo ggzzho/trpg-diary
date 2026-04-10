@@ -274,7 +274,7 @@ export default function SchedulePage() {
             {cellItems.slice(0,3).map((item,i)=>{
               if (item._kind==='blocked') return (
                 <div key={`bl${i}`}
-                  style={{fontSize:'0.58rem',padding:'1px 3px',borderRadius:3,marginBottom:2,background:'rgba(229,115,115,0.15)',color:'#e57373',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer'}}
+                  style={{fontSize:'0.65rem',padding:'1px 3px',borderRadius:3,marginBottom:2,background:'rgba(229,115,115,0.15)',color:'#e57373',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer'}}
                   onClick={e=>{e.stopPropagation();setCalPopup(item)}}
                   title={[item.blocked_from&&item.blocked_until?`${fmtTime(item.blocked_from)}~${fmtTime(item.blocked_until)}`:item.blocked_from?`${fmtTime(item.blocked_from)}~`:'', item.description].filter(Boolean).join(' ')}
                 >
