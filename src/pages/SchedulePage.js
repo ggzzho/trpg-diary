@@ -181,7 +181,7 @@ export default function SchedulePage() {
 
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
-    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 일정 관리을(를) 정리해주세요.'); return }
+    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 일정 관리를 정리해주세요.'); return }
     const { id, user_id, created_at, ...formFields } = form
     const payload = {...formFields, scheduled_time:form.scheduled_time||null, end_time:form.end_time||null}
     let error
