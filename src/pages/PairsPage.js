@@ -78,7 +78,7 @@ export function PairsPage() {
     .sort((a,b)=>{
       const da=a.first_met_date||'', db=b.first_met_date||''
       const noA=!a.first_met_date, noB=!b.first_met_date
-      if (noA && noB) return (a.name||'').localeCompare(b.name||'','ko')
+      if (noA && noB) return sortOrder==='asc'?(a.name||'').localeCompare(b.name||'','ko'):(b.name||'').localeCompare(a.name||'','ko')
       if (noA) return 1
       if (noB) return -1
       return sortOrder==='asc'?da.localeCompare(db):db.localeCompare(da)
