@@ -26,6 +26,8 @@ const AvailabilityPage = React.lazy(() => import('./pages/AvailabilityPage').the
 const PlayLogPage      = React.lazy(() => import('./pages/PlayLogPage').then(m => ({ default: m.PlayLogPage })))
 const RulebookPage     = React.lazy(() => import('./pages/RulebookPage').then(m => ({ default: m.RulebookPage })))
 const ScenarioPage     = React.lazy(() => import('./pages/ScenarioPage').then(m => ({ default: m.ScenarioPage })))
+const WishScenarioPage = React.lazy(() => import('./pages/WishScenarioPage').then(m => ({ default: m.WishScenarioPage })))
+const DotoriPage       = React.lazy(() => import('./pages/DotoriPage').then(m => ({ default: m.DotoriPage })))
 const PairsPage        = React.lazy(() => import('./pages/PairsPage').then(m => ({ default: m.PairsPage })))
 const GuestbookPage    = React.lazy(() => import('./pages/GuestbookPage').then(m => ({ default: m.GuestbookPage })))
 const BookmarkPage     = React.lazy(() => import('./pages/BookmarkPage').then(m => ({ default: m.BookmarkPage })))
@@ -112,6 +114,8 @@ function AppRoutes() {
         <Route path="/logs" element={<PrivateLayout><PlayLogPage/></PrivateLayout>}/>
         <Route path="/rulebooks" element={<PrivateLayout><RulebookPage/></PrivateLayout>}/>
         <Route path="/scenarios" element={<PrivateLayout><ScenarioPage/></PrivateLayout>}/>
+        <Route path="/wish-scenarios" element={<PrivateLayout><WishScenarioPage/></PrivateLayout>}/>
+        <Route path="/dotori" element={<PrivateLayout><DotoriPage/></PrivateLayout>}/>
         <Route path="/pairs" element={<PrivateLayout><PairsPage/></PrivateLayout>}/>
         <Route path="/bookmarks" element={<PrivateLayout><BookmarkPage/></PrivateLayout>}/>
         <Route path="/guestbook" element={<PrivateLayout><GuestbookPage/></PrivateLayout>}/>

@@ -88,8 +88,10 @@ export const availabilityApi = makeTableApi('availability')
 export const playLogsApi = makeTableApi('play_logs')
 export const rulebooksApi = makeTableApi('rulebooks')
 export const scenariosApi = makeTableApi('scenarios')
+export const wishScenariosApi = makeTableApi('wish_scenarios')
 export const pairsApi = makeTableApi('pairs')
 export const bookmarksApi = makeTableApi('bookmarks')
+export const dotoriApi = makeTableApi('dotori')
 
 // ── 북마크 태그 API ───────────────────────────────────────────
 export const bookmarkTagsApi = {
@@ -103,6 +105,22 @@ export const bookmarkTagsApi = {
   },
   remove: async (id) => {
     const { error } = await supabase.from('bookmark_tags').delete().eq('id', id)
+    return { error }
+  }
+}
+
+// ── 도토리 태그 API ───────────────────────────────────────────
+export const dotoriTagsApi = {
+  getAll: async (userId) => {
+    const { data, error } = await supabase.from('dotori_tags').select('*').eq('user_id', userId).order('name')
+    return { data, error }
+  },
+  create: async (payload) => {
+    const { data, error } = await supabase.from('dotori_tags').insert(payload).select().single()
+    return { data, error }
+  },
+  remove: async (id) => {
+    const { error } = await supabase.from('dotori_tags').delete().eq('id', id)
     return { error }
   }
 }
