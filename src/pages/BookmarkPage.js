@@ -238,7 +238,7 @@ export function BookmarkPage() {
       <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 북마크 태그 관리"
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
       ><TagManager tags={tags} onAdd={addTag} onEdit={editTag} onRemove={removeTag} placeholder="도토리, 배포자료, 유틸..."/></Modal>
-      <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>{bookmarksApi.remove(confirm);load();setConfirm(null)}} message="이 북마크를 삭제하시겠어요?"/>
+      <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={async ()=>{ await bookmarksApi.remove(confirm); setConfirm(null); load() }} message="이 북마크를 삭제하시겠어요?"/>
     </div>
   )
 }

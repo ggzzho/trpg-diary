@@ -229,7 +229,7 @@ export function DotoriPage() {
       <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 도토리 태그 관리"
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
       ><TagManager tags={tags} onAdd={addTag} onEdit={editTag} onRemove={removeTag} placeholder="단편, 장편, 호러, 판타지..."/></Modal>
-      <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>{dotoriApi.remove(confirm);load();setConfirm(null)}} message="이 도토리를 삭제하시겠어요?"/>
+      <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={async ()=>{ await dotoriApi.remove(confirm); setConfirm(null); load() }} message="이 도토리를 삭제하시겠어요?"/>
     </div>
   )
 }
