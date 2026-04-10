@@ -1,6 +1,5 @@
 // src/pages/SettingsPage.js
 import React, { useState, useEffect, useRef } from 'react'
-import { useBlocker } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { updateProfile, uploadFile, supabase } from '../lib/supabase'
@@ -95,8 +94,6 @@ export default function SettingsPage() {
     }
   }, [])
 
-  // React Router 이탈 차단
-  const blocker = useBlocker(isDirty)
 
   const set = k => e => setForm(f=>({...f, [k]:e.target.value}))
   const updateSection = (idx,field,value) => setForm(f=>{const s=[...f.profile_sections];s[idx]={...s[idx],[field]:value};return {...f,profile_sections:s}})
@@ -183,17 +180,10 @@ export default function SettingsPage() {
 
   return (
     <div className="fade-in">
-      {blocker.state === 'blocked' && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div className="card" style={{maxWidth:360,width:'90%',padding:28,textAlign:'center'}}>
-            <Mi style={{fontSize:'2rem',color:'var(--color-primary)',marginBottom:12}}>warning</Mi>
-            <div style={{fontWeight:700,fontSize:'1rem',marginBottom:8}}>저장하지 않은 변경사항</div>
-            <div style={{fontSize:'0.88rem',color:'var(--color-text-light)',marginBottom:20}}>이 페이지를 벗어나면 변경사항이 사라져요.<br/>그래도 이동할까요?</div>
-            <div style={{display:'flex',gap:10,justifyContent:'center'}}>
-              <button className="btn btn-outline" onClick={()=>blocker.reset()}>돌아가기</button>
-              <button className="btn btn-primary" onClick={()=>blocker.proceed()}>저장 없이 이동</button>
-            </div>
-          </div>
+      {isDirty && (
+        <div style={{position:'sticky',top:0,zIndex:100,background:'var(--color-primary)',color:'white',padding:'8px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',borderRadius:8,marginBottom:12,fontSize:'0.85rem',boxShadow:'0 2px 8px rgba(0,0,0,0.15)'}}>
+          <span style={{display:'flex',alignItems:'center',gap:6}}><Mi size='sm' color='white'>edit_note</Mi>저장하지 않은 변경사항이 있어요.</span>
+          <button className="btn btn-sm" style={{background:'white',color:'var(--color-primary)',fontWeight:700,padding:'3px 12px'}} onClick={save}>{saving?'저장 중…':'지금 저장'}</button>
         </div>
       )}
       <div className="page-header"><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>settings</Mi>환경설정</h1><p className="page-subtitle">나만의 TRPG 다이어리를 꾸며보세요</p></div>
