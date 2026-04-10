@@ -118,6 +118,7 @@ export function WishScenarioPage() {
   }
   const save = async () => {
     if (!form.title) return
+    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 위시 시나리오을(를) 정리해주세요.'); return }
     const parentId = isChild ? (form.parent_id||null) : null
     const payload = cleanPayload({...form, parent_id: parentId})
     if (editing) {

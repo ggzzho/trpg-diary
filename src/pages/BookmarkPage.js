@@ -116,6 +116,7 @@ export function BookmarkPage() {
 
   const save = async () => {
     if (!form.url) return
+    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 북마크을(를) 정리해주세요.'); return }
     const validTagNames = tags.map(t=>t.name)
     const { id, user_id, created_at, ...formFields } = form
     const payload = {...formFields, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}

@@ -173,6 +173,7 @@ export function RulebookPage() {
 
   const save = async () => {
     if (!form.title) return
+    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 보유 룰북을(를) 정리해주세요.'); return }
     const { id, user_id, created_at, ...formFields } = form
     const payload = { ...formFields, parent_id: isSuppl ? (form.parent_id || null) : null }
     if (editing) await supabase.from('rulebooks').update(payload).eq('id', editing.id)
