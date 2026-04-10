@@ -41,9 +41,10 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [newLink, setNewLink] = useState({label:'',url:''})
-  const [pwForm, setPwForm] = useState({current:'', next:'', confirm:''})
+  const [pwForm, setPwForm] = useState({next:'', confirm:''})
   const [pwMsg, setPwMsg] = useState(null)
   const [pwErr, setPwErr] = useState(null)
+  const [pwLoading, setPwLoading] = useState(false)
   const [withdrawConfirm, setWithdrawConfirm] = useState(false)
   const [withdrawInput, setWithdrawInput] = useState('')
   const [withdrawing, setWithdrawing] = useState(false)
@@ -158,9 +159,19 @@ export default function SettingsPage() {
     e.preventDefault(); setPwErr(null); setPwMsg(null)
     if (pwForm.next !== pwForm.confirm) { setPwErr('새 비밀번호가 일치하지 않아요.'); return }
     if (pwForm.next.length < 6) { setPwErr('비밀번호는 6자 이상이어야 해요.'); return }
+    setPwLoading(true)
     const {error} = await supabase.auth.updateUser({password: pwForm.next})
-    if (error) setPwErr(error.message)
-    else { setPwMsg('비밀번호가 변경됐어요! ✅'); setPwForm({current:'',next:'',confirm:''}) }
+    setPwLoading(false)
+    if (error) {
+      const msg = error.message?.toLowerCase() || ''
+      if (msg.includes('same password') || msg.includes('different from the old')) setPwErr('현재 비밀번호와 동일해요. 다른 비밀번호를 입력해주세요.')
+      else if (msg.includes('at least')) setPwErr('비밀번호는 6자 이상이어야 해요.')
+      else if (msg.includes('session') || msg.includes('not authenticated')) setPwErr('인증이 만료됐어요. 다시 로그인 후 시도해주세요.')
+      else setPwErr('비밀번호 변경 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+    } else {
+      setPwMsg('비밀번호가 변경됐어요! ✅')
+      setPwForm({next:'', confirm:''})
+    }
   }
 
   const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'theme',label:'테마',icon:'palette'},{key:'dashboard',label:'홈화면',icon:'dashboard'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'},{key:'withdraw',label:'회원 탈퇴',icon:'person_remove'}]
@@ -453,9 +464,9 @@ export default function SettingsPage() {
             {pwErr&&<div style={{padding:'10px 14px',borderRadius:8,background:'rgba(229,115,115,0.1)',border:'1px solid rgba(229,115,115,0.3)',color:'#c62828',fontSize:'0.82rem',marginBottom:14}}>{pwErr}</div>}
             {pwMsg&&<div style={{padding:'10px 14px',borderRadius:8,background:'rgba(104,159,56,0.1)',border:'1px solid rgba(104,159,56,0.3)',color:'#33691e',fontSize:'0.82rem',marginBottom:14}}>{pwMsg}</div>}
             <form onSubmit={handlePwChange}>
-              <div className="form-group"><label className="form-label">새 비밀번호</label><input className="form-input" type="password" placeholder="6자 이상" value={pwForm.next} onChange={e=>setPwForm(f=>({...f,next:e.target.value}))} required /></div>
-              <div className="form-group"><label className="form-label">새 비밀번호 확인</label><input className="form-input" type="password" placeholder="동일하게 입력" value={pwForm.confirm} onChange={e=>setPwForm(f=>({...f,confirm:e.target.value}))} required /></div>
-              <button className="btn btn-primary btn-sm" type="submit"><Mi size='sm' color='white'>lock_reset</Mi> 비밀번호 변경</button>
+              <div className="form-group"><label className="form-label">새 비밀번호</label><input className="form-input" type="password" placeholder="6자 이상" value={pwForm.next} onChange={e=>setPwForm(f=>({...f,next:e.target.value}))} disabled={pwLoading} required /></div>
+              <div className="form-group"><label className="form-label">새 비밀번호 확인</label><input className="form-input" type="password" placeholder="동일하게 입력" value={pwForm.confirm} onChange={e=>setPwForm(f=>({...f,confirm:e.target.value}))} disabled={pwLoading} required /></div>
+              <button className="btn btn-primary btn-sm" type="submit" disabled={pwLoading}><Mi size='sm' color='white'>lock_reset</Mi> {pwLoading ? '변경 중...' : '비밀번호 변경'}</button>
             </form>
           </>
         )}
