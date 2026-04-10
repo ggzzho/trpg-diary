@@ -92,7 +92,7 @@ export default function NoticePage() {
         <meta property="og:type"        content="article" />
         <meta property="og:title"       content={`${notice.title} - TRPG Diary`} />
         <meta property="og:description" content={notice.content?.slice(0,100)?.replace(/[#*`]/g,'') || 'TRPG Diary 공지사항'} />
-        <meta property="og:image"       content="https://trpg-diary.co.kr/logo512.png" />
+        <meta property="og:image"       content="https://trpg-diary.co.kr/og-image.png" />
         <meta property="og:url"         content={`https://trpg-diary.co.kr/notices/${notice.id}`} />
         <meta name="twitter:card"        content="summary" />
         <meta name="twitter:title"       content={`${notice.title} - TRPG Diary`} />

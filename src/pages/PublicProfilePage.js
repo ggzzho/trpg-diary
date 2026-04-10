@@ -367,7 +367,7 @@ export default function PublicProfilePage() {
 
   const ogTitle = profile ? `${profile.display_name || profile.username}의 TRPG Diary` : 'TRPG Diary ✦'
   const ogDesc  = profile?.play_style || (profile ? `${profile.display_name || profile.username}님의 TRPG 다이어리 - trpg-diary.co.kr` : '나만의 TRPG Diary')
-  const ogImage = profile?.header_image_url || profile?.avatar_url || 'https://trpg-diary.co.kr/logo512.png'
+  const ogImage = profile?.header_image_url || profile?.avatar_url || 'https://trpg-diary.co.kr/og-image.png'
   const ogUrl   = `https://trpg-diary.co.kr/u/${username}`
 
   return (
