@@ -118,7 +118,7 @@ export default function SchedulePage() {
   const setB = k => e => setBlockedForm(f=>({...f,[k]:e.target.value}))
   const resetRepeatBlocked = () => { setIsRepeatBlocked(false); setRepeatModeBlocked('count'); setRepeatCountBlocked(4); setRepeatEndDateBlocked(''); setRepeatPreviewBlocked([]) }
   const openNewBlocked = (date) => { setEditingBlocked(null); setBlockedForm({...BLOCKED_BLANK, scheduled_date:date||new Date().toISOString().split('T')[0]}); resetRepeatBlocked(); setModalTab('blocked'); setModal(true) }
-  const openEditBlocked = item => { setEditingBlocked(item); setBlockedForm({...item}); resetRepeatBlocked(); setModalTab('blocked'); setModal(true) }
+  const openEditBlocked = item => { const {_sortTime,_type,_kind,...clean}=item; setEditingBlocked(clean); setBlockedForm({...clean}); resetRepeatBlocked(); setModalTab('blocked'); setModal(true) }
   const saveBlocked = async () => {
     if (!blockedForm.scheduled_date) return
     const { id, user_id, created_at, ...blockedFields } = blockedForm
@@ -154,7 +154,7 @@ export default function SchedulePage() {
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const resetRepeat = () => { setIsRepeat(false); setRepeatMode('count'); setRepeatCount(4); setRepeatEndDate(''); setRepeatPreview([]) }
   const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||new Date().toISOString().split('T')[0]}); resetRepeat(); setModalTab('session'); setModal(true) }
-  const openEdit = item => { setEditing(item); setForm({...item}); resetRepeat(); setModalTab('session'); setModal(true) }
+  const openEdit = item => { const {_sortTime,_type,_kind,...clean}=item; setEditing(clean); setForm({...clean}); resetRepeat(); setModalTab('session'); setModal(true) }
 
   const calcRepeatDates = (baseDate, mode, count, endDate) => {
     if (!baseDate) return []
@@ -218,7 +218,7 @@ export default function SchedulePage() {
       const {id,created_at,...rest}=copyTarget
       await schedulesApi.create({...rest,scheduled_date:copyDate,user_id:user.id})
     } else {
-      await schedulesApi.update(copyTarget.id,{...copyTarget,scheduled_date:copyDate})
+      const {_sortTime,_type,_kind,...cleanTarget}=copyTarget; await schedulesApi.update(cleanTarget.id,{...cleanTarget,scheduled_date:copyDate})
     }
     setCopyModal(false); setCopyTarget(null); setCopyDate(''); load()
   }
