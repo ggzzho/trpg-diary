@@ -52,6 +52,14 @@ const hexToRgba = (hex, alpha) => {
 // ── 미니 캘린더 ──
 function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
   const [tooltip, setTooltip] = useState(null) // { date, scheds, x, y }
+
+  // 모바일: 툴팁 외부 터치 시 닫기
+  React.useEffect(() => {
+    if (!tooltip) return
+    const handler = () => setTooltip(null)
+    document.addEventListener('touchstart', handler)
+    return () => document.removeEventListener('touchstart', handler)
+  }, [!!tooltip])
   const [cal, setCal] = useState(new Date())
   const startDate = startOfWeek(startOfMonth(cal), { weekStartsOn:0 })
   const endDate = endOfWeek(endOfMonth(cal), { weekStartsOn:0 })
@@ -119,25 +127,28 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
     rows.push(<React.Fragment key={day.toString()}>{week}</React.Fragment>)
   }
   return (
-    <div className="card">
-      <div className="flex justify-between items-center" style={{ marginBottom:14 }}>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setCal(subMonths(cal,1))}>‹ 이전</button>
-        <span style={{ fontWeight:700, fontSize:'1rem', color:'var(--color-accent)' }}>{format(cal,'yyyy년 M월',{locale:ko})}</span>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}>다음 ›</button>
+    <>
+      <div className="card">
+        <div className="flex justify-between items-center" style={{ marginBottom:14 }}>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setCal(subMonths(cal,1))}>‹ 이전</button>
+          <span style={{ fontWeight:700, fontSize:'1rem', color:'var(--color-accent)' }}>{format(cal,'yyyy년 M월',{locale:ko})}</span>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}>다음 ›</button>
+        </div>
+        <div className="calendar-grid" style={{ marginBottom:3 }}>
+          {['일','월','화','수','목','금','토'].map((d,i) => (
+            <div key={d} className="calendar-day-header"
+              style={{ color: i===0?'#e57373':i===6?'#6b8cba':'var(--color-text-light)' }}>{d}</div>
+          ))}
+        </div>
+        <div className="calendar-grid">{rows}</div>
       </div>
-      <div className="calendar-grid" style={{ marginBottom:3 }}>
-        {['일','월','화','수','목','금','토'].map((d,i) => (
-          <div key={d} className="calendar-day-header"
-            style={{ color: i===0?'#e57373':i===6?'#6b8cba':'var(--color-text-light)' }}>{d}</div>
-        ))}
-      </div>
-      <div className="calendar-grid">{rows}</div>
       {tooltip && (
         <>
-          <div style={{ position:'fixed', inset:0, zIndex:9998 }} onTouchEnd={()=>setTooltip(null)} onClick={()=>setTooltip(null)} />
+          <div style={{ position:'fixed', inset:0, zIndex:9998, pointerEvents:'none' }} />
           <div
             onMouseEnter={() => {}}
             onMouseLeave={() => setTooltip(null)}
+            onTouchStart={e => e.stopPropagation()}
             style={{
               position:'fixed', left: Math.min(tooltip.x, window.innerWidth - 230),
               top: tooltip.y + 4, zIndex:9999,
@@ -165,7 +176,7 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
           </div>
         </>
       )}
-    </div>
+    </>
   )
 }
 
