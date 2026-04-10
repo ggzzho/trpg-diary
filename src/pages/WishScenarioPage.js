@@ -12,7 +12,7 @@ import { CSS } from '@dnd-kit/utilities'
 
 const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
 const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자' }
-const DEFAULT_STATUS_TAGS = ['미구매', '구매 예정', '구매 완료', '품절']
+const DEFAULT_STATUS_TAGS = ['미구매', '구매 예정', '품절']
 
 function SortableWrapper({ id, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
