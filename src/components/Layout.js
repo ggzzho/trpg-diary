@@ -80,8 +80,8 @@ function NavGroup({ group, pathname }) {
   )
 }
 
-export const FOOTER_TEXT = '© 2026 TRPG Diary v1.1.0 · Made with Claude (AI). All rights reserved.'
-export const SITE_VERSION = 'v1.1.0'
+export const FOOTER_TEXT = '© 2026 TRPG Diary v2.0.1 · Made with Claude (AI). All rights reserved.'
+export const SITE_VERSION = 'v2.0.1'
 
 export function Layout({ children }) {
   const { user, profile } = useAuth()
