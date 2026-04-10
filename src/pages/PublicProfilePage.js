@@ -51,6 +51,7 @@ const hexToRgba = (hex, alpha) => {
 
 // ── 미니 캘린더 ──
 function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
+  const [tooltip, setTooltip] = useState(null) // { date, scheds, x, y }
   const [cal, setCal] = useState(new Date())
   const startDate = startOfWeek(startOfMonth(cal), { weekStartsOn:0 })
   const endDate = endOfWeek(endOfMonth(cal), { weekStartsOn:0 })
@@ -63,11 +64,17 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
       const dStr = format(d, 'yyyy-MM-dd')
       const dayScheds = schedules.filter(s => s.scheduled_date === dStr).sort((a,b) => (a.scheduled_time||'').localeCompare(b.scheduled_time||''))
       const dayBlocked = blocked.filter(b => b.scheduled_date === dStr)
-      const hasBlocked = dayBlocked.length > 0
+      const hasAllDayBlocked = dayBlocked.some(b => !b.blocked_from)
+      const hasMore = dayScheds.length > 2
       week.push(
         <div key={dStr}
           className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,cal)?'other-month':''}`}
-          style={{ cursor:'default', outline: hasBlocked ? '2px solid #e57373' : 'none', outlineOffset:'-2px' }}
+          style={{ cursor: hasMore ? 'pointer' : 'default', outline: hasAllDayBlocked ? '2px solid #e57373' : 'none', outlineOffset:'-2px', position:'relative' }}
+          onMouseEnter={hasMore ? e => {
+            const r = e.currentTarget.getBoundingClientRect()
+            setTooltip({ date: dStr, scheds: dayScheds, x: r.left, y: r.bottom + window.scrollY })
+          } : undefined}
+          onMouseLeave={hasMore ? () => setTooltip(null) : undefined}
         >
           <div className="calendar-date">{format(d,'d')}</div>
           {dayScheds.slice(0,2).map((s,idx) => {
@@ -83,8 +90,8 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
               </div>
             )
           })}
-          {dayScheds.length > 2 && (
-            <div style={{ fontSize:'0.55rem', color:'var(--color-text-light)', paddingLeft:2 }}>+{dayScheds.length-2}개 더</div>
+          {hasMore && (
+            <div style={{ fontSize:'0.55rem', color:'var(--color-primary)', paddingLeft:2, fontWeight:600 }}>+{dayScheds.length-2}개 더 ▾</div>
           )}
           {dayBlocked.map((b,idx) => (
             <div key={`bl${idx}`}
@@ -120,6 +127,33 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
         ))}
       </div>
       <div className="calendar-grid">{rows}</div>
+      {tooltip && (
+        <div
+          onMouseEnter={() => {}}
+          onMouseLeave={() => setTooltip(null)}
+          style={{
+            position:'fixed', left: Math.min(tooltip.x, window.innerWidth - 230),
+            top: tooltip.y + 4, zIndex:9999,
+            background:'var(--color-surface)', border:'1px solid var(--color-border)',
+            borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,0.15)',
+            minWidth:190, maxWidth:250, padding:'10px 12px'
+          }}
+        >
+          <div style={{ fontSize:'0.75rem', fontWeight:700, color:'var(--color-accent)', marginBottom:6 }}>
+            {format(new Date(tooltip.date), 'M월 d일', {locale:ko})} 일정
+          </div>
+          {tooltip.scheds.map((s,i) => {
+            const evColor = colorMap?.[s.system_name]
+            return (
+              <div key={i} className={`calendar-event${!evColor&&s.is_gm?' gm':''}`}
+                style={{ marginBottom:3, fontSize:'0.75rem', ...(evColor ? { background: s.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7), color:'white' } : {}) }}>
+                {s.scheduled_time && <span style={{ opacity:0.8, marginRight:4 }}>{s.scheduled_time.slice(0,5)}</span>}
+                {s.title}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

@@ -264,7 +264,7 @@ export default function SchedulePage() {
         const bl=blockedItems.filter(x=>x.scheduled_date===dateStr)
         week.push(
           <div key={dateStr} className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,calendarDate)?'other-month':''}`}
-            style={{position:'relative', outline: bl.length>0 ? '2px solid #e57373' : 'none', outlineOffset:'-2px'}}
+            style={{position:'relative', outline: bl.some(b=>!b.blocked_from) ? '2px solid #e57373' : 'none', outlineOffset:'-2px'}}
             onClick={()=>setSelectedDate(prev => prev===dateStr ? null : dateStr)}>
             <div className="calendar-date">{format(d,'d')}</div>
             {di.slice(0,2).map(ev=>{
