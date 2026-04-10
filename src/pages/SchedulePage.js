@@ -361,10 +361,10 @@ export default function SchedulePage() {
                       : i.is_gm ? 'var(--color-accent)' : 'var(--color-primary)'
                   const textColor = evColor && isPast ? hexToRgba(evColor,0.85) : 'white'
                   return (
-                    <div key={i.id} style={{fontSize:'0.6rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:bg,color:textColor,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    <div key={i.id} style={{fontSize:'0.6rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:bg,color:textColor,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:i.status==='cancelled'?'line-through':'none'}}>
                       <span style={{opacity:0.85,marginRight:3}}>{format(new Date(i.scheduled_date+'T00:00:00'),'d일',{locale:ko})}</span>
                       {fmtTime(i.scheduled_time)&&<span style={{opacity:0.85,marginRight:3}}>{fmtTime(i.scheduled_time)}</span>}
-                      {i.status==='cancelled'?'[취소] ':''}{i.title}
+                      {i.title}
                     </div>
                   )
                 })}

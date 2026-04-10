@@ -524,7 +524,7 @@ body::before {
 }
 .calendar-event.gm { background: var(--color-accent); }
 .calendar-event.completed { background: #aaa; }
-.calendar-event.cancelled { background: #e57373; }
+.calendar-event.cancelled { background: #e57373; text-decoration: line-through; }
 
 /* ── Material Symbols ─────────────────────────────────── */
 .ms {
