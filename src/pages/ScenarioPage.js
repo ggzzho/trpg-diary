@@ -253,8 +253,8 @@ export function ScenarioPage() {
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
         <div>
-          <h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>description</Mi>시나리오 목록</h1>
-          <p className="page-subtitle">보유/위시 TRPG 시나리오 목록이예요 ({items.length}개)</p>
+          <h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>description</Mi>보유 시나리오</h1>
+          <p className="page-subtitle">보유한 TRPG 시나리오 목록이예요 ({items.length}개)</p>
         </div>
         <div className="flex gap-8">
           <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}><Mi size='sm'>sell</Mi> 상태 태그 관리</button>
