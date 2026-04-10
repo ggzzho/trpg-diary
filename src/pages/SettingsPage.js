@@ -1,5 +1,6 @@
 // src/pages/SettingsPage.js
 import React, { useState, useEffect, useRef } from 'react'
+import { useBlocker } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { updateProfile, uploadFile, supabase } from '../lib/supabase'
@@ -60,13 +61,42 @@ export default function SettingsPage() {
   })
 
   const [form, setForm] = useState(() => buildForm(profile))
+  const [isDirty, setIsDirty] = useState(false)
+  const savedFormRef = useRef(buildForm(profile))
+  const profileRef = useRef(profile)
 
   // profile이 외부에서 바뀌면 form도 업데이트 (단, 현재 편집 중이면 덮어쓰지 않음)
   const isMounted = useRef(false)
   useEffect(() => {
+    profileRef.current = profile
     if (!isMounted.current) { isMounted.current = true; return }
-    if (!saving) setForm(buildForm(profile))
+    if (!saving) { const f = buildForm(profile); setForm(f); savedFormRef.current = f }
   }, [profile?.updated_at])
+
+  // form 변경 감지 → isDirty
+  useEffect(() => {
+    setIsDirty(JSON.stringify(form) !== JSON.stringify(savedFormRef.current))
+  }, [form])
+
+  // 브라우저 새로고침/탭 닫기 경고
+  useEffect(() => {
+    const handler = e => { if (isDirty) { e.preventDefault(); e.returnValue = '' } }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
+  // 언마운트 시 원래 테마로 복원
+  useEffect(() => {
+    return () => {
+      const p = profileRef.current
+      if (!p) return
+      applyTheme(p.theme_color||'#c8a96e', p.theme_bg_color||'#faf6f0', p.theme_accent||'#8b6f47', p.theme_text_color||null, p.dark_mode||false)
+      applyBackground(p.background_image_url||'', p.bg_opacity??1, p.dark_mode||false, p.theme_color||'#c8a96e')
+    }
+  }, [])
+
+  // React Router 이탈 차단
+  const blocker = useBlocker(isDirty)
 
   const set = k => e => setForm(f=>({...f, [k]:e.target.value}))
   const updateSection = (idx,field,value) => setForm(f=>{const s=[...f.profile_sections];s[idx]={...s[idx],[field]:value};return {...f,profile_sections:s}})
@@ -97,6 +127,8 @@ export default function SettingsPage() {
     const {error} = await updateProfile(user.id, form)
     if (!error) {
       await refreshProfile()
+      savedFormRef.current = form
+      setIsDirty(false)
       setSaved(true); setTimeout(()=>setSaved(false),2500)
       applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent)
       applyBackground(form.background_image_url,form.bg_opacity)
@@ -151,6 +183,19 @@ export default function SettingsPage() {
 
   return (
     <div className="fade-in">
+      {blocker.state === 'blocked' && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div className="card" style={{maxWidth:360,width:'90%',padding:28,textAlign:'center'}}>
+            <Mi style={{fontSize:'2rem',color:'var(--color-primary)',marginBottom:12}}>warning</Mi>
+            <div style={{fontWeight:700,fontSize:'1rem',marginBottom:8}}>저장하지 않은 변경사항</div>
+            <div style={{fontSize:'0.88rem',color:'var(--color-text-light)',marginBottom:20}}>이 페이지를 벗어나면 변경사항이 사라져요.<br/>그래도 이동할까요?</div>
+            <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+              <button className="btn btn-outline" onClick={()=>blocker.reset()}>돌아가기</button>
+              <button className="btn btn-primary" onClick={()=>blocker.proceed()}>저장 없이 이동</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="page-header"><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>settings</Mi>환경설정</h1><p className="page-subtitle">나만의 TRPG 다이어리를 꾸며보세요</p></div>
       <div className="flex gap-8" style={{marginBottom:24,flexWrap:'wrap'}}>
         {TABS.map(t=><button key={t.key} className={`btn ${tab===t.key?'btn-primary':'btn-outline'}`} onClick={()=>setTab(t.key)} style={{display:'flex',alignItems:'center',gap:4}}><Mi size='sm' color={tab===t.key?'white':'accent'}>{t.icon}</Mi>{t.label}</button>)}
