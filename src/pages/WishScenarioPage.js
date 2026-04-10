@@ -56,6 +56,7 @@ export function WishScenarioPage() {
     const { data } = await supabase.from('wish_scenarios').select('*').eq('user_id', user.id)
       .order('sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true })
+      .limit(3000)
     setItems(data || [])
     setLoading(false)
   }
