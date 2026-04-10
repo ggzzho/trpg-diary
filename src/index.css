@@ -459,7 +459,7 @@ body::before {
 }
 
 .calendar-cell {
-  height: 100px;
+  height: 110px;
   border: 1px solid var(--color-border);
   border-radius: 5px;
   padding: 5px;

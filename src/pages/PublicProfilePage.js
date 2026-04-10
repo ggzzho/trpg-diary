@@ -129,7 +129,10 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
         <div className="flex justify-between items-center" style={{ marginBottom:14 }}>
           <button className="btn btn-ghost btn-sm" onClick={()=>setCal(subMonths(cal,1))}>‹ 이전</button>
           <span style={{ fontWeight:700, fontSize:'1rem', color:'var(--color-accent)' }}>{format(cal,'yyyy년 M월',{locale:ko})}</span>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}>다음 ›</button>
+          <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}>다음 ›</button>
+            <button className="btn btn-outline btn-sm" onClick={()=>setCal(new Date())} style={{ fontSize:'0.75rem', padding:'3px 10px' }}>오늘</button>
+          </div>
         </div>
         <div className="calendar-grid" style={{ marginBottom:3 }}>
           {['일','월','화','수','목','금','토'].map((d,i) => (
