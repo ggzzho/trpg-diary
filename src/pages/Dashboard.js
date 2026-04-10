@@ -266,7 +266,7 @@ export default function Dashboard() {
 
       {/* ── 공지 상세 모달 ── */}
       {noticeModal && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
           <div style={{background:'var(--color-surface)',borderRadius:16,padding:28,width:'100%',maxWidth:520,maxHeight:'80vh',overflowY:'auto',border:'1px solid var(--color-border)'}}>
             <div className="flex justify-between items-center" style={{marginBottom:16}}>
               <h3 style={{fontWeight:700,fontSize:'1rem',color:'var(--color-accent)'}}>{noticeModal.title}</h3>
