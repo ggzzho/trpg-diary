@@ -4,17 +4,79 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signOut } from '../lib/supabase'
 
-const NAV_ITEMS = [
-  { to:'/dashboard', icon:'home', label:'홈' },
-  { to:'/schedule', icon:'calendar_month', label:'일정 관리' },
-  { to:'/rulebooks', icon:'menu_book', label:'보유 룰북' },
-  { to:'/logs', icon:'auto_stories', label:'다녀온 기록' },
-  { to:'/availability', icon:'event_available', label:'공수표 목록' },
-  { to:'/scenarios', icon:'description', label:'시나리오 목록' },
-  { to:'/pairs', icon:'people', label:'페어 목록' },
-  { to:'/bookmarks', icon:'bookmark', label:'북마크' },
-  { to:'/guestbook', icon:'mail', label:'방명록' },
+const NAV_GROUPS = [
+  { type:'item', to:'/dashboard', icon:'home', label:'Home' },
+  { type:'group', key:'infor', label:'Infor', items:[
+    { to:'/schedule', icon:'calendar_month', label:'일정 관리' },
+    { to:'/rulebooks', icon:'menu_book', label:'보유 룰북' },
+  ]},
+  { type:'group', key:'scenario', label:'Scenario', items:[
+    { to:'/scenarios', icon:'description', label:'보유 시나리오' },
+  ]},
+  { type:'group', key:'sessions', label:'Sessions', items:[
+    { to:'/availability', icon:'event_available', label:'공수표 목록' },
+    { to:'/logs', icon:'auto_stories', label:'다녀온 기록' },
+    { to:'/pairs', icon:'people', label:'페어 목록' },
+  ]},
+  { type:'group', key:'etc', label:'ETC.', items:[
+    { to:'/bookmarks', icon:'bookmark', label:'북마크' },
+    { to:'/guestbook', icon:'mail', label:'방명록' },
+  ]},
 ]
+
+const STORAGE_KEY = 'nav_groups_open'
+
+function loadGroupState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {} } catch { return {} }
+}
+
+function NavGroup({ group, pathname }) {
+  const hasActive = group.items.some(i => pathname.startsWith(i.to))
+  const [open, setOpen] = useState(() => {
+    const s = loadGroupState()
+    return s[group.key] !== undefined ? s[group.key] : true
+  })
+
+  // auto-open when a child becomes active
+  useEffect(() => {
+    if (hasActive && !open) setOpen(true)
+  }, [hasActive]) // eslint-disable-line
+
+  const toggle = () => {
+    const next = !open
+    setOpen(next)
+    try {
+      const s = loadGroupState()
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...s, [group.key]: next }))
+    } catch {}
+  }
+
+  return (
+    <div>
+      <button
+        onClick={toggle}
+        className={`nav-group-header${hasActive ? ' has-active' : ''}`}
+      >
+        <span className="nav-group-icon">
+          <span className="ms">{open ? 'folder_open' : 'folder'}</span>
+        </span>
+        <span className="nav-group-label">{group.label}</span>
+        <span className="ms nav-group-chevron" style={{fontSize:16,marginLeft:'auto',transition:'transform 0.2s',transform:open?'rotate(0deg)':'rotate(-90deg)'}}>
+          expand_more
+        </span>
+      </button>
+      {open && (
+        <div className="nav-group-children">
+          {group.items.map(item => (
+            <NavLink key={item.to} to={item.to} className={({isActive})=>`nav-item nav-child ${isActive?'active':''}`}>
+              <span className="nav-icon"><span className="ms">{item.icon}</span></span>{item.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export const FOOTER_TEXT = '© 2026 TRPG Diary v1.1.0 · Made with Claude (AI). All rights reserved.'
 export const SITE_VERSION = 'v1.1.0'
@@ -42,23 +104,28 @@ export function Layout({ children }) {
           {profile?.username && <p>@{profile.username}</p>}
         </div>
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map(item=>(
-            <NavLink key={item.to} to={item.to} className={({isActive})=>`nav-item ${isActive?'active':''}`}>
-              <span className="nav-icon"><span className="ms">{item.icon}</span></span>{item.label}
-            </NavLink>
-          ))}
+          {NAV_GROUPS.map(item =>
+            item.type === 'item'
+              ? <NavLink key={item.to} to={item.to} className={({isActive})=>`nav-item ${isActive?'active':''}`}>
+                  <span className="nav-icon"><span className="ms">{item.icon}</span></span>{item.label}
+                </NavLink>
+              : <NavGroup key={item.key} group={item} pathname={location.pathname} />
+          )}
 
           {/* 관리자 전용 */}
           {isAdmin && (<>
             <div style={{borderTop:'1px solid var(--color-border)',margin:'8px 0',opacity:0.5}} />
-            <NavLink to="/admin/notices" className={({isActive})=>`nav-item ${isActive?'active':''}`}
-              style={{color:'var(--color-accent)'}}>
-              <span className="nav-icon"><span className="ms">campaign</span></span>공지사항 관리
-            </NavLink>
-            <NavLink to="/admin/feedback" className={({isActive})=>`nav-item ${isActive?'active':''}`}
-              style={{color:'var(--color-accent)'}}>
-              <span className="nav-icon"><span className="ms">support_agent</span></span>문의함
-            </NavLink>
+            <NavGroup
+              group={{
+                key:'master',
+                label:'Master',
+                items:[
+                  { to:'/admin/notices', icon:'campaign', label:'공지 관리' },
+                  { to:'/admin/feedback', icon:'support_agent', label:'문의함' },
+                ]
+              }}
+              pathname={location.pathname}
+            />
           </>)}
 
           <div style={{borderTop:'1px solid var(--color-border)',margin:'12px 0'}} />
