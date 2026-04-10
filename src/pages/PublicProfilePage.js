@@ -72,7 +72,7 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
           style={{ cursor: hasMore ? 'pointer' : 'default', outline: hasAllDayBlocked ? '2px solid #e57373' : 'none', outlineOffset:'-2px', position:'relative' }}
           onMouseEnter={hasMore ? e => {
             const r = e.currentTarget.getBoundingClientRect()
-            setTooltip({ date: dStr, scheds: dayScheds, x: r.left, y: r.bottom + window.scrollY })
+            setTooltip({ date: dStr, scheds: dayScheds, x: r.left, y: r.bottom })
           } : undefined}
           onMouseLeave={hasMore ? () => setTooltip(null) : undefined}
         >
