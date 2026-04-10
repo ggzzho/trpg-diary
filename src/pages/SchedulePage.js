@@ -260,21 +260,33 @@ export default function SchedulePage() {
       const week=[]
       for (let i=0;i<7;i++) {
         const d=new Date(day), dateStr=format(d,'yyyy-MM-dd')
-        const di=items.filter(x=>x.scheduled_date===dateStr).sort((a,b)=>(a.scheduled_time||'').localeCompare(b.scheduled_time||''))
+        const di=items.filter(x=>x.scheduled_date===dateStr)
         const bl=blockedItems.filter(x=>x.scheduled_date===dateStr)
+        const cellItems=[
+          ...di.map(x=>({...x,_time:x.scheduled_time||'',_kind:'session'})),
+          ...bl.map(x=>({...x,_time:x.blocked_from||'',_kind:'blocked'}))
+        ].sort((a,b)=>a._time.localeCompare(b._time))
         week.push(
           <div key={dateStr} className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,calendarDate)?'other-month':''}`}
             style={{position:'relative', outline: bl.some(b=>!b.blocked_from) ? '2px solid #e57373' : 'none', outlineOffset:'-2px'}}
             onClick={()=>setSelectedDate(prev => prev===dateStr ? null : dateStr)}>
             <div className="calendar-date">{format(d,'d')}</div>
-            {di.slice(0,2).map(ev=>{
+            {cellItems.slice(0,2).map((item,i)=>{
+              if (item._kind==='blocked') return (
+                <div key={`bl${i}`}
+                  style={{fontSize:'0.58rem',padding:'1px 3px',borderRadius:3,marginBottom:2,background:'rgba(229,115,115,0.15)',color:'#e57373',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer'}}
+                  onClick={e=>{e.stopPropagation();setCalPopup(item)}}
+                  title={[item.blocked_from&&item.blocked_until?`${fmtTime(item.blocked_from)}~${fmtTime(item.blocked_until)}`:item.blocked_from?`${fmtTime(item.blocked_from)}~`:'', item.description].filter(Boolean).join(' ')}
+                >
+                  🚫 {item.blocked_from?`${fmtTime(item.blocked_from)}${item.blocked_until?`~${fmtTime(item.blocked_until)}`:'~'}`:'종일'}
+                </div>
+              )
+              const ev=item
               const evColor = colorMap?.[ev.system_name]
               const isPast = dateStr < today
               const colorStyle = evColor && ev.status !== 'cancelled' ? {
-                background: isPast
-                  ? hexToRgba(evColor, 0.3)
-                  : ev.is_gm ? hexToRgba(evColor, 1.0) : hexToRgba(evColor, 0.7),
-                color: isPast ? hexToRgba(evColor, 0.85) : 'white',
+                background: isPast ? hexToRgba(evColor,0.3) : ev.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7),
+                color: isPast ? hexToRgba(evColor,0.85) : 'white',
               } : {}
               return (
                 <div key={ev.id}
@@ -288,17 +300,7 @@ export default function SchedulePage() {
                 </div>
               )
             })}
-            {di.length>2&&<div style={{fontSize:'0.55rem',color:'var(--color-text-light)',paddingLeft:2}}>+{di.length-2}개 더</div>}
-            {/* 불가 날짜 표시 */}
-            {bl.map((b,i)=>(
-              <div key={`bl${i}`}
-                style={{fontSize:'0.58rem',padding:'1px 3px',borderRadius:3,marginBottom:2,background:'rgba(229,115,115,0.15)',color:'#e57373',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer'}}
-                onClick={e=>{e.stopPropagation();setCalPopup(b)}}
-                title={[b.blocked_from&&b.blocked_until?`${fmtTime(b.blocked_from)}~${fmtTime(b.blocked_until)}`:b.blocked_from?`${fmtTime(b.blocked_from)}~`:'', b.description].filter(Boolean).join(' ')}
-              >
-                🚫 {b.blocked_from?`${fmtTime(b.blocked_from)}${b.blocked_until?`~${fmtTime(b.blocked_until)}`:'~'}`:'종일'}
-              </div>
-            ))}
+            {cellItems.length>2&&<div style={{fontSize:'0.55rem',color:'var(--color-text-light)',paddingLeft:2}}>+{cellItems.length-2}개 더</div>}
           </div>
         )
         day=addDays(day,1)

@@ -70,41 +70,52 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
     for (let i = 0; i < 7; i++) {
       const d = new Date(day)
       const dStr = format(d, 'yyyy-MM-dd')
-      const dayScheds = schedules.filter(s => s.scheduled_date === dStr).sort((a,b) => (a.scheduled_time||'').localeCompare(b.scheduled_time||''))
+      const dayScheds = schedules.filter(s => s.scheduled_date === dStr)
       const dayBlocked = blocked.filter(b => b.scheduled_date === dStr)
       const hasAllDayBlocked = dayBlocked.some(b => !b.blocked_from)
-      const hasMore = dayScheds.length > 2
+      const cellItems = [
+        ...dayScheds.map(x => ({...x, _time: x.scheduled_time||'', _kind:'session'})),
+        ...dayBlocked.map(x => ({...x, _time: x.blocked_from||'', _kind:'blocked'}))
+      ].sort((a,b) => a._time.localeCompare(b._time))
+      const hasMore = cellItems.length > 2
       week.push(
         <div key={dStr}
           className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,cal)?'other-month':''}`}
           style={{ cursor: hasMore ? 'pointer' : 'default', outline: hasAllDayBlocked ? '2px solid #e57373' : 'none', outlineOffset:'-2px', position:'relative' }}
           onMouseEnter={hasMore ? e => {
             const r = e.currentTarget.getBoundingClientRect()
-            setTooltip({ date: dStr, scheds: dayScheds, x: r.left, y: r.bottom })
+            setTooltip({ date: dStr, items: cellItems, x: r.left, y: r.bottom })
           } : undefined}
           onMouseLeave={hasMore ? () => setTooltip(null) : undefined}
           onTouchEnd={hasMore ? e => {
             e.preventDefault()
             const r = e.currentTarget.getBoundingClientRect()
-            setTooltip(prev => prev?.date === dStr ? null : { date: dStr, scheds: dayScheds, x: r.left, y: r.bottom })
+            setTooltip(prev => prev?.date === dStr ? null : { date: dStr, items: cellItems, x: r.left, y: r.bottom })
           } : undefined}
         >
           <div className="calendar-date">{format(d,'d')}</div>
-          {dayScheds.slice(0,2).map((s,idx) => {
-            const evColor = colorMap?.[s.system_name]
-            const colorStyle = evColor ? {
-              background: s.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7),
-              color: 'white',
-            } : {}
+          {cellItems.slice(0,2).map((item,idx) => {
+            if (item._kind === 'blocked') return (
+              <div key={`bl${idx}`}
+                style={{ fontSize:'0.58rem', padding:'1px 3px', borderRadius:3, marginBottom:2,
+                  background:'rgba(229,115,115,0.15)', color:'#e57373',
+                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}
+                title={item.blocked_from && item.blocked_until ? `${item.blocked_from.slice(0,5)}~${item.blocked_until.slice(0,5)}` : item.blocked_from ? `${item.blocked_from.slice(0,5)}~` : ''}
+              >
+                🚫 {item.blocked_from ? `${item.blocked_from.slice(0,5)}${item.blocked_until?`~${item.blocked_until.slice(0,5)}`:'~'}` : '종일'}
+              </div>
+            )
+            const evColor = colorMap?.[item.system_name]
+            const colorStyle = evColor ? { background: item.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7), color:'white' } : {}
             return (
-              <div key={idx} className={`calendar-event${!evColor&&s.is_gm?' gm':''}`} style={colorStyle} title={s.title}>
-                {s.scheduled_time && <span style={{ opacity:0.85, marginRight:2 }}>{s.scheduled_time.slice(0,5)}</span>}
-                {s.title}
+              <div key={idx} className={`calendar-event${!evColor&&item.is_gm?' gm':''}`} style={colorStyle} title={item.title}>
+                {item.scheduled_time && <span style={{ opacity:0.85, marginRight:2 }}>{item.scheduled_time.slice(0,5)}</span>}
+                {item.title}
               </div>
             )
           })}
           {hasMore && (
-            <div style={{ fontSize:'0.55rem', color:'var(--color-primary)', paddingLeft:2, fontWeight:600 }}>+{dayScheds.length-2}개 더 ▾</div>
+            <div style={{ fontSize:'0.55rem', color:'var(--color-primary)', paddingLeft:2, fontWeight:600 }}>+{cellItems.length-2}개 더 ▾</div>
           )}
         </div>
       )
@@ -149,13 +160,18 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
               </span>
               <button onClick={()=>setTooltip(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--color-text-light)', fontSize:'0.9rem', lineHeight:1, padding:'0 2px' }}>×</button>
             </div>
-            {tooltip.scheds.map((s,i) => {
-              const evColor = colorMap?.[s.system_name]
+            {(tooltip.items||[]).map((item,i) => {
+              if (item._kind === 'blocked') return (
+                <div key={i} style={{ marginBottom:3, fontSize:'0.75rem', padding:'1px 4px', borderRadius:3, background:'rgba(229,115,115,0.15)', color:'#e57373' }}>
+                  🚫 {item.blocked_from ? `${item.blocked_from.slice(0,5)}${item.blocked_until?`~${item.blocked_until.slice(0,5)}`:'~'}` : '종일'}
+                </div>
+              )
+              const evColor = colorMap?.[item.system_name]
               return (
-                <div key={i} className={`calendar-event${!evColor&&s.is_gm?' gm':''}`}
-                  style={{ marginBottom:3, fontSize:'0.75rem', ...(evColor ? { background: s.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7), color:'white' } : {}) }}>
-                  {s.scheduled_time && <span style={{ opacity:0.8, marginRight:4 }}>{s.scheduled_time.slice(0,5)}</span>}
-                  {s.title}
+                <div key={i} className={`calendar-event${!evColor&&item.is_gm?' gm':''}`}
+                  style={{ marginBottom:3, fontSize:'0.75rem', ...(evColor ? { background: item.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7), color:'white' } : {}) }}>
+                  {item.scheduled_time && <span style={{ opacity:0.8, marginRight:4 }}>{item.scheduled_time.slice(0,5)}</span>}
+                  {item.title}
                 </div>
               )
             })}
