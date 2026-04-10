@@ -77,7 +77,7 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
         ...dayScheds.map(x => ({...x, _time: x.scheduled_time||'', _kind:'session'})),
         ...dayBlocked.map(x => ({...x, _time: x.blocked_from||'', _kind:'blocked'}))
       ].sort((a,b) => a._time.localeCompare(b._time))
-      const hasMore = cellItems.length > 2
+      const hasMore = cellItems.length > 3
       week.push(
         <div key={dStr}
           className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,cal)?'other-month':''}`}
@@ -94,7 +94,7 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
           } : undefined}
         >
           <div className="calendar-date">{format(d,'d')}</div>
-          {cellItems.slice(0,2).map((item,idx) => {
+          {cellItems.slice(0,3).map((item,idx) => {
             if (item._kind === 'blocked') return (
               <div key={`bl${idx}`}
                 style={{ fontSize:'0.58rem', padding:'1px 3px', borderRadius:3, marginBottom:2,
@@ -115,7 +115,7 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
             )
           })}
           {hasMore && (
-            <div style={{ fontSize:'0.55rem', color:'var(--color-primary)', paddingLeft:2, fontWeight:600 }}>+{cellItems.length-2}개 더 ▾</div>
+            <div style={{ fontSize:'0.55rem', color:'var(--color-primary)', paddingLeft:2, fontWeight:600 }}>+{cellItems.length-3}개 더 ▾</div>
           )}
         </div>
       )

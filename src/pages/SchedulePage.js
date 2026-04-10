@@ -271,7 +271,7 @@ export default function SchedulePage() {
             style={{position:'relative', outline: bl.some(b=>!b.blocked_from) ? '2px solid #e57373' : 'none', outlineOffset:'-2px'}}
             onClick={()=>setSelectedDate(prev => prev===dateStr ? null : dateStr)}>
             <div className="calendar-date">{format(d,'d')}</div>
-            {cellItems.slice(0,2).map((item,i)=>{
+            {cellItems.slice(0,3).map((item,i)=>{
               if (item._kind==='blocked') return (
                 <div key={`bl${i}`}
                   style={{fontSize:'0.58rem',padding:'1px 3px',borderRadius:3,marginBottom:2,background:'rgba(229,115,115,0.15)',color:'#e57373',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',cursor:'pointer'}}
@@ -300,7 +300,7 @@ export default function SchedulePage() {
                 </div>
               )
             })}
-            {cellItems.length>2&&<div style={{fontSize:'0.55rem',color:'var(--color-text-light)',paddingLeft:2}}>+{cellItems.length-2}개 더</div>}
+            {cellItems.length>3&&<div style={{fontSize:'0.55rem',color:'var(--color-text-light)',paddingLeft:2}}>+{cellItems.length-3}개 더</div>}
           </div>
         )
         day=addDays(day,1)
