@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
-import { updateProfile, uploadFile, supabase } from '../lib/supabase'
+import { updateProfile, supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 
 const PRESET_COLORS = [
@@ -40,7 +40,6 @@ export default function SettingsPage() {
   const [tab, setTab] = useState('profile')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [avatarUploading, setAvatarUploading] = useState(false)
   const [newLink, setNewLink] = useState({label:'',url:''})
   const [pwForm, setPwForm] = useState({current:'', next:'', confirm:''})
   const [pwMsg, setPwMsg] = useState(null)
@@ -120,13 +119,7 @@ export default function SettingsPage() {
     setSaving(false)
   }
 
-  const handleAvatarUpload = async e => {
-    const file=e.target.files?.[0]; if(!file) return; setAvatarUploading(true)
-    const {url,error}=await uploadFile('avatars',`${user.id}/avatar-${Date.now()}`,file,{compress:true,maxSize:500,quality:0.85})
-    if(url){await updateProfile(user.id,{avatar_url:url});refreshProfile()}
-    else alert(error?.message||'업로드 실패')
-    setAvatarUploading(false)
-  }
+
 
   const addLink = () => { if(!newLink.label||!newLink.url) return; setForm(f=>({...f,external_links:[...(f.external_links||[]),{...newLink}]})); setNewLink({label:'',url:''}) }
   const removeLink = idx => setForm(f=>({...f,external_links:f.external_links.filter((_,i)=>i!==idx)}))
@@ -196,32 +189,17 @@ export default function SettingsPage() {
                     ? <img src={form.avatar_url||profile?.avatar_url} alt="avatar"/>
                     : (profile?.display_name||'?')[0]}
                 </div>
-                <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-                  <label className="btn btn-outline btn-sm" style={{cursor:'pointer',display:'inline-flex'}}>
-                    {avatarUploading?'업로드 중...':'파일 업로드'}
-                    <input type="file" accept="image/*" style={{display:'none'}}
-                      onChange={async e => {
-                        const file=e.target.files?.[0]; if(!file) return; setAvatarUploading(true)
-                        const {url,error}=await uploadFile('avatars',`${user.id}/avatar-${Date.now()}`,file,{compress:true,maxSize:500,quality:0.85})
-                        if(url){ await updateProfile(user.id,{avatar_url:url}); setForm(f=>({...f,avatar_url:url})); refreshProfile() }
-                        else alert(error?.message||'업로드 실패')
-                        setAvatarUploading(false)
-                      }} disabled={avatarUploading}/>
-                  </label>
-                  {(form.avatar_url||profile?.avatar_url) && (
-                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
-                      onClick={async()=>{
-                        await updateProfile(user.id,{avatar_url:null})
-                        setForm(f=>({...f,avatar_url:''}))
-                        refreshProfile()
-                      }}>제거</button>
-                  )}
-                </div>
+                {(form.avatar_url||profile?.avatar_url) && (
+                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
+                    onClick={async()=>{
+                      await updateProfile(user.id,{avatar_url:null})
+                      setForm(f=>({...f,avatar_url:''}))
+                      refreshProfile()
+                    }}>제거</button>
+                )}
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <input className="form-input" placeholder="또는 이미지 URL 직접 입력 (https://...)"
-                  value={form.avatar_url||''} onChange={e=>setForm(f=>({...f,avatar_url:e.target.value}))}/>
-              </div>
+              <input className="form-input" placeholder="이미지 URL 입력 (https://...)"
+                value={form.avatar_url||''} onChange={e=>setForm(f=>({...f,avatar_url:e.target.value}))}/>
             </div>
             <div className="form-group"><label className="form-label">사용자명 (URL)</label><div style={{display:'flex',alignItems:'center',gap:6}}><span className="text-light text-sm">https://trpg-diary.co.kr/u/</span><input className="form-input" value={profile?.username||''} disabled style={{flex:1,opacity:0.6}} /></div></div>
             <div className="form-group"><label className="form-label">표시 이름</label><input className="form-input" value={form.display_name} onChange={set('display_name')} /></div>

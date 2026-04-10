@@ -1,7 +1,7 @@
 // src/pages/RulebookPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { rulebooksApi, uploadFile, supabase } from '../lib/supabase'
+import { rulebooksApi, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
@@ -127,7 +127,6 @@ export function RulebookPage() {
   const [search, setSearch] = useState('')
   const [tagModal, setTagModal] = useState(false)
   const [availableTags, setAvailableTags] = useState([])
-  const [imgUploading, setImgUploading] = useState(false)
   const [expanded, setExpanded] = useState({})   // 아코디언 열림 상태
 
   const load = async () => {
@@ -189,14 +188,6 @@ export function RulebookPage() {
     load()
   }
 
-  const handleImgUpload = async e => {
-    const file = e.target.files?.[0]; if (!file) return
-    setImgUploading(true)
-    const { url, error } = await uploadFile('covers', `${user.id}/rulebook-${Date.now()}`, file)
-    if (url) setForm(f => ({ ...f, cover_image_url:url }))
-    else alert(error?.message || '업로드 실패')
-    setImgUploading(false)
-  }
 
   const addTag = async name => { await supabase.from('rulebook_tags').insert({ user_id:user.id, name }); loadTags() }
   const editTag = async (id, name) => { await supabase.from('rulebook_tags').update({ name }).eq('id', id); loadTags() }
@@ -403,10 +394,7 @@ export function RulebookPage() {
         </div>
         <div className="form-group">
           <label className="form-label">아이콘 이미지</label>
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-            <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.cover_image_url||''} onChange={set('cover_image_url')} style={{ flex:1 }}/>
-            <label className="btn btn-outline btn-sm" style={{ cursor:'pointer', whiteSpace:'nowrap' }}>{imgUploading ? '업로드 중...' : '📁 업로드'}<input type="file" accept="image/*" style={{ display:'none' }} onChange={handleImgUpload} disabled={imgUploading}/></label>
-          </div>
+          <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.cover_image_url||''} onChange={set('cover_image_url')}/>
           {form.cover_image_url && <div style={{ marginTop:8, display:'flex', gap:8, alignItems:'center' }}><img src={form.cover_image_url} alt="preview" style={{ width:48, height:48, objectFit:'cover', borderRadius:6, border:'1px solid var(--color-border)' }}/><button className="btn btn-ghost btn-sm" style={{ color:'#e57373' }} onClick={() => setForm(f => ({ ...f, cover_image_url:'' }))}>제거</button></div>}
         </div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{ minHeight:64 }}/></div>
