@@ -66,7 +66,7 @@ const makeTableApi = (table) => ({
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(9000)
+      .limit(5000)
     return { data, error }
   },
   create: async (payload) => {

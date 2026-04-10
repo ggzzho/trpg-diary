@@ -834,7 +834,6 @@ export default function SchedulePage() {
       {/* 월뷰 상세 팝업 */}
       {calPopup && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}
-          onClick={e=>e.target===e.currentTarget&&setCalPopup(null)}>
           <div style={{background:'var(--color-surface)',borderRadius:16,padding:24,width:'100%',maxWidth:380,border:'1px solid var(--color-border)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
               <div>

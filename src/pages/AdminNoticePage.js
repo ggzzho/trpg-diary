@@ -167,7 +167,6 @@ export default function AdminNoticePage() {
       {/* 등록/수정 모달 */}
       {modal && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}
-          onClick={e=>e.target===e.currentTarget&&setModal(false)}>
           <div style={{background:'var(--color-surface)',borderRadius:16,padding:28,width:'100%',maxWidth:640,maxHeight:'90vh',overflowY:'auto',border:'1px solid var(--color-border)'}}>
             <h3 style={{fontWeight:700,marginBottom:20,fontSize:'1rem'}}>{editing?'공지 수정':'공지 등록'}</h3>
 

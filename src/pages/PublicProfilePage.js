@@ -254,21 +254,21 @@ export default function PublicProfilePage() {
       const today = new Date().toISOString().split('T')[0]
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
       const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks, guestbook] = await Promise.all([
-        safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).limit(9000).then(r=>r)),
+        safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).limit(5000).then(r=>r)),
         safe(supabase.from('rulebooks').select('*').eq('user_id', p.id)
           .order('sort_order', { ascending: true, nullsFirst: false })
           .order('created_at', { ascending: false })
-          .limit(9000).then(r=>r)),
+          .limit(5000).then(r=>r)),
         safe(supabase.from('scenarios').select('*').eq('user_id', p.id)
           .order('sort_order', { ascending: true, nullsFirst: false })
           .order('created_at', { ascending: true })
-          .limit(9000).then(r=>r)),
+          .limit(5000).then(r=>r)),
         safe(pairsApi.getAll(p.id)),
-        safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).limit(9000).then(r=>r)),
+        safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).limit(5000).then(r=>r)),
         safe(supabase.from('schedules').select('*').eq('user_id',p.id)
-          .order('scheduled_date').limit(9000).then(r=>r)),
-        safe(supabase.from('bookmarks').select('*').eq('user_id',p.id).order('title').limit(9000).then(r=>r)),
-        safe(supabase.from('guestbook').select('id').eq('owner_id',p.id).limit(9000).then(r=>r)),
+          .order('scheduled_date').limit(5000).then(r=>r)),
+        safe(supabase.from('bookmarks').select('*').eq('user_id',p.id).order('title').limit(5000).then(r=>r)),
+        safe(supabase.from('guestbook').select('id').eq('owner_id',p.id).limit(5000).then(r=>r)),
       ])
       const scheds = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
       const blocked = schedsAll.filter(s => s.entry_type === 'blocked')

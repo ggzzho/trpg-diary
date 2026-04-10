@@ -148,7 +148,7 @@ export function Layout({ children }) {
 export function Modal({ isOpen, onClose, title, children, footer }) {
   if (!isOpen) return null
   return (
-    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="modal-overlay">
       <div className="modal">
         {title&&<h2 className="modal-title">{title}</h2>}
         <form onSubmit={e=>e.preventDefault()}>

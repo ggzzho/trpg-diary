@@ -352,6 +352,8 @@ body::before {
   justify-content: center;
   padding: 20px;
   animation: fadeIn 0.15s ease;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .modal {
