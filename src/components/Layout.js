@@ -112,22 +112,6 @@ export function Layout({ children }) {
               : <NavGroup key={item.key} group={item} pathname={location.pathname} />
           )}
 
-          {/* 관리자 전용 */}
-          {isAdmin && (<>
-            <div style={{borderTop:'1px solid var(--color-border)',margin:'8px 0',opacity:0.5}} />
-            <NavGroup
-              group={{
-                key:'master',
-                label:'Master',
-                items:[
-                  { to:'/admin/notices', icon:'campaign', label:'공지 관리' },
-                  { to:'/admin/feedback', icon:'support_agent', label:'문의함' },
-                ]
-              }}
-              pathname={location.pathname}
-            />
-          </>)}
-
           <div style={{borderTop:'1px solid var(--color-border)',margin:'12px 0'}} />
           <NavLink to="/settings" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
             <span className="nav-icon"><span className="ms">settings</span></span>환경설정
@@ -144,6 +128,22 @@ export function Layout({ children }) {
           <NavLink to="/notices" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
             <span className="nav-icon"><span className="ms">campaign</span></span>공지사항
           </NavLink>
+
+          {/* 관리자 전용 */}
+          {isAdmin && (<>
+            <div style={{borderTop:'1px solid var(--color-border)',margin:'8px 0',opacity:0.5}} />
+            <NavGroup
+              group={{
+                key:'master',
+                label:'Master',
+                items:[
+                  { to:'/admin/notices', icon:'campaign', label:'공지 관리' },
+                  { to:'/admin/feedback', icon:'support_agent', label:'문의함' },
+                ]
+              }}
+              pathname={location.pathname}
+            />
+          </>)}
         </nav>
         <div className="sidebar-user">
           <div className="sidebar-user-info">
