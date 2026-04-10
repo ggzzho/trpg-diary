@@ -75,6 +75,11 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
             setTooltip({ date: dStr, scheds: dayScheds, x: r.left, y: r.bottom })
           } : undefined}
           onMouseLeave={hasMore ? () => setTooltip(null) : undefined}
+          onTouchEnd={hasMore ? e => {
+            e.preventDefault()
+            const r = e.currentTarget.getBoundingClientRect()
+            setTooltip(prev => prev?.date === dStr ? null : { date: dStr, scheds: dayScheds, x: r.left, y: r.bottom })
+          } : undefined}
         >
           <div className="calendar-date">{format(d,'d')}</div>
           {dayScheds.slice(0,2).map((s,idx) => {
@@ -128,31 +133,37 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
       </div>
       <div className="calendar-grid">{rows}</div>
       {tooltip && (
-        <div
-          onMouseEnter={() => {}}
-          onMouseLeave={() => setTooltip(null)}
-          style={{
-            position:'fixed', left: Math.min(tooltip.x, window.innerWidth - 230),
-            top: tooltip.y + 4, zIndex:9999,
-            background:'var(--color-surface)', border:'1px solid var(--color-border)',
-            borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,0.15)',
-            minWidth:190, maxWidth:250, padding:'10px 12px'
-          }}
-        >
-          <div style={{ fontSize:'0.75rem', fontWeight:700, color:'var(--color-accent)', marginBottom:6 }}>
-            {format(new Date(tooltip.date), 'M월 d일', {locale:ko})} 일정
+        <>
+          <div style={{ position:'fixed', inset:0, zIndex:9998 }} onTouchEnd={()=>setTooltip(null)} onClick={()=>setTooltip(null)} />
+          <div
+            onMouseEnter={() => {}}
+            onMouseLeave={() => setTooltip(null)}
+            style={{
+              position:'fixed', left: Math.min(tooltip.x, window.innerWidth - 230),
+              top: tooltip.y + 4, zIndex:9999,
+              background:'var(--color-surface)', border:'1px solid var(--color-border)',
+              borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,0.15)',
+              minWidth:190, maxWidth:250, padding:'10px 12px'
+            }}
+          >
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+              <span style={{ fontSize:'0.75rem', fontWeight:700, color:'var(--color-accent)' }}>
+                {format(new Date(tooltip.date), 'M월 d일', {locale:ko})} 일정
+              </span>
+              <button onClick={()=>setTooltip(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--color-text-light)', fontSize:'0.9rem', lineHeight:1, padding:'0 2px' }}>×</button>
+            </div>
+            {tooltip.scheds.map((s,i) => {
+              const evColor = colorMap?.[s.system_name]
+              return (
+                <div key={i} className={`calendar-event${!evColor&&s.is_gm?' gm':''}`}
+                  style={{ marginBottom:3, fontSize:'0.75rem', ...(evColor ? { background: s.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7), color:'white' } : {}) }}>
+                  {s.scheduled_time && <span style={{ opacity:0.8, marginRight:4 }}>{s.scheduled_time.slice(0,5)}</span>}
+                  {s.title}
+                </div>
+              )
+            })}
           </div>
-          {tooltip.scheds.map((s,i) => {
-            const evColor = colorMap?.[s.system_name]
-            return (
-              <div key={i} className={`calendar-event${!evColor&&s.is_gm?' gm':''}`}
-                style={{ marginBottom:3, fontSize:'0.75rem', ...(evColor ? { background: s.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7), color:'white' } : {}) }}>
-                {s.scheduled_time && <span style={{ opacity:0.8, marginRight:4 }}>{s.scheduled_time.slice(0,5)}</span>}
-                {s.title}
-              </div>
-            )
-          })}
-        </div>
+        </>
       )}
     </div>
   )
