@@ -106,20 +106,6 @@ function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
           {hasMore && (
             <div style={{ fontSize:'0.55rem', color:'var(--color-primary)', paddingLeft:2, fontWeight:600 }}>+{dayScheds.length-2}개 더 ▾</div>
           )}
-          {dayBlocked.map((b,idx) => (
-            <div key={`bl${idx}`}
-              style={{ fontSize:'0.58rem', padding:'1px 3px', borderRadius:3, marginBottom:2,
-                background:'rgba(229,115,115,0.15)', color:'#e57373',
-                overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}
-              title={[
-                b.blocked_from && b.blocked_until ? `${b.blocked_from.slice(0,5)}~${b.blocked_until.slice(0,5)}`
-                  : b.blocked_from ? `${b.blocked_from.slice(0,5)}~` : '',
-                b.description
-              ].filter(Boolean).join(' ')}
-            >
-              🚫 {b.blocked_from ? `${b.blocked_from.slice(0,5)}${b.blocked_until?`~${b.blocked_until.slice(0,5)}`:'~'}` : '종일'}
-            </div>
-          ))}
         </div>
       )
       day = addDays(day, 1)
