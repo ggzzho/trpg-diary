@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
-import { updateProfile, uploadFile, supabase } from '../lib/supabase'
+import { updateProfile, supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 
 const PRESET_COLORS = [
@@ -18,6 +18,17 @@ function hexToRgb(hex) {
   try { return [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)] }
   catch { return [200,169,110] }
 }
+const WIDGET_OPTIONS = [
+  {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
+  {key:'rulebooks', label:'보유 룰북', icon:'menu_book'},
+  {key:'scenarios', label:'시나리오 목록', icon:'description'},
+  {key:'pairs', label:'페어 목록', icon:'people'},
+  {key:'schedule', label:'일정 관리', icon:'calendar_month'},
+  {key:'availability', label:'공수표', icon:'event_available'},
+  {key:'guestbook', label:'방명록', icon:'mail'},
+  {key:'bookmarks', label:'북마크', icon:'bookmark'},
+]
+
 const DEFAULT_SECTIONS = [
   {id:'play_style', label:'플레이 스타일', value:''},
   {id:'caution', label:'주의 사항', value:''},
@@ -29,7 +40,6 @@ export default function SettingsPage() {
   const [tab, setTab] = useState('profile')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [avatarUploading, setAvatarUploading] = useState(false)
   const [newLink, setNewLink] = useState({label:'',url:''})
   const [pwForm, setPwForm] = useState({current:'', next:'', confirm:''})
   const [pwMsg, setPwMsg] = useState(null)
@@ -57,6 +67,9 @@ export default function SettingsPage() {
     scenario_sort_order: p?.scenario_sort_order||'asc',
     bookmark_sort_order: p?.bookmark_sort_order||'asc',
     availability_sort_order: p?.availability_sort_order||'asc',
+    dashboard_cards: p?.dashboard_cards || ['logs','rulebooks','scenarios','pairs'],
+    theme_text_color: p?.theme_text_color || '',
+    dark_mode: p?.dark_mode || false,
   })
 
   const [form, setForm] = useState(() => buildForm(profile))
@@ -114,10 +127,12 @@ export default function SettingsPage() {
     })
   }
 
-  const applyPreset = p => { setForm(f=>({...f,theme_color:p.primary,theme_bg_color:p.bg,theme_accent:p.accent})); applyTheme(p.primary,p.bg,p.accent) }
-  const handleColorChange = (key,value) => { const u={...form,[key]:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent) }
-  const handleOpacityChange = value => { const o=parseFloat(value); setForm(f=>({...f,bg_opacity:o})); applyBackground(form.background_image_url,o) }
-  const handleBgUrlChange = value => { setForm(f=>({...f,background_image_url:value})); applyBackground(value,form.bg_opacity) }
+  const applyPreset = p => { setForm(f=>({...f,theme_color:p.primary,theme_bg_color:p.bg,theme_accent:p.accent})); applyTheme(p.primary,p.bg,p.accent,form.theme_text_color||null,form.dark_mode) }
+  const handleColorChange = (key,value) => { const u={...form,[key]:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent,u.theme_text_color||null,u.dark_mode) }
+  const handleOpacityChange = value => { const o=parseFloat(value); setForm(f=>({...f,bg_opacity:o})); applyBackground(form.background_image_url,o,form.dark_mode,form.theme_color) }
+  const handleBgUrlChange = value => { setForm(f=>({...f,background_image_url:value})); applyBackground(value,form.bg_opacity,form.dark_mode,form.theme_color) }
+  const handleTextColorChange = value => { const u={...form,theme_text_color:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent,value||null,u.dark_mode) }
+  const handleDarkModeToggle = value => { const u={...form,dark_mode:value}; setForm(u); applyTheme(u.theme_color,u.theme_bg_color,u.theme_accent,u.theme_text_color||null,value); applyBackground(u.background_image_url,u.bg_opacity,value,u.theme_color) }
 
   const save = async () => {
     setSaving(true)
@@ -127,19 +142,13 @@ export default function SettingsPage() {
       savedFormRef.current = form
       setIsDirty(false)
       setSaved(true); setTimeout(()=>setSaved(false),2500)
-      applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent)
-      applyBackground(form.background_image_url,form.bg_opacity)
+      applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent,form.theme_text_color||null,form.dark_mode)
+      applyBackground(form.background_image_url,form.bg_opacity,form.dark_mode,form.theme_color)
     }
     setSaving(false)
   }
 
-  const handleAvatarUpload = async e => {
-    const file=e.target.files?.[0]; if(!file) return; setAvatarUploading(true)
-    const {url,error}=await uploadFile('avatars',`${user.id}/avatar-${Date.now()}`,file,{compress:true,maxSize:500,quality:0.85})
-    if(url){await updateProfile(user.id,{avatar_url:url});refreshProfile()}
-    else alert(error?.message||'업로드 실패')
-    setAvatarUploading(false)
-  }
+
 
   const addLink = () => { if(!newLink.label||!newLink.url) return; setForm(f=>({...f,external_links:[...(f.external_links||[]),{...newLink}]})); setNewLink({label:'',url:''}) }
   const removeLink = idx => setForm(f=>({...f,external_links:f.external_links.filter((_,i)=>i!==idx)}))
@@ -154,7 +163,7 @@ export default function SettingsPage() {
     else { setPwMsg('비밀번호가 변경됐어요! ✅'); setPwForm({current:'',next:'',confirm:''}) }
   }
 
-  const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'theme',label:'테마',icon:'palette'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'},{key:'withdraw',label:'회원 탈퇴',icon:'person_remove'}]
+  const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'theme',label:'테마',icon:'palette'},{key:'dashboard',label:'홈화면',icon:'dashboard'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'},{key:'withdraw',label:'회원 탈퇴',icon:'person_remove'}]
 
   const handleWithdraw = async () => {
     if (withdrawInput !== '탈퇴합니다') return
@@ -215,32 +224,17 @@ export default function SettingsPage() {
                     ? <img src={form.avatar_url||profile?.avatar_url} alt="avatar"/>
                     : (profile?.display_name||'?')[0]}
                 </div>
-                <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-                  <label className="btn btn-outline btn-sm" style={{cursor:'pointer',display:'inline-flex'}}>
-                    {avatarUploading?'업로드 중...':'파일 업로드'}
-                    <input type="file" accept="image/*" style={{display:'none'}}
-                      onChange={async e => {
-                        const file=e.target.files?.[0]; if(!file) return; setAvatarUploading(true)
-                        const {url,error}=await uploadFile('avatars',`${user.id}/avatar-${Date.now()}`,file,{compress:true,maxSize:500,quality:0.85})
-                        if(url){ await updateProfile(user.id,{avatar_url:url}); setForm(f=>({...f,avatar_url:url})); refreshProfile() }
-                        else alert(error?.message||'업로드 실패')
-                        setAvatarUploading(false)
-                      }} disabled={avatarUploading}/>
-                  </label>
-                  {(form.avatar_url||profile?.avatar_url) && (
-                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
-                      onClick={async()=>{
-                        await updateProfile(user.id,{avatar_url:null})
-                        setForm(f=>({...f,avatar_url:''}))
-                        refreshProfile()
-                      }}>제거</button>
-                  )}
-                </div>
+                {(form.avatar_url||profile?.avatar_url) && (
+                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
+                    onClick={async()=>{
+                      await updateProfile(user.id,{avatar_url:null})
+                      setForm(f=>({...f,avatar_url:''}))
+                      refreshProfile()
+                    }}>제거</button>
+                )}
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <input className="form-input" placeholder="또는 이미지 URL 직접 입력 (https://...)"
-                  value={form.avatar_url||''} onChange={e=>setForm(f=>({...f,avatar_url:e.target.value}))}/>
-              </div>
+              <input className="form-input" placeholder="이미지 URL 입력 (https://...)"
+                value={form.avatar_url||''} onChange={e=>setForm(f=>({...f,avatar_url:e.target.value}))}/>
             </div>
             <div className="form-group"><label className="form-label">사용자명 (URL)</label><div style={{display:'flex',alignItems:'center',gap:6}}><span className="text-light text-sm">https://trpg-diary.co.kr/u/</span><input className="form-input" value={profile?.username||''} disabled style={{flex:1,opacity:0.6}} /></div></div>
             <div className="form-group"><label className="form-label">표시 이름</label><input className="form-input" value={form.display_name} onChange={set('display_name')} /></div>
@@ -290,6 +284,39 @@ export default function SettingsPage() {
           </>
         )}
 
+        {/* ── 홈화면 위젯 ── */}
+        {tab==='dashboard'&&(
+          <>
+            <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:8,fontSize:'1rem'}}>홈화면 위젯 선택</h2>
+            <p className="text-sm text-light" style={{marginBottom:20}}>홈화면 상단에 표시할 위젯 4개를 선택하세요.</p>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {WIDGET_OPTIONS.map(w=>{
+                const isSelected=(form.dashboard_cards||[]).includes(w.key)
+                const canAdd=(form.dashboard_cards||[]).length<4
+                return (
+                  <div key={w.key} className="card" style={{padding:'10px 14px',background:'var(--color-nav-active-bg)',opacity:(!isSelected&&!canAdd)?0.45:1,transition:'opacity 0.15s'}}>
+                    <div className="flex justify-between items-center">
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <Mi size='sm' color={isSelected?'accent':'light'}>{w.icon}</Mi>
+                        <span style={{fontSize:'0.88rem',fontWeight:500,color:isSelected?'var(--color-text)':'var(--color-text-light)'}}>{w.label}</span>
+                      </div>
+                      <div
+                        onClick={()=>{
+                          if(isSelected) setForm(f=>({...f,dashboard_cards:(f.dashboard_cards||[]).filter(k=>k!==w.key)}))
+                          else if(canAdd) setForm(f=>({...f,dashboard_cards:[...(f.dashboard_cards||[]),w.key]}))
+                        }}
+                        style={{width:36,height:20,borderRadius:10,background:isSelected?'var(--color-primary)':'#ccc',position:'relative',cursor:(!isSelected&&!canAdd)?'not-allowed':'pointer',transition:'background 0.2s',flexShrink:0}}>
+                        <div style={{position:'absolute',top:2,left:isSelected?18:2,width:16,height:16,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-sm text-light" style={{marginTop:12,textAlign:'right'}}>{(form.dashboard_cards||[]).length}/4 선택됨</p>
+          </>
+        )}
+
         {/* ── 테마 ── */}
         {tab==='theme'&&(
           <>
@@ -321,7 +348,7 @@ export default function SettingsPage() {
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.background_image_url} onChange={e=>handleBgUrlChange(e.target.value)} style={{flex:1}} />
               </div>
-              {form.background_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} /><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1)}}>제거</button></div>}
+              {form.background_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} /><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1,form.dark_mode,form.theme_color)}}>제거</button></div>}
             </div>
             {form.background_image_url&&(
               <div className="form-group">
@@ -333,6 +360,29 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+            {/* 폰트 색상 */}
+            <div className="form-group">
+              <label className="form-label">폰트 색상 <span className="text-xs text-light" style={{fontWeight:400}}>(비어 있으면 강조 컬러 기반 자동)</span></label>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <input type="color" value={form.theme_text_color||'#5a4a3a'} onChange={e=>handleTextColorChange(e.target.value)} style={{width:36,height:32,border:'none',cursor:'pointer',borderRadius:5,padding:2}} />
+                <input className="form-input" value={form.theme_text_color||''} onChange={e=>handleTextColorChange(e.target.value)} style={{flex:1,fontFamily:'monospace',fontSize:'0.75rem'}} placeholder="자동" />
+                {form.theme_text_color&&<button className="btn btn-ghost btn-sm" style={{flexShrink:0}} onClick={()=>handleTextColorChange('')}>초기화</button>}
+              </div>
+            </div>
+
+            {/* 다크 모드 */}
+            <div className="card" style={{marginBottom:16,background:'var(--color-nav-active-bg)'}}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <div style={{fontWeight:600,marginBottom:3,fontSize:'0.9rem'}}>다크 모드</div>
+                  <div className="text-sm text-light">배경을 어둡게 전환해요. 메인/강조 컬러는 유지돼요.</div>
+                </div>
+                <div onClick={()=>handleDarkModeToggle(!form.dark_mode)} style={{width:40,height:22,borderRadius:11,background:form.dark_mode?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
+                  <div style={{position:'absolute',top:2,left:form.dark_mode?20:2,width:18,height:18,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
+                </div>
+              </div>
+            </div>
+
             <div style={{padding:14,borderRadius:8,background:form.theme_bg_color,border:`2px solid ${form.theme_color}30`}}>
               <div style={{color:form.theme_accent,fontSize:'0.85rem',fontWeight:700,marginBottom:6}}>✦ 미리보기</div>
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>

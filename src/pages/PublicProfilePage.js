@@ -1,5 +1,6 @@
 // src/pages/PublicProfilePage.js
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -39,8 +40,26 @@ function Chip({ type, label }) {
   )
 }
 
+// hex → rgba 변환
+const hexToRgba = (hex, alpha) => {
+  const h = hex.replace('#','')
+  const r = parseInt(h.slice(0,2),16)
+  const g = parseInt(h.slice(2,4),16)
+  const b = parseInt(h.slice(4,6),16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
 // ── 미니 캘린더 ──
-function PublicCalendar({ schedules, blocked = [] }) {
+function PublicCalendar({ schedules, blocked = [], colorMap = {} }) {
+  const [tooltip, setTooltip] = useState(null) // { date, scheds, x, y }
+
+  // 모바일: 툴팁 외부 터치 시 닫기
+  React.useEffect(() => {
+    if (!tooltip) return
+    const handler = () => setTooltip(null)
+    document.addEventListener('touchstart', handler)
+    return () => document.removeEventListener('touchstart', handler)
+  }, [!!tooltip])
   const [cal, setCal] = useState(new Date())
   const startDate = startOfWeek(startOfMonth(cal), { weekStartsOn:0 })
   const endDate = endOfWeek(endOfMonth(cal), { weekStartsOn:0 })
@@ -53,36 +72,51 @@ function PublicCalendar({ schedules, blocked = [] }) {
       const dStr = format(d, 'yyyy-MM-dd')
       const dayScheds = schedules.filter(s => s.scheduled_date === dStr)
       const dayBlocked = blocked.filter(b => b.scheduled_date === dStr)
-      const hasBlocked = dayBlocked.length > 0
+      const hasAllDayBlocked = dayBlocked.some(b => !b.blocked_from)
+      const cellItems = [
+        ...dayScheds.map(x => ({...x, _time: x.scheduled_time||'', _kind:'session'})),
+        ...dayBlocked.map(x => ({...x, _time: x.blocked_from||'', _kind:'blocked'}))
+      ].sort((a,b) => a._time.localeCompare(b._time))
+      const hasMore = cellItems.length > 3
       week.push(
         <div key={dStr}
           className={`calendar-cell ${isToday(d)?'today':''} ${!isSameMonth(d,cal)?'other-month':''}`}
-          style={{ cursor:'default', outline: hasBlocked ? '2px solid #e57373' : 'none', outlineOffset:'-2px' }}
+          style={{ cursor: hasMore ? 'pointer' : 'default', outline: hasAllDayBlocked ? '2px solid #e57373' : 'none', outlineOffset:'-2px', position:'relative' }}
+          onMouseEnter={hasMore ? e => {
+            const r = e.currentTarget.getBoundingClientRect()
+            setTooltip({ date: dStr, items: cellItems, x: r.left, y: r.bottom })
+          } : undefined}
+          onMouseLeave={hasMore ? () => setTooltip(null) : undefined}
+          onTouchEnd={hasMore ? e => {
+            e.preventDefault()
+            const r = e.currentTarget.getBoundingClientRect()
+            setTooltip(prev => prev?.date === dStr ? null : { date: dStr, items: cellItems, x: r.left, y: r.bottom })
+          } : undefined}
         >
           <div className="calendar-date">{format(d,'d')}</div>
-          {dayScheds.slice(0,2).map((s,idx) => (
-            <div key={idx} className={`calendar-event${s.is_gm?' gm':''}`} title={s.title}>
-              {s.scheduled_time && <span style={{ opacity:0.85, marginRight:2 }}>{s.scheduled_time.slice(0,5)}</span>}
-              {s.title}
-            </div>
-          ))}
-          {dayScheds.length > 2 && (
-            <div style={{ fontSize:'0.55rem', color:'var(--color-text-light)', paddingLeft:2 }}>+{dayScheds.length-2}개 더</div>
+          {cellItems.slice(0,3).map((item,idx) => {
+            if (item._kind === 'blocked') return (
+              <div key={`bl${idx}`}
+                style={{ fontSize:'0.65rem', padding:'1px 3px', borderRadius:3, marginBottom:2,
+                  background:'rgba(229,115,115,0.15)', color:'#e57373',
+                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}
+                title={item.blocked_from && item.blocked_until ? `${item.blocked_from.slice(0,5)}~${item.blocked_until.slice(0,5)}` : item.blocked_from ? `${item.blocked_from.slice(0,5)}~` : ''}
+              >
+                🚫 {item.blocked_from ? `${item.blocked_from.slice(0,5)}${item.blocked_until?`~${item.blocked_until.slice(0,5)}`:'~'}` : '종일'}
+              </div>
+            )
+            const evColor = colorMap?.[item.system_name]
+            const colorStyle = evColor ? { background: item.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7), color:'white' } : {}
+            return (
+              <div key={idx} className={`calendar-event${!evColor&&item.is_gm?' gm':''}`} style={colorStyle} title={item.title}>
+                {item.scheduled_time && <span style={{ opacity:0.85, marginRight:2 }}>{item.scheduled_time.slice(0,5)}</span>}
+                {item.title}
+              </div>
+            )
+          })}
+          {hasMore && (
+            <div style={{ fontSize:'0.55rem', color:'var(--color-primary)', paddingLeft:2, fontWeight:600 }}>+{cellItems.length-3}개 더 ▾</div>
           )}
-          {dayBlocked.map((b,idx) => (
-            <div key={`bl${idx}`}
-              style={{ fontSize:'0.58rem', padding:'1px 3px', borderRadius:3, marginBottom:2,
-                background:'rgba(229,115,115,0.15)', color:'#e57373',
-                overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}
-              title={[
-                b.blocked_from && b.blocked_until ? `${b.blocked_from.slice(0,5)}~${b.blocked_until.slice(0,5)}`
-                  : b.blocked_from ? `${b.blocked_from.slice(0,5)}~` : '',
-                b.description
-              ].filter(Boolean).join(' ')}
-            >
-              🚫 {b.blocked_from ? `${b.blocked_from.slice(0,5)}${b.blocked_until?`~${b.blocked_until.slice(0,5)}`:'~'}` : '종일'}
-            </div>
-          ))}
         </div>
       )
       day = addDays(day, 1)
@@ -90,20 +124,64 @@ function PublicCalendar({ schedules, blocked = [] }) {
     rows.push(<React.Fragment key={day.toString()}>{week}</React.Fragment>)
   }
   return (
-    <div className="card">
-      <div className="flex justify-between items-center" style={{ marginBottom:14 }}>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setCal(subMonths(cal,1))}>‹ 이전</button>
-        <span style={{ fontWeight:700, fontSize:'1rem', color:'var(--color-accent)' }}>{format(cal,'yyyy년 M월',{locale:ko})}</span>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}>다음 ›</button>
+    <>
+      <div className="card">
+        <div className="flex justify-between items-center" style={{ marginBottom:14 }}>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setCal(subMonths(cal,1))}>‹ 이전</button>
+          <span style={{ fontWeight:700, fontSize:'1rem', color:'var(--color-accent)' }}>{format(cal,'yyyy년 M월',{locale:ko})}</span>
+          <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setCal(addMonths(cal,1))}>다음 ›</button>
+            <button className="btn btn-outline btn-sm" onClick={()=>setCal(new Date())} style={{ fontSize:'0.75rem', padding:'3px 10px' }}>오늘</button>
+          </div>
+        </div>
+        <div className="calendar-grid" style={{ marginBottom:3 }}>
+          {['일','월','화','수','목','금','토'].map((d,i) => (
+            <div key={d} className="calendar-day-header"
+              style={{ color: i===0?'#e57373':i===6?'#6b8cba':'var(--color-text-light)' }}>{d}</div>
+          ))}
+        </div>
+        <div className="calendar-grid">{rows}</div>
       </div>
-      <div className="calendar-grid" style={{ marginBottom:3 }}>
-        {['일','월','화','수','목','금','토'].map((d,i) => (
-          <div key={d} className="calendar-day-header"
-            style={{ color: i===0?'#e57373':i===6?'#6b8cba':'var(--color-text-light)' }}>{d}</div>
-        ))}
-      </div>
-      <div className="calendar-grid">{rows}</div>
-    </div>
+      {tooltip && (
+        <>
+          <div style={{ position:'fixed', inset:0, zIndex:9998, pointerEvents:'none' }} />
+          <div
+            onMouseEnter={() => {}}
+            onMouseLeave={() => setTooltip(null)}
+            onTouchStart={e => e.stopPropagation()}
+            style={{
+              position:'fixed', left: Math.min(tooltip.x, window.innerWidth - 230),
+              top: tooltip.y + 4, zIndex:9999,
+              background:'var(--color-surface)', border:'1px solid var(--color-border)',
+              borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,0.15)',
+              minWidth:190, maxWidth:250, padding:'10px 12px'
+            }}
+          >
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+              <span style={{ fontSize:'0.75rem', fontWeight:700, color:'var(--color-accent)' }}>
+                {format(new Date(tooltip.date), 'M월 d일', {locale:ko})} 일정
+              </span>
+              <button onClick={()=>setTooltip(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--color-text-light)', fontSize:'0.9rem', lineHeight:1, padding:'0 2px' }}>×</button>
+            </div>
+            {(tooltip.items||[]).map((item,i) => {
+              if (item._kind === 'blocked') return (
+                <div key={i} style={{ marginBottom:3, fontSize:'0.75rem', padding:'1px 4px', borderRadius:3, background:'rgba(229,115,115,0.15)', color:'#e57373' }}>
+                  🚫 {item.blocked_from ? `${item.blocked_from.slice(0,5)}${item.blocked_until?`~${item.blocked_until.slice(0,5)}`:'~'}` : '종일'}
+                </div>
+              )
+              const evColor = colorMap?.[item.system_name]
+              return (
+                <div key={i} className={`calendar-event${!evColor&&item.is_gm?' gm':''}`}
+                  style={{ marginBottom:3, fontSize:'0.75rem', ...(evColor ? { background: item.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7), color:'white' } : {}) }}>
+                  {item.scheduled_time && <span style={{ opacity:0.8, marginRight:4 }}>{item.scheduled_time.slice(0,5)}</span>}
+                  {item.title}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -122,6 +200,7 @@ export default function PublicProfilePage() {
   const [rulebookExpanded, setRulebookExpanded] = useState({})
   const [scenarioExpanded, setScenarioExpanded] = useState({})
   const [kakaoPopup, setKakaoPopup] = useState(false)
+  const [viewDark, setViewDark] = useState(false)
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
   const publicLogs = (data.logs||[]).filter(l => !l.is_private)
@@ -151,50 +230,49 @@ export default function PublicProfilePage() {
 
   const pairsPagination = usePagination(data.pairs||[], 20)
 
+  // 공개 캘린더용 colorMap: 해당 유저의 룰북 title → color
+  // ⚠️ Hook이므로 early return 전에 선언 필수
+  const publicColorMap = useMemo(() => {
+    const m = {}
+    ;(data.rulebooks||[]).filter(r => !r.parent_id && r.color).forEach(r => { m[r.title] = r.color })
+    return m
+  }, [data.rulebooks])
+
   useEffect(() => {
     const load = async () => {
       const { data:p, error } = await getProfile(username)
       if (error || !p) { setNotFound(true); setLoading(false); return }
       setProfile(p)
-      // 탭 제목: ✦ TRPG Diary - 닉네임 또는 @아이디
-      const displayName = p.display_name || p.username
-      document.title = `✦ TRPG Diary - ${displayName}`
-
-      // OG 메타태그 동적 업데이트
-      const ogImage = p.header_image_url || p.avatar_url || 'https://trpg-diary.co.kr/logo512.png'
-      const ogTitle = `${displayName}의 TRPG Diary`
-      const ogDesc = p.play_style || `${displayName}님의 TRPG 다이어리 - trpg-diary.co.kr`
-      const ogUrl = `https://trpg-diary.co.kr/u/${p.username}`
-      const setMeta = (prop, val, attr='property') => {
-        let el = document.querySelector(`meta[${attr}="${prop}"]`)
-        if (!el) { el = document.createElement('meta'); el.setAttribute(attr, prop); document.head.appendChild(el) }
-        el.setAttribute('content', val)
-      }
-      setMeta('og:title', ogTitle); setMeta('og:description', ogDesc)
-      setMeta('og:image', ogImage); setMeta('og:url', ogUrl)
-      setMeta('twitter:title', ogTitle, 'name'); setMeta('twitter:description', ogDesc, 'name')
-      setMeta('twitter:image', ogImage, 'name')
 
       // 페어 정렬 설정 동기화
       if (p.pair_sort_order) setPairSort(p.pair_sort_order)
-      applyTheme(p.theme_color||'#c8a96e', p.theme_bg_color||'#faf6f0', p.theme_accent||'#8b6f47')
-      applyBackground(p.background_image_url||'', p.bg_opacity !== undefined ? p.bg_opacity : 1)
+
+      // 방문자 뷰 모드: localStorage 우선, 없으면 오너 dark_mode 기본값
+      const saved = localStorage.getItem(`trpg_view_${username}`)
+      setViewDark(saved !== null ? saved === 'dark' : (p.dark_mode || false))
 
       const today = new Date().toISOString().split('T')[0]
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
-      const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks] = await Promise.all([
-        safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).limit(9000).then(r=>r)),
-        safe(supabase.from('rulebooks').select('*').eq('user_id', p.id).order('title').limit(9000).then(r=>r)),
-        safe(scenariosApi.getAll(p.id)),
+      const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks, guestbook] = await Promise.all([
+        safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).limit(3000).then(r=>r)),
+        safe(supabase.from('rulebooks').select('*').eq('user_id', p.id)
+          .order('sort_order', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: false })
+          .limit(3000).then(r=>r)),
+        safe(supabase.from('scenarios').select('*').eq('user_id', p.id)
+          .order('sort_order', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: true })
+          .limit(3000).then(r=>r)),
         safe(pairsApi.getAll(p.id)),
-        safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).limit(9000).then(r=>r)),
+        safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).limit(3000).then(r=>r)),
         safe(supabase.from('schedules').select('*').eq('user_id',p.id)
-          .order('scheduled_date').limit(9000).then(r=>r)),
-        safe(supabase.from('bookmarks').select('*').eq('user_id',p.id).order('title').limit(9000).then(r=>r)),
+          .order('scheduled_date').limit(3000).then(r=>r)),
+        safe(supabase.from('bookmarks').select('*').eq('user_id',p.id).order('title').limit(3000).then(r=>r)),
+        safe(supabase.from('guestbook').select('id').eq('owner_id',p.id).limit(3000).then(r=>r)),
       ])
       const scheds = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
       const blocked = schedsAll.filter(s => s.entry_type === 'blocked')
-      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked, bookmarks })
+      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked, bookmarks, guestbook })
 
       // hidden_tabs가 있으면 초기 탭이 숨겨져 있을 수 있으므로 첫 번째 보이는 탭으로 조정
       const hidden = p.hidden_tabs || []
@@ -209,6 +287,24 @@ export default function PublicProfilePage() {
     }
     load()
   }, [username])
+
+  // profile 또는 viewDark 변경 시 테마 재적용 (오너 설정 + 방문자 뷰모드 반영)
+  useEffect(() => {
+    if (!profile) return
+    applyTheme(
+      profile.theme_color||'#c8a96e',
+      profile.theme_bg_color||'#faf6f0',
+      profile.theme_accent||'#8b6f47',
+      profile.theme_text_color||null,
+      viewDark
+    )
+    applyBackground(
+      profile.background_image_url||'',
+      profile.bg_opacity !== undefined ? profile.bg_opacity : 1,
+      viewDark,
+      profile.theme_color||'#c8a96e'
+    )
+  }, [profile, viewDark])
 
   // 페이지 떠날 때 탭 제목 복원
   useEffect(() => {
@@ -269,8 +365,52 @@ export default function PublicProfilePage() {
   // 각 탭 페이지네이션 - pagedPairs 계산
   const pagedPairs = sortedPairs.slice((pairsPagination.page-1)*pairsPagination.perPage, pairsPagination.page*pairsPagination.perPage)
 
+  const ogTitle = profile ? `${profile.display_name || profile.username}의 TRPG Diary` : 'TRPG Diary ✦'
+  const ogDesc  = profile?.play_style || (profile ? `${profile.display_name || profile.username}님의 TRPG 다이어리 - trpg-diary.co.kr` : '나만의 TRPG Diary')
+  const ogImage = profile?.header_image_url || profile?.avatar_url || 'https://trpg-diary.co.kr/logo512.png'
+  const ogUrl   = `https://trpg-diary.co.kr/u/${username}`
+
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
+      <Helmet>
+        <title>{ogTitle}</title>
+        <meta property="og:type"        content="profile" />
+        <meta property="og:title"       content={ogTitle} />
+        <meta property="og:description" content={ogDesc} />
+        <meta property="og:image"       content={ogImage} />
+        <meta property="og:url"         content={ogUrl} />
+        <meta name="twitter:card"        content="summary_large_image" />
+        <meta name="twitter:title"       content={ogTitle} />
+        <meta name="twitter:description" content={ogDesc} />
+        <meta name="twitter:image"       content={ogImage} />
+      </Helmet>
+
+      {/* 다크/라이트 모드 토글 - 방문자가 직접 선택 */}
+      {profile && (
+        <div
+          onClick={() => {
+            const next = !viewDark
+            setViewDark(next)
+            localStorage.setItem(`trpg_view_${username}`, next ? 'dark' : 'light')
+          }}
+          style={{
+            position:'fixed', bottom:68, right:20, zIndex:9999,
+            width:36, height:36, borderRadius:'50%',
+            background: viewDark ? 'rgba(30,30,30,0.75)' : 'var(--color-primary)',
+            color:'white', cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            boxShadow:'0 2px 12px rgba(0,0,0,0.2)',
+            backdropFilter:'blur(8px)',
+            transition:'opacity 0.15s',
+            border: viewDark ? '1px solid rgba(255,255,255,0.15)' : 'none',
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity='0.8'}
+          onMouseLeave={e => e.currentTarget.style.opacity='1'}
+          title={viewDark ? '라이트 모드로 보기' : '다크 모드로 보기'}
+        >
+          <Mi size='sm' color='white'>{viewDark ? 'light_mode' : 'dark_mode'}</Mi>
+        </div>
+      )}
 
       {/* 로그인 상태 표시 배지 - auth 로딩 완료 후 표시 */}
       {!authLoading && (
@@ -343,19 +483,30 @@ export default function PublicProfilePage() {
           <p className="text-sm text-light">@{profile.username}</p>
 
           {/* 통계 */}
-          <div className="flex justify-between" style={{ marginTop:16, padding:'12px 0', borderTop:'1px solid var(--color-border)', borderBottom:'1px solid var(--color-border)' }}>
-            {[
-              { label:'기록', v:publicLogs.length||0 },
-              { label:'룰북', v:(data.rulebooks||[]).filter(r=>!r.parent_id).length },
-              { label:'시나리오', v:data.scenarios?.length||0 },
-              { label:'페어', v:data.pairs?.length||0 },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign:'center', flex:1 }}>
-                <div style={{ fontSize:'1.3rem', color:'var(--color-accent)', fontWeight:700 }}>{s.v}</div>
-                <div className="text-xs text-light">{s.label}</div>
+          {(() => {
+            const ALL_PUBLIC_STATS = [
+              {key:'logs', label:'기록', v:publicLogs.length||0},
+              {key:'rulebooks', label:'룰북', v:(data.rulebooks||[]).filter(r=>!r.parent_id).length},
+              {key:'scenarios', label:'시나리오', v:data.scenarios?.length||0},
+              {key:'pairs', label:'페어', v:data.pairs?.length||0},
+              {key:'schedule', label:'일정', v:data.schedules?.length||0},
+              {key:'availability', label:'공수표', v:data.availability?.length||0},
+              {key:'guestbook', label:'방명록', v:data.guestbook?.length||0},
+              {key:'bookmarks', label:'북마크', v:data.bookmarks?.length||0},
+            ]
+            const dashCards = profile?.dashboard_cards || ['logs','rulebooks','scenarios','pairs']
+            const publicStats = ALL_PUBLIC_STATS.filter(s=>dashCards.includes(s.key))
+            return (
+              <div className="flex justify-between" style={{ marginTop:16, padding:'12px 0', borderTop:'1px solid var(--color-border)', borderBottom:'1px solid var(--color-border)' }}>
+                {publicStats.map(s => (
+                  <div key={s.key} style={{ textAlign:'center', flex:1 }}>
+                    <div style={{ fontSize:'1.3rem', color:'var(--color-accent)', fontWeight:700 }}>{s.v}</div>
+                    <div className="text-xs text-light">{s.label}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )
+          })()}
 
           {/* 프로필 소개 */}
           {sections.filter(s=>s.value).length > 0 && (
@@ -397,7 +548,7 @@ export default function PublicProfilePage() {
       </div>
 
       {/* ── 일정 (캘린더) ── */}
-      {activeTab==='schedules' && <PublicCalendar schedules={data.schedules||[]} blocked={data.blocked||[]}/>}
+      {activeTab==='schedules' && <PublicCalendar schedules={data.schedules||[]} blocked={data.blocked||[]} colorMap={publicColorMap}/>}
 
       {/* ── 기록 (카드 + 팝업) ── */}
       {activeTab==='logs' && (
@@ -477,6 +628,7 @@ export default function PublicProfilePage() {
               <div style={{ fontWeight: isChild ? 500 : 700, fontSize:'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:6 }}>
                 {isChild && <span style={{ fontSize:'0.65rem', color:'var(--color-text-light)', opacity:0.7 }}>└</span>}
                 {r.title}
+                {r.publisher && <span className="text-xs text-light" style={{ fontWeight:400 }}>{r.publisher}</span>}
               </div>
               {r.tags?.length > 0 && <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginTop:3 }}>{r.tags.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}</div>}
             </div>
@@ -534,15 +686,20 @@ export default function PublicProfilePage() {
                         : <span style={{ fontSize:'1.1rem', opacity:0.35 }}><Mi size='lg' color='light'>description</Mi></span>}
                     </div>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:700, fontSize:isChild?'0.85rem':'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:8 }}>
-                        {isChild && <Mi size="sm" color="light">subdirectory_arrow_right</Mi>}
+                      <div style={{ fontWeight: isChild ? 500 : 700, fontSize:isChild?'0.85rem':'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
                         {item.title}
-                        <span className="badge badge-gray" style={{fontSize:'0.65rem'}}>{SCENARIO_STATUS[item.status]}</span>
+                        {(item.status_tags||[]).map(t => (
+                          <span key={t} style={{padding:'1px 7px',borderRadius:100,fontSize:'0.65rem',fontWeight:600,
+                            background:'var(--color-nav-active-bg)',color:'var(--color-accent)',border:'1px solid var(--color-border)',whiteSpace:'nowrap'}}>
+                            {t}
+                          </span>
+                        ))}
                       </div>
                       <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
                         {item.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
                         {item.author && <span className="text-xs text-light"><Mi size='sm' color='light'>edit</Mi> {item.author}</span>}
                         {item.player_count && <span className="text-xs text-light"><Mi size="sm" color="light">group</Mi> {item.player_count}</span>}
+                        {item.format && <span className="text-xs text-light"><Mi size='sm' color='light'>inventory_2</Mi> {item.format==='physical'?'실물':item.format==='digital'?'전자':'실물+전자'}</span>}
                       </div>
                       {item.scenario_url && <a href={item.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:2, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
                     </div>

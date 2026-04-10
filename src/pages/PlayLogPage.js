@@ -1,7 +1,7 @@
 // src/pages/PlayLogPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { playLogsApi, uploadFile, supabase } from '../lib/supabase'
+import { playLogsApi, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
@@ -123,7 +123,6 @@ export function PlayLogPage() {
   const [confirm, setConfirm] = useState(null)
   const [detail, setDetail] = useState(null)
   const [search, setSearch] = useState('')
-  const [imgUploading, setImgUploading] = useState(false)
   const [ruleFilter, setRuleFilter] = useState('all')
   const [showSpoilerPw, setShowSpoilerPw] = useState(false)
 
@@ -142,6 +141,7 @@ export function PlayLogPage() {
 
   const save = async () => {
     if (!form.title||!form.played_date) return
+    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 다녀온 기록을 정리해주세요.'); return }
     if (editing) await playLogsApi.update(editing.id,cleanPayload(form))
     else await playLogsApi.create({...cleanPayload(form),user_id:user.id})
     setModal(false); load()
@@ -149,14 +149,6 @@ export function PlayLogPage() {
   }
   const remove = async id => { await playLogsApi.remove(id); load(); setDetail(null) }
 
-  const handleImageUpload = async e => {
-    const file=e.target.files?.[0]; if(!file) return
-    setImgUploading(true)
-    const {url,error}=await uploadFile('play-images',`${user.id}/session-${Date.now()}`,file)
-    if(url) setForm(f=>({...f,session_image_url:url}))
-    else alert(error?.message||'업로드 실패')
-    setImgUploading(false)
-  }
 
   const seriesList = useMemo(()=>[...new Set(items.map(i=>i.series_tag).filter(Boolean))].sort(),[items])
   const ruleList = useMemo(()=>[...new Set(items.map(i=>i.system_name).filter(Boolean))].sort(),[items])
@@ -321,10 +313,7 @@ export function PlayLogPage() {
           {/* 세션카드 이미지 */}
           <div className="form-group">
             <label className="form-label">세션카드 이미지</label>
-            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-              <input className="form-input" autoComplete="off" placeholder="https://... (imgur 주소 등록 추천)" value={form.session_image_url||''} onChange={set('session_image_url')} style={{flex:1}}/>
-              <label className="btn btn-outline btn-sm" style={{cursor:'pointer',whiteSpace:'nowrap'}}>{imgUploading?'업로드 중...':'📁 업로드'}<input type="file" accept="image/*" style={{display:'none'}} onChange={handleImageUpload} disabled={imgUploading}/></label>
-            </div>
+            <input className="form-input" autoComplete="off" placeholder="https://... (imgur 주소 등록 추천)" value={form.session_image_url||''} onChange={set('session_image_url')}/>
             {form.session_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.session_image_url} alt="preview" style={{width:60,height:34,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,session_image_url:''}))}>제거</button></div>}
           </div>
 

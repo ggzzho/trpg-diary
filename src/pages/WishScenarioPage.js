@@ -1,7 +1,7 @@
-// src/pages/ScenarioPage.js
+// src/pages/WishScenarioPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { scenariosApi, supabase } from '../lib/supabase'
+import { wishScenariosApi, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination, TagManager } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
@@ -12,7 +12,7 @@ import { CSS } from '@dnd-kit/utilities'
 
 const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
 const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자' }
-const DEFAULT_STATUS_TAGS = ['미플', 'PL 완료', 'GM 완료', '위시리스트']
+const DEFAULT_STATUS_TAGS = ['미구매', '구매 예정', '품절']
 
 function SortableWrapper({ id, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
@@ -34,7 +34,7 @@ const cleanPayload = f => {
   return { ...rest, purchase_date:f.purchase_date||null, parent_id:f.parent_id||null, status_tags:f.status_tags||[] }
 }
 
-export function ScenarioPage() {
+export function WishScenarioPage() {
   const { user, profile } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -44,23 +44,23 @@ export function ScenarioPage() {
   const [confirm, setConfirm] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [sortOrder, setSortOrder] = useState(() => 'asc')
+  const [sortOrder, setSortOrder] = useState('asc')
   const [isChild, setIsChild] = useState(false)
   const [expanded, setExpanded] = useState({})
   const [parentSearchText, setParentSearchText] = useState('')
   const [showParentDrop, setShowParentDrop] = useState(false)
-  const [statusTags, setStatusTags] = useState([])       // 사용자 정의 상태 태그 목록
-  const [tagModal, setTagModal] = useState(false)        // 태그 관리 모달
+  const [statusTags, setStatusTags] = useState([])
+  const [tagModal, setTagModal] = useState(false)
 
   const load = async () => {
-    const { data } = await supabase.from('scenarios').select('*').eq('user_id', user.id)
+    const { data } = await supabase.from('wish_scenarios').select('*').eq('user_id', user.id)
       .order('sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true })
     setItems(data || [])
     setLoading(false)
   }
   const loadStatusTags = async () => {
-    const { data } = await supabase.from('scenario_status_tags').select('*').eq('user_id', user.id).order('created_at')
+    const { data } = await supabase.from('wish_scenario_status_tags').select('*').eq('user_id', user.id).order('created_at')
     setStatusTags(data || [])
     return data || []
   }
@@ -70,7 +70,7 @@ export function ScenarioPage() {
       load()
       const tags = await loadStatusTags()
       if (tags.length === 0) {
-        await supabase.from('scenario_status_tags').insert(
+        await supabase.from('wish_scenario_status_tags').insert(
           DEFAULT_STATUS_TAGS.map(name => ({ user_id: user.id, name }))
         )
         await loadStatusTags()
@@ -78,22 +78,21 @@ export function ScenarioPage() {
     }
     init()
   }, [user])
-  useEffect(() => { if (profile?.scenario_sort_order) setSortOrder(profile.scenario_sort_order) }, [profile])
+  useEffect(() => { if (profile?.wish_scenario_sort_order) setSortOrder(profile.wish_scenario_sort_order) }, [profile])
 
-  const addStatusTag    = async (name) => { await supabase.from('scenario_status_tags').insert({ user_id:user.id, name }); loadStatusTags() }
-  const editStatusTag   = async (id, name) => { await supabase.from('scenario_status_tags').update({ name }).eq('id', id); loadStatusTags() }
+  const addStatusTag    = async (name) => { await supabase.from('wish_scenario_status_tags').insert({ user_id:user.id, name }); loadStatusTags() }
+  const editStatusTag   = async (id, name) => { await supabase.from('wish_scenario_status_tags').update({ name }).eq('id', id); loadStatusTags() }
   const removeStatusTag = async id => {
     const tag = statusTags.find(t => t.id === id)
     if (!tag) return
-    // 해당 태그를 사용 중인 시나리오에서 제거
-    const { data: fresh } = await supabase.from('scenarios').select('id, status_tags').eq('user_id', user.id)
+    const { data: fresh } = await supabase.from('wish_scenarios').select('id, status_tags').eq('user_id', user.id)
     const affected = (fresh || []).filter(i => (i.status_tags||[]).includes(tag.name))
     if (affected.length > 0) {
       await Promise.all(affected.map(i =>
-        supabase.from('scenarios').update({ status_tags: (i.status_tags||[]).filter(t => t !== tag.name) }).eq('id', i.id)
+        supabase.from('wish_scenarios').update({ status_tags: (i.status_tags||[]).filter(t => t !== tag.name) }).eq('id', i.id)
       ))
     }
-    await supabase.from('scenario_status_tags').delete().eq('id', id)
+    await supabase.from('wish_scenario_status_tags').delete().eq('id', id)
     await loadStatusTags()
     await load()
   }
@@ -119,18 +118,18 @@ export function ScenarioPage() {
   }
   const save = async () => {
     if (!form.title) return
-    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 보유 시나리오를 정리해주세요.'); return }
+    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 위시 시나리오를 정리해주세요.'); return }
     const parentId = isChild ? (form.parent_id||null) : null
     const payload = cleanPayload({...form, parent_id: parentId})
     if (editing) {
-      await scenariosApi.update(editing.id, payload)
+      await wishScenariosApi.update(editing.id, payload)
     } else {
       const so = parentId ? (childMap[parentId]?.length || 0) : undefined
-      await scenariosApi.create({...payload, user_id:user.id, ...(so !== undefined ? {sort_order:so} : {})})
+      await wishScenariosApi.create({...payload, user_id:user.id, ...(so !== undefined ? {sort_order:so} : {})})
     }
     setModal(false); load()
   }
-  const remove = async id => { await scenariosApi.remove(id); load() }
+  const remove = async id => { await wishScenariosApi.remove(id); load() }
   const toggleExpand = id => setExpanded(e => ({...e, [id]:!e[id]}))
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -147,7 +146,7 @@ export function ScenarioPage() {
       const reordered = arrayMove(siblings, oldIdx, newIdx)
       setItems(prev => [...prev.filter(i => i.parent_id !== activeItem.parent_id), ...reordered])
       await Promise.all(reordered.map((item, idx) =>
-        supabase.from('scenarios').update({ sort_order: idx }).eq('id', item.id)
+        supabase.from('wish_scenarios').update({ sort_order: idx }).eq('id', item.id)
       ))
     }
   }
@@ -253,8 +252,8 @@ export function ScenarioPage() {
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
         <div>
-          <h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>description</Mi>시나리오 목록</h1>
-          <p className="page-subtitle">보유/위시 TRPG 시나리오 목록이예요 ({items.length}개)</p>
+          <h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>favorite</Mi>위시 시나리오</h1>
+          <p className="page-subtitle">갖고 싶은 TRPG 시나리오집 목록이예요 ({items.length}개)</p>
         </div>
         <div className="flex gap-8">
           <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}><Mi size='sm'>sell</Mi> 상태 태그 관리</button>
@@ -265,29 +264,26 @@ export function ScenarioPage() {
       {/* 상태 태그 필터 */}
       <div className="flex gap-8" style={{marginBottom:12,flexWrap:'wrap'}}>
         <button className={`btn btn-sm ${statusFilter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setStatusFilter('all')}>전체</button>
-        {statusTags.map(t => {
-          const isActive = statusFilter === t.name
-          return (
-            <button key={t.id}
-              className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-outline'}`}
-              onClick={()=>setStatusFilter(t.name)}>
-              {t.name}
-            </button>
-          )
-        })}
+        {statusTags.map(t => (
+          <button key={t.id}
+            className={`btn btn-sm ${statusFilter===t.name?'btn-primary':'btn-outline'}`}
+            onClick={()=>setStatusFilter(t.name)}>
+            {t.name}
+          </button>
+        ))}
       </div>
 
       <div style={{marginBottom:16,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
         <input className="form-input" placeholder="🔍 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
         {search && <span className="text-xs text-light">({filteredParents.length}건)</span>}
         <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
-          onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await supabase.from('profiles').update({scenario_sort_order:next}).eq('id',user.id) }}>
+          onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await supabase.from('profiles').update({wish_scenario_sort_order:next}).eq('id',user.id) }}>
           가나다순 {sortOrder==='asc'?'↑':'↓'}
         </button>
       </div>
 
       {loading?<LoadingSpinner/>:filteredParents.length===0
-        ?<EmptyState icon="description" title="시나리오가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
+        ?<EmptyState icon="favorite" title="위시 시나리오가 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
         :<>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
@@ -389,7 +385,6 @@ export function ScenarioPage() {
             </select>
           </div>
         </div>
-        {/* 상태 태그 다중 선택 */}
         <div className="form-group">
           <label className="form-label">
             상태
@@ -414,11 +409,10 @@ export function ScenarioPage() {
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{minHeight:64}}/></div>
       </Modal>
 
-      {/* 상태 태그 관리 모달 */}
-      <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 시나리오 상태 태그 관리"
+      <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 상태 태그 관리"
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
       >
-        <TagManager tags={statusTags} onAdd={addStatusTag} onEdit={editStatusTag} onRemove={removeStatusTag} placeholder="미플, PL 완료, GM 완료, 위시리스트..."/>
+        <TagManager tags={statusTags} onAdd={addStatusTag} onEdit={editStatusTag} onRemove={removeStatusTag} placeholder="미구매, 구매 예정, 구매 완료..."/>
       </Modal>
 
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 시나리오를 삭제하시겠어요?"/>

@@ -1,6 +1,7 @@
 // src/pages/NoticePage.js
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Mi } from '../components/Mi'
@@ -86,6 +87,17 @@ export default function NoticePage() {
 
   return (
     <div className="fade-in" style={{maxWidth:680,margin:'0 auto',padding:'20px 0 60px'}}>
+      <Helmet>
+        <title>{notice.title} - TRPG Diary</title>
+        <meta property="og:type"        content="article" />
+        <meta property="og:title"       content={`${notice.title} - TRPG Diary`} />
+        <meta property="og:description" content={notice.content?.slice(0,100)?.replace(/[#*`]/g,'') || 'TRPG Diary 공지사항'} />
+        <meta property="og:image"       content="https://trpg-diary.co.kr/logo512.png" />
+        <meta property="og:url"         content={`https://trpg-diary.co.kr/notices/${notice.id}`} />
+        <meta name="twitter:card"        content="summary" />
+        <meta name="twitter:title"       content={`${notice.title} - TRPG Diary`} />
+        <meta name="twitter:description" content={notice.content?.slice(0,100)?.replace(/[#*`]/g,'') || 'TRPG Diary 공지사항'} />
+      </Helmet>
       <button className="btn btn-ghost btn-sm" style={{marginBottom:20,color:'var(--color-text-light)'}}
         onClick={()=>navigate(-1)}>
         <Mi size="sm" color="light">arrow_back</Mi> 뒤로가기

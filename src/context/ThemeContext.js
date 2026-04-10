@@ -11,26 +11,43 @@ function hexToRgb(hex) {
   } catch { return [200, 169, 110] }
 }
 
-export function applyTheme(primary, bg, accent) {
+export function applyTheme(primary, bg, accent, textColor = null, darkMode = false) {
   const root = document.documentElement
   const [pr, pg, pb] = hexToRgb(primary)
   const [ar, ag, ab] = hexToRgb(accent)
-  const [br, bgG, bb] = hexToRgb(bg)
 
   root.style.setProperty('--color-primary', primary)
-  root.style.setProperty('--color-bg', bg)
   root.style.setProperty('--color-accent', accent)
-  root.style.setProperty('--color-border', `rgba(${pr}, ${pg}, ${pb}, 0.3)`)
   root.style.setProperty('--color-shadow', `rgba(${ar}, ${ag}, ${ab}, 0.08)`)
-  root.style.setProperty('--color-surface',
-    `rgba(${Math.min(255,br+10)}, ${Math.min(255,bgG+8)}, ${Math.min(255,bb+5)}, 0.92)`)
   root.style.setProperty('--color-nav-active-bg', `rgba(${pr}, ${pg}, ${pb}, 0.12)`)
   root.style.setProperty('--color-btn-shadow', `rgba(${pr}, ${pg}, ${pb}, 0.35)`)
-  root.style.setProperty('--color-text',
-    `rgb(${Math.max(0,ar-30)}, ${Math.max(0,ag-20)}, ${Math.max(0,ab-10)})`)
-  root.style.setProperty('--color-text-light',
-    `rgb(${Math.min(180,ar+30)}, ${Math.min(160,ag+20)}, ${Math.min(140,ab+20)})`)
-  document.body.style.backgroundColor = bg
+
+  if (darkMode) {
+    const bgR = Math.max(18, Math.round(pr * 0.11))
+    const bgG = Math.max(18, Math.round(pg * 0.11))
+    const bgB = Math.max(18, Math.round(pb * 0.11))
+    const sfR = Math.max(30, Math.round(pr * 0.17))
+    const sfG = Math.max(30, Math.round(pg * 0.17))
+    const sfB = Math.max(30, Math.round(pb * 0.17))
+    const darkBg = `rgb(${bgR},${bgG},${bgB})`
+    root.style.setProperty('--color-bg', darkBg)
+    root.style.setProperty('--color-surface', `rgba(${sfR},${sfG},${sfB},0.97)`)
+    root.style.setProperty('--color-border', `rgba(${pr}, ${pg}, ${pb}, 0.22)`)
+    root.style.setProperty('--color-text', textColor || `rgb(${Math.min(245,ar+110)}, ${Math.min(245,ag+110)}, ${Math.min(245,ab+110)})`)
+    root.style.setProperty('--color-text-light', `rgb(${Math.min(185,ar+55)}, ${Math.min(185,ag+55)}, ${Math.min(185,ab+55)})`)
+    document.body.style.backgroundColor = darkBg
+  } else {
+    const [br, bgG, bb] = hexToRgb(bg)
+    root.style.setProperty('--color-bg', bg)
+    root.style.setProperty('--color-border', `rgba(${pr}, ${pg}, ${pb}, 0.3)`)
+    root.style.setProperty('--color-surface',
+      `rgba(${Math.min(255,br+10)}, ${Math.min(255,bgG+8)}, ${Math.min(255,bb+5)}, 0.92)`)
+    root.style.setProperty('--color-text',
+      textColor || `rgb(${Math.max(0,ar-30)}, ${Math.max(0,ag-20)}, ${Math.max(0,ab-10)})`)
+    root.style.setProperty('--color-text-light',
+      `rgb(${Math.min(180,ar+30)}, ${Math.min(160,ag+20)}, ${Math.min(140,ab+20)})`)
+    document.body.style.backgroundColor = bg
+  }
 
   // 동적 파비콘 - 테마 컬러로 ✦ 심벌 생성
   try {
@@ -53,7 +70,7 @@ export function applyTheme(primary, bg, accent) {
 }
 
 // 배경 이미지 + 불투명도 적용
-export function applyBackground(imageUrl, opacity = 1) {
+export function applyBackground(imageUrl, opacity = 1, darkMode = false, primary = '#c8a96e') {
   // 기존 오버레이 제거
   const existing = document.getElementById('bg-overlay')
   if (existing) existing.remove()
@@ -69,13 +86,22 @@ export function applyBackground(imageUrl, opacity = 1) {
   document.body.style.backgroundAttachment = 'fixed'
   document.body.style.backgroundPosition = 'center'
 
-  // 반투명 오버레이로 불투명도 조절 (흰색 오버레이로 배경을 흐리게)
+  // 오버레이 컬러: 다크모드는 primary 기반 어두운 tint, 라이트는 흰색
+  let overlayColor = 'white'
+  if (darkMode) {
+    const [pr, pg, pb] = hexToRgb(primary)
+    const bgR = Math.max(18, Math.round(pr * 0.11))
+    const bgG = Math.max(18, Math.round(pg * 0.11))
+    const bgB = Math.max(18, Math.round(pb * 0.11))
+    overlayColor = `rgb(${bgR},${bgG},${bgB})`
+  }
+
   const overlay = document.createElement('div')
   overlay.id = 'bg-overlay'
   overlay.style.cssText = `
     position: fixed;
     inset: 0;
-    background: white;
+    background: ${overlayColor};
     opacity: ${1 - opacity};
     pointer-events: none;
     z-index: 0;
@@ -92,11 +118,15 @@ export function ThemeProvider({ children, overrideProfile }) {
     applyTheme(
       profile.theme_color || '#c8a96e',
       profile.theme_bg_color || '#faf6f0',
-      profile.theme_accent || '#8b6f47'
+      profile.theme_accent || '#8b6f47',
+      profile.theme_text_color || null,
+      profile.dark_mode || false
     )
     applyBackground(
       profile.background_image_url || '',
-      profile.bg_opacity !== undefined ? profile.bg_opacity : 1
+      profile.bg_opacity !== undefined ? profile.bg_opacity : 1,
+      profile.dark_mode || false,
+      profile.theme_color || '#c8a96e'
     )
   }, [profile])
 

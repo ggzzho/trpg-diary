@@ -1,16 +1,14 @@
-// src/pages/BookmarkPage.js
+// src/pages/DotoriPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { bookmarksApi, bookmarkTagsApi, supabase } from '../lib/supabase'
+import { dotoriApi, dotoriTagsApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 
 const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[] }
 
-// OG 메타 가져오기 - 여러 서비스 순차 시도
 async function fetchOgMeta(url) {
-  // 1차: jsonlink.io (무료, 제한 없음)
   try {
     const res = await fetch(
       `https://jsonlink.io/api/extract?url=${encodeURIComponent(url)}`,
@@ -18,15 +16,10 @@ async function fetchOgMeta(url) {
     )
     const json = await res.json()
     if (json.title || json.images?.[0]) {
-      return {
-        title: json.title || '',
-        description: json.description || '',
-        thumbnail_url: json.images?.[0] || '',
-      }
+      return { title: json.title || '', description: json.description || '', thumbnail_url: json.images?.[0] || '' }
     }
   } catch {}
 
-  // 2차: microlink.io (월 100회 제한 있음)
   try {
     const res = await fetch(
       `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=false`,
@@ -35,15 +28,10 @@ async function fetchOgMeta(url) {
     const json = await res.json()
     if (json.status === 'success' && json.data) {
       const d = json.data
-      return {
-        title: d.title || '',
-        description: d.description || '',
-        thumbnail_url: d.image?.url || d.logo?.url || '',
-      }
+      return { title: d.title || '', description: d.description || '', thumbnail_url: d.image?.url || d.logo?.url || '' }
     }
   } catch {}
 
-  // 3차: allorigins (폴백)
   try {
     const res = await fetch(
       `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
@@ -68,7 +56,7 @@ async function fetchOgMeta(url) {
   return { title: '', description: '', thumbnail_url: '' }
 }
 
-export function BookmarkPage() {
+export function DotoriPage() {
   const { user, profile } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -84,9 +72,9 @@ export function BookmarkPage() {
   const [fetching, setFetching] = useState(false)
   const [fetchMsg, setFetchMsg] = useState('')
 
-  useEffect(() => { if (profile?.bookmark_sort_order) setSortOrder(profile.bookmark_sort_order) }, [profile])
-  const load = async () => { const {data}=await bookmarksApi.getAll(user.id); setItems(data||[]); setLoading(false) }
-  const loadTags = async () => { const {data}=await bookmarkTagsApi.getAll(user.id); setTags(data||[]) }
+  useEffect(() => { if (profile?.dotori_sort_order) setSortOrder(profile.dotori_sort_order) }, [profile])
+  const load = async () => { const {data}=await dotoriApi.getAll(user.id); setItems(data||[]); setLoading(false) }
+  const loadTags = async () => { const {data}=await dotoriTagsApi.getAll(user.id); setTags(data||[]) }
   useEffect(() => { load(); loadTags() }, [user])
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
@@ -116,25 +104,25 @@ export function BookmarkPage() {
 
   const save = async () => {
     if (!form.url) return
-    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 북마크를 정리해주세요.'); return }
+    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 도토리를 정리해주세요.'); return }
     const validTagNames = tags.map(t=>t.name)
     const { id, user_id, created_at, ...formFields } = form
     const payload = {...formFields, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
-    if (editing) await bookmarksApi.update(editing.id, payload)
-    else await bookmarksApi.create({...payload,user_id:user.id})
+    if (editing) await dotoriApi.update(editing.id, payload)
+    else await dotoriApi.create({...payload,user_id:user.id})
     setModal(false); load()
   }
 
-  const addTag = async name => { await bookmarkTagsApi.create({user_id:user.id,name}); loadTags() }
-  const editTag = async (id,name) => {
-    const oldTag=tags.find(t=>t.id===id)?.name
-    if (oldTag) { const affected=items.filter(i=>i.tags?.includes(oldTag)); for(const item of affected) await bookmarksApi.update(item.id,{...item,tags:item.tags.map(t=>t===oldTag?name:t)}) }
-    await bookmarkTagsApi.remove(id); await bookmarkTagsApi.create({user_id:user.id,name}); load(); loadTags()
+  const addTag = async name => { await dotoriTagsApi.create({user_id:user.id,name}); loadTags() }
+  const editTag = async (id, name) => {
+    const oldTag = tags.find(t=>t.id===id)?.name
+    if (oldTag) { const affected=items.filter(i=>i.tags?.includes(oldTag)); for(const item of affected) await dotoriApi.update(item.id,{...item,tags:item.tags.map(t=>t===oldTag?name:t)}) }
+    await dotoriTagsApi.remove(id); await dotoriTagsApi.create({user_id:user.id,name}); load(); loadTags()
   }
   const removeTag = async id => {
-    const tagName=tags.find(t=>t.id===id)?.name
-    if (tagName) { const affected=items.filter(i=>i.tags?.includes(tagName)); for(const item of affected) await bookmarksApi.update(item.id,{...item,tags:item.tags.filter(t=>t!==tagName)}) }
-    await bookmarkTagsApi.remove(id); load(); loadTags()
+    const tagName = tags.find(t=>t.id===id)?.name
+    if (tagName) { const affected=items.filter(i=>i.tags?.includes(tagName)); for(const item of affected) await dotoriApi.update(item.id,{...item,tags:item.tags.filter(t=>t!==tagName)}) }
+    await dotoriTagsApi.remove(id); load(); loadTags()
   }
 
   const filtered = useMemo(()=>items.filter(i=>{
@@ -151,10 +139,13 @@ export function BookmarkPage() {
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
-        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>bookmark</Mi>북마크</h1><p className="page-subtitle">유용한 링크와 배포 자료들을 모아요</p></div>
+        <div>
+          <h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>forest</Mi>도토리</h1>
+          <p className="page-subtitle">플레이하고 싶은 배포 시나리오 링크를 모아요</p>
+        </div>
         <div className="flex gap-8">
           <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}><Mi size='sm'>sell</Mi> 태그 관리</button>
-          <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 북마크 추가</button>
+          <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 도토리 추가</button>
         </div>
       </div>
       <div style={{marginBottom:20}}>
@@ -174,7 +165,7 @@ export function BookmarkPage() {
         )}
       </div>
       {loading?<LoadingSpinner/>:filtered.length===0
-        ?<EmptyState icon="bookmark" title="북마크가 없어요" description="유용한 링크를 추가해보세요!" action={<button className="btn btn-primary" onClick={openNew}>북마크 추가</button>}/>
+        ?<EmptyState icon="forest" title="도토리가 없어요" description="플레이하고 싶은 배포 시나리오 링크를 추가해보세요!" action={<button className="btn btn-primary" onClick={openNew}>도토리 추가</button>}/>
         :<>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))',gap:14}}>
           {paged.map(item=>(
@@ -213,7 +204,7 @@ export function BookmarkPage() {
         <Pagination total={filtered.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
         </>
       }
-      <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'북마크 수정':'북마크 추가'}
+      <Modal isOpen={modal} onClose={()=>setModal(false)} title={editing?'도토리 수정':'도토리 추가'}
         footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
         <div className="form-group">
@@ -235,10 +226,10 @@ export function BookmarkPage() {
         </div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" placeholder="간단한 메모..." value={form.memo||''} onChange={set('memo')} style={{minHeight:64}}/></div>
       </Modal>
-      <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 북마크 태그 관리"
+      <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 도토리 태그 관리"
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
-      ><TagManager tags={tags} onAdd={addTag} onEdit={editTag} onRemove={removeTag} placeholder="도토리, 배포자료, 유틸..."/></Modal>
-      <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>{bookmarksApi.remove(confirm);load();setConfirm(null)}} message="이 북마크를 삭제하시겠어요?"/>
+      ><TagManager tags={tags} onAdd={addTag} onEdit={editTag} onRemove={removeTag} placeholder="단편, 장편, 호러, 판타지..."/></Modal>
+      <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>{dotoriApi.remove(confirm);load();setConfirm(null)}} message="이 도토리를 삭제하시겠어요?"/>
     </div>
   )
 }
