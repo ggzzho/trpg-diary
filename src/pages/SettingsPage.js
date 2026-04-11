@@ -219,7 +219,7 @@ export default function SettingsPage() {
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>프로필 설정</h2>
             {/* 헤더 이미지 */}
             <div className="form-group">
-              <label className="form-label">공개 페이지 헤더 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 1200×400px)</span></label>
+              <label className="form-label">공개 페이지 헤더 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 1200×400px, 상단 크롭)</span></label>
               {form.header_image_url&&<div style={{borderRadius:8,overflow:'hidden',marginBottom:8,height:90,background:'var(--color-nav-active-bg)'}}><img src={form.header_image_url} alt="header" style={{width:'100%',height:'100%',objectFit:'cover'}} /></div>}
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.header_image_url||''} onChange={set('header_image_url')} style={{flex:1}} />
