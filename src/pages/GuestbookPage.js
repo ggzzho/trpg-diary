@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Mi } from '../components/Mi'
-import { supabase } from '../lib/supabase'
+import { supabase, notificationsApi } from '../lib/supabase'
 
 const fmtDT = (d) => {
   const dt = new Date(d)
@@ -73,15 +73,16 @@ function DeleteConfirm({ isOpen, onClose, onConfirm, message = '정말 삭제하
   )
 }
 
-// ── 방명록 카드 ──
-// ── 댓글 아이템 (수정 기능 포함) ──
-function ReplyItem({ r, isOwner, userId, onDelete, onEdit, rHidden, parentIsPrivate }) {
+// ── 댓글 아이템 (대댓글 포함) ──
+function ReplyItem({ r, subReplies, isOwner, userId, onDelete, onEdit, rHidden, parentIsPrivate,
+  subReplyFormOpen, onToggleSubReply, subReplyForm, setSubReplyForm, onSubmitSubReply, replySubmitting, authLoading }) {
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(r.content)
   const canEdit = userId && r.author_id === userId
   const showLock = r.is_private || parentIsPrivate
   return (
     <div style={{ padding:'10px 0', borderBottom:'1px solid var(--color-border)' }}>
+      {/* 댓글 헤더 */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ width:26, height:26, borderRadius:'50%', background:'var(--color-nav-active-bg)',
@@ -103,13 +104,20 @@ function ReplyItem({ r, isOwner, userId, onDelete, onEdit, rHidden, parentIsPriv
             <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px', fontSize:'0.72rem' }}
               onClick={() => onDelete(r.id)}>삭제</button>
           )}
+          <button className="btn btn-ghost btn-sm"
+            style={{ padding:'1px 6px', fontSize:'0.72rem', color:'var(--color-text-light)' }}
+            onClick={onToggleSubReply}>
+            <Mi size="sm" color="light">subdirectory_arrow_right</Mi> 답글
+          </button>
         </div>
       </div>
+
+      {/* 댓글 본문 */}
       {editing ? (
         <div style={{ paddingLeft:34 }}>
           <textarea className="form-textarea" value={editContent}
             onChange={e => setEditContent(e.target.value)}
-            style={{ minHeight:60, fontSize:'0.84rem', marginBottom:6 }}/>
+            style={{ minHeight:60, fontSize:'0.84rem', marginBottom:6, resize:'vertical' }}/>
           <div style={{ display:'flex', gap:6 }}>
             <button className="btn btn-primary btn-sm" style={{ fontSize:'0.75rem' }}
               onClick={() => { onEdit(r.id, editContent); setEditing(false) }}>저장</button>
@@ -123,21 +131,99 @@ function ReplyItem({ r, isOwner, userId, onDelete, onEdit, rHidden, parentIsPriv
           {rHidden ? <span style={{ display:'flex', alignItems:'center', gap:4 }}><Mi size="sm" color="light">lock</Mi> 비공개 댓글이에요</span> : r.content}
         </p>
       )}
+
+      {/* 대댓글 목록 */}
+      {subReplies.length > 0 && (
+        <div style={{ marginTop:6, paddingLeft:20, borderLeft:'2px solid var(--color-border)' }}>
+          {subReplies.map(sr => {
+            const srHidden = sr.is_private && !isOwner && sr.author_id !== userId
+            return (
+              <div key={sr.id} style={{ padding:'7px 0', borderBottom:'1px solid var(--color-border)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:3 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ color:'var(--color-text-light)', fontSize:'0.78rem', lineHeight:1 }}>ㄴ</span>
+                    <div style={{ width:22, height:22, borderRadius:'50%', background:'var(--color-nav-active-bg)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      fontSize:'0.62rem', fontWeight:700, color:'var(--color-accent)', flexShrink:0,
+                      border:'1px solid var(--color-border)' }}>
+                      {(sr.author_name||'?')[0]}
+                    </div>
+                    <span style={{ fontWeight:700, fontSize:'0.78rem' }}>{sr.author_name || '익명'}</span>
+                    {(sr.is_private || parentIsPrivate) && <Mi size="sm" color="light">lock</Mi>}
+                    <span style={{ fontSize:'0.65rem', color:'var(--color-text-light)' }}>{fmtDT(sr.created_at)}</span>
+                  </div>
+                  {(isOwner || sr.author_id === userId) && (
+                    <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px', fontSize:'0.7rem' }}
+                      onClick={() => onDelete(sr.id)}>삭제</button>
+                  )}
+                </div>
+                <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)', lineHeight:1.6,
+                  whiteSpace:'pre-wrap', paddingLeft:28, margin:0 }}>
+                  {srHidden ? <span style={{ display:'flex', alignItems:'center', gap:4 }}><Mi size="sm" color="light">lock</Mi> 비공개 댓글이에요</span> : sr.content}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 대댓글 입력 */}
+      {subReplyFormOpen && (
+        <div style={{ marginTop:8, paddingLeft:20, borderLeft:'2px solid var(--color-border)' }}>
+          <input className="form-input" autoComplete="off"
+            placeholder={authLoading ? '로딩 중...' : userId ? '비워두면 내 닉네임으로 등록돼요' : '닉네임 (필수)'}
+            value={subReplyForm.nickname || ''}
+            onChange={e => setSubReplyForm(f => ({...f, nickname:e.target.value}))}
+            style={{ fontSize:'0.8rem', marginBottom:5 }}/>
+          <textarea className="form-textarea" placeholder="답글을 남겨보세요..."
+            value={subReplyForm.content || ''}
+            onChange={e => setSubReplyForm(f => ({...f, content:e.target.value}))}
+            style={{ minHeight:44, fontSize:'0.82rem', resize:'vertical', marginBottom:6 }}/>
+          <div className="flex justify-between items-center">
+            <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.75rem', color:'var(--color-text-light)', cursor:'pointer' }}>
+              <input type="checkbox" checked={subReplyForm.is_private || false}
+                onChange={e => setSubReplyForm(f => ({...f, is_private:e.target.checked}))}/>
+              <Mi size="sm" color="light">lock</Mi> 비공개
+            </label>
+            <button className="btn btn-primary btn-sm" style={{ fontSize:'0.75rem' }}
+              onClick={onSubmitSubReply}
+              disabled={replySubmitting || !(subReplyForm.content||'').trim() || (!authLoading && !userId && !(subReplyForm.nickname||'').trim())}>
+              {replySubmitting ? '등록 중...' : '답글 등록'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function GuestEntry({ g, replies, isOwner, userId, onDelete, onEdit, onReply, replyOpen, onToggleReply,
-  replyForm, setReplyForm, onSubmitReply, replySubmitting, authLoading, onToggleLike }) {
+function GuestEntry({ g, replies, getSubReplies, isOwner, userId, onDelete, onEdit, onReply, replyOpen, onToggleReply,
+  replyForm, setReplyForm, onSubmitReply, onSubmitSubReply, replySubmitting, authLoading, onToggleLike }) {
   const hidden = g.is_private && !isOwner && g.author_id !== userId
-  const replyCount = replies.length
+  const replyCount = replies.length + (getSubReplies ? replies.reduce((s,r) => s + getSubReplies(r.id).length, 0) : 0)
   const likes = Array.isArray(g.likes) ? g.likes : []
   const liked = userId && likes.includes(userId)
   const likeCount = likes.length
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(g.content)
+  const [openSubReplyForms, setOpenSubReplyForms] = useState({})
+  const [subReplyForms, setSubReplyForms] = useState({})
 
   const canEdit = userId && g.author_id === userId
+
+  const getSubReplyForm = (id) => subReplyForms[id] || { nickname:'', content:'', is_private:false }
+  const setSubReplyForm = (id, updater) => setSubReplyForms(f => ({
+    ...f, [id]: typeof updater === 'function' ? updater(f[id] || { nickname:'', content:'', is_private:false }) : updater
+  }))
+
+  const handleSubmitSubReply = async (commentId) => {
+    const form = getSubReplyForm(commentId)
+    const success = await onSubmitSubReply(commentId, form)
+    if (success) {
+      setSubReplyForms(f => ({ ...f, [commentId]: { nickname:'', content:'', is_private:false } }))
+      setOpenSubReplyForms(o => ({ ...o, [commentId]: false }))
+    }
+  }
 
   return (
     <div className="card" style={{ padding:'16px 20px' }}>
@@ -209,9 +295,19 @@ function GuestEntry({ g, replies, isOwner, userId, onDelete, onEdit, onReply, re
           {replies.map(r => {
             const rHidden = r.is_private && !isOwner && r.author_id !== userId
             return (
-              <ReplyItem key={r.id} r={r} isOwner={isOwner} userId={userId}
-                onDelete={onDelete} onEdit={onEdit} rHidden={rHidden}
-                parentIsPrivate={g.is_private}/>
+              <ReplyItem key={r.id} r={r}
+                subReplies={getSubReplies ? getSubReplies(r.id) : []}
+                isOwner={isOwner} userId={userId}
+                onDelete={onDelete} onEdit={onEdit}
+                rHidden={rHidden} parentIsPrivate={g.is_private}
+                subReplyFormOpen={!!openSubReplyForms[r.id]}
+                onToggleSubReply={() => setOpenSubReplyForms(o => ({...o, [r.id]:!o[r.id]}))}
+                subReplyForm={getSubReplyForm(r.id)}
+                setSubReplyForm={(updater) => setSubReplyForm(r.id, updater)}
+                onSubmitSubReply={() => handleSubmitSubReply(r.id)}
+                replySubmitting={replySubmitting}
+                authLoading={authLoading}
+              />
             )
           })}
 
@@ -273,12 +369,152 @@ function FriendChip({ g, isOwner, userId, onEdit, onRemove }) {
   )
 }
 
+// ── 문의함 댓글 섹션 (대댓글 포함) ──
+function FeedbackReplySection({ replies, getSubReplies, isOwner, userId, ownerId, onDelete,
+  canReply, rf, onRfChange, onSubmitReply, onSubmitSubReply, replySubmitting, authLoading }) {
+  const [openSubReplyForms, setOpenSubReplyForms] = React.useState({})
+  const [subReplyForms, setSubReplyForms] = React.useState({})
+
+  const getSubReplyForm = (id) => subReplyForms[id] || { nickname:'', content:'', is_private:false }
+  const setSubReplyForm = (id, updater) => setSubReplyForms(f => ({
+    ...f, [id]: typeof updater==='function' ? updater(f[id]||{nickname:'',content:'',is_private:false}) : updater
+  }))
+
+  const handleSubmitSubReply = async (commentId) => {
+    const form = getSubReplyForm(commentId)
+    const success = await onSubmitSubReply(commentId, form)
+    if (success) {
+      setSubReplyForms(f => ({ ...f, [commentId]: { nickname:'', content:'', is_private:false } }))
+      setOpenSubReplyForms(o => ({ ...o, [commentId]: false }))
+    }
+  }
+
+  return (
+    <div style={{ marginTop:14, paddingLeft:16, borderLeft:'2px solid var(--color-border)' }}>
+      {replies.map(r => {
+        const subReplies = getSubReplies(r.id)
+        const subReplyFormOpen = !!openSubReplyForms[r.id]
+        const subReplyForm = getSubReplyForm(r.id)
+        return (
+          <div key={r.id} style={{ padding:'10px 0', borderBottom:'1px solid var(--color-border)' }}>
+            {/* 댓글 헤더 */}
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{ width:26, height:26, borderRadius:'50%',
+                  background: r.author_id === ownerId ? 'var(--color-primary)' : 'var(--color-nav-active-bg)',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:'0.68rem', fontWeight:700,
+                  color: r.author_id === ownerId ? 'white' : 'var(--color-accent)',
+                  flexShrink:0, border:'1px solid var(--color-border)' }}>
+                  {(r.author_name||'?')[0]}
+                </div>
+                <span style={{ fontWeight:700, fontSize:'0.82rem' }}>{r.author_name || '익명'}</span>
+                {r.author_id === ownerId && <span className="badge badge-primary" style={{ fontSize:'0.6rem' }}>관리자</span>}
+                {r.is_private && <Mi size="sm" color="light">lock</Mi>}
+                <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)' }}>{fmtDT(r.created_at)}</span>
+              </div>
+              <div style={{ display:'flex', gap:4 }}>
+                {(isOwner || r.author_id === userId) && (
+                  <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px', fontSize:'0.72rem' }}
+                    onClick={() => onDelete(r.id)}>삭제</button>
+                )}
+                {canReply && (
+                  <button className="btn btn-ghost btn-sm"
+                    style={{ padding:'1px 6px', fontSize:'0.72rem', color:'var(--color-text-light)' }}
+                    onClick={() => setOpenSubReplyForms(o => ({...o, [r.id]:!o[r.id]}))}>
+                    <Mi size="sm" color="light">subdirectory_arrow_right</Mi> 답글
+                  </button>
+                )}
+              </div>
+            </div>
+            <p style={{ fontSize:'0.84rem', color:'var(--color-text-light)', lineHeight:1.65, whiteSpace:'pre-wrap', paddingLeft:34 }}>{r.content}</p>
+
+            {/* 대댓글 목록 */}
+            {subReplies.length > 0 && (
+              <div style={{ marginTop:6, paddingLeft:20, borderLeft:'2px solid var(--color-border)' }}>
+                {subReplies.map(sr => (
+                  <div key={sr.id} style={{ padding:'7px 0', borderBottom:'1px solid var(--color-border)' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:3 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                        <span style={{ color:'var(--color-text-light)', fontSize:'0.78rem', lineHeight:1 }}>ㄴ</span>
+                        <div style={{ width:22, height:22, borderRadius:'50%',
+                          background: sr.author_id === ownerId ? 'var(--color-primary)' : 'var(--color-nav-active-bg)',
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                          fontSize:'0.62rem', fontWeight:700,
+                          color: sr.author_id === ownerId ? 'white' : 'var(--color-accent)',
+                          flexShrink:0, border:'1px solid var(--color-border)' }}>
+                          {(sr.author_name||'?')[0]}
+                        </div>
+                        <span style={{ fontWeight:700, fontSize:'0.78rem' }}>{sr.author_name || '익명'}</span>
+                        {sr.author_id === ownerId && <span className="badge badge-primary" style={{ fontSize:'0.6rem' }}>관리자</span>}
+                        <span style={{ fontSize:'0.65rem', color:'var(--color-text-light)' }}>{fmtDT(sr.created_at)}</span>
+                      </div>
+                      {(isOwner || sr.author_id === userId) && (
+                        <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px', fontSize:'0.7rem' }}
+                          onClick={() => onDelete(sr.id)}>삭제</button>
+                      )}
+                    </div>
+                    <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)', lineHeight:1.6, whiteSpace:'pre-wrap', paddingLeft:28, margin:0 }}>{sr.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 대댓글 입력 */}
+            {subReplyFormOpen && (
+              <div style={{ marginTop:8, paddingLeft:20, borderLeft:'2px solid var(--color-border)' }}>
+                <input className="form-input" autoComplete="off"
+                  placeholder={authLoading ? '로딩 중...' : userId ? '비워두면 내 닉네임으로 등록돼요' : '닉네임 (필수)'}
+                  value={subReplyForm.nickname || ''}
+                  onChange={e => setSubReplyForm(r.id, f => ({...f, nickname:e.target.value}))}
+                  style={{ fontSize:'0.8rem', marginBottom:5 }}/>
+                <textarea className="form-textarea" placeholder="답글을 남겨보세요..."
+                  value={subReplyForm.content || ''}
+                  onChange={e => setSubReplyForm(r.id, f => ({...f, content:e.target.value}))}
+                  style={{ minHeight:44, fontSize:'0.82rem', resize:'vertical', marginBottom:6 }}/>
+                <div className="flex justify-end">
+                  <button className="btn btn-primary btn-sm" style={{ fontSize:'0.75rem' }}
+                    onClick={() => handleSubmitSubReply(r.id)}
+                    disabled={replySubmitting || !(subReplyForm.content||'').trim()}>
+                    {replySubmitting ? '등록 중...' : '답글 등록'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {/* 댓글 입력폼 */}
+      {canReply && (
+        <div style={{ marginTop:12 }}>
+          <input className="form-input" autoComplete="off"
+            placeholder={authLoading ? '로딩 중...' : userId ? '비워두면 내 닉네임으로 등록돼요' : '닉네임 (필수)'}
+            value={rf.nickname} onChange={e => onRfChange(f => ({...f, nickname:e.target.value}))}
+            style={{ fontSize:'0.82rem', marginBottom:6 }}/>
+          <textarea className="form-textarea" placeholder="답변을 남겨보세요..."
+            value={rf.content} onChange={e => onRfChange(f => ({...f, content:e.target.value}))}
+            style={{ minHeight:52, fontSize:'0.84rem', resize:'vertical', marginBottom:8 }}/>
+          <div className="flex justify-end">
+            <button className="btn btn-primary btn-sm" style={{ fontSize:'0.78rem' }}
+              onClick={onSubmitReply}
+              disabled={replySubmitting || !rf.content.trim()}>
+              {replySubmitting ? '등록 중...' : '답변 등록'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── 공개 페이지용 ──
 export function GuestbookPublicView({ ownerId }) {
   const { user, profile, loading: authLoading } = useAuth()
   const [tab, setTab] = useState('message')
   const [messages, setMessages] = useState([])
   const [allReplies, setAllReplies] = useState([])
+  const [allSubReplies, setAllSubReplies] = useState([])
   const [mypages, setMypages] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -307,14 +543,22 @@ export function GuestbookPublicView({ ownerId }) {
     const { data } = await supabase.from('guestbook').select('*')
       .eq('owner_id', ownerId).order('created_at', { ascending: false })
     const all = data || []
-    setMessages(all.filter(g => g.type === 'message' && !g.parent_id))
+    const msgs = all.filter(g => g.type === 'message' && !g.parent_id)
+    const postIds = new Set(msgs.map(m => m.id))
+    const allWithParent = all.filter(g => g.type === 'message' && !!g.parent_id)
+    const level1 = allWithParent.filter(r => postIds.has(r.parent_id))
+    const level1Ids = new Set(level1.map(r => r.id))
+    const level2 = allWithParent.filter(r => level1Ids.has(r.parent_id))
+    setMessages(msgs)
+    setAllReplies(level1)
+    setAllSubReplies(level2)
     setMypages(all.filter(g => g.type === 'mypage'))
-    setAllReplies(all.filter(g => !!g.parent_id))
     setLoading(false)
   }
   useEffect(() => { loadAll() }, [ownerId, user])
 
   const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
+  const getSubReplies = (commentId) => allSubReplies.filter(r => r.parent_id === commentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
 
   // 검색 필터
   const filteredMessages = search.trim()
@@ -399,6 +643,21 @@ export function GuestbookPublicView({ ownerId }) {
     setReplySubmitting(false); loadAll()
   }
 
+  const submitSubReply = async (parentId, formData) => {
+    if (!formData.content.trim()) return false
+    const authorName = formData.nickname.trim() || profile?.display_name || profile?.username || '익명'
+    setReplySubmitting(true)
+    const { error } = await supabase.from('guestbook').insert({
+      owner_id: ownerId, author_id: user?.id||null,
+      author_name: authorName,
+      content: formData.content.trim(), is_private: formData.is_private,
+      type:'message', parent_id: parentId,
+    })
+    setReplySubmitting(false)
+    if (error) { alert('답글 저장 실패: ' + error.message); return false }
+    loadAll(); return true
+  }
+
   const editEntry = async (id, content) => {
     await supabase.from('guestbook').update({ content }).eq('id', id).eq('author_id', user.id)
     loadAll()
@@ -479,6 +738,7 @@ export function GuestbookPublicView({ ownerId }) {
                         {paged.map(g => (
                           <GuestEntry key={g.id} g={g}
                             replies={getReplies(g.id)}
+                            getSubReplies={getSubReplies}
                             isOwner={isOwner} userId={user?.id}
                             onDelete={(id) => setDeleteConfirm(id)}
                             onEdit={editEntry}
@@ -487,6 +747,7 @@ export function GuestbookPublicView({ ownerId }) {
                             replyForm={getReplyForm(g.id)}
                             setReplyForm={(updater) => setReplyForm(g.id, updater)}
                             onSubmitReply={submitReply}
+                            onSubmitSubReply={submitSubReply}
                             replySubmitting={replySubmitting}
                             authLoading={authLoading}
                             onToggleLike={toggleLike}
@@ -626,8 +887,10 @@ export function GuestbookPublicView({ ownerId }) {
 
 // ── 내 홈 방명록 관리 ──
 function GuestbookOwnerView({ user }) {
+  const { refreshNotifs } = useAuth()
   const [messages, setMessages] = useState([])
   const [allReplies, setAllReplies] = useState([])
+  const [allSubReplies, setAllSubReplies] = useState([])
   const [mypages, setMypages] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('message')
@@ -647,14 +910,26 @@ function GuestbookOwnerView({ user }) {
     const { data } = await supabase.from('guestbook').select('*')
       .eq('owner_id', user.id).order('created_at', { ascending: false })
     const all = data || []
-    setMessages(all.filter(g => g.type === 'message' && !g.parent_id))
+    const msgs = all.filter(g => g.type === 'message' && !g.parent_id)
+    const postIds = new Set(msgs.map(m => m.id))
+    const allWithParent = all.filter(g => g.type === 'message' && !!g.parent_id)
+    const level1 = allWithParent.filter(r => postIds.has(r.parent_id))
+    const level1Ids = new Set(level1.map(r => r.id))
+    const level2 = allWithParent.filter(r => level1Ids.has(r.parent_id))
+    setMessages(msgs)
+    setAllReplies(level1)
+    setAllSubReplies(level2)
     setMypages(all.filter(g => g.type === 'mypage'))
-    setAllReplies(all.filter(g => !!g.parent_id))
     setLoading(false)
   }
-  useEffect(() => { loadAll() }, [user])
+  useEffect(() => {
+    loadAll()
+    // 방명록 알림 읽음 처리
+    notificationsApi.markRead('guestbook_comment').then(() => refreshNotifs())
+  }, [user]) // eslint-disable-line
 
   const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
+  const getSubReplies = (commentId) => allSubReplies.filter(r => r.parent_id === commentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
 
   const filteredMessages = search.trim()
     ? messages.filter(g => (g.author_name||'').includes(search) || (g.content||'').includes(search))
@@ -706,6 +981,20 @@ function GuestbookOwnerView({ user }) {
     if (error) { alert('댓글 저장 실패: ' + error.message); setReplySubmitting(false); return }
     setReplyForms(f => ({...f, [parentId]: {nickname:'',content:'',is_private:false}}))
     setReplySubmitting(false); loadAll()
+  }
+
+  const submitSubReply = async (parentId, formData) => {
+    if (!formData.content.trim()) return false
+    setReplySubmitting(true)
+    const { error } = await supabase.from('guestbook').insert({
+      owner_id: user.id, author_id: user.id,
+      author_name: formData.nickname.trim() || '나',
+      content: formData.content.trim(), is_private: formData.is_private,
+      type:'message', parent_id: parentId,
+    })
+    setReplySubmitting(false)
+    if (error) { alert('답글 저장 실패: ' + error.message); return false }
+    loadAll(); return true
   }
 
   const editEntry = async (id, content) => {
@@ -763,6 +1052,7 @@ function GuestbookOwnerView({ user }) {
                       {paged.map(g => (
                         <GuestEntry key={g.id} g={g}
                           replies={getReplies(g.id)}
+                          getSubReplies={getSubReplies}
                           isOwner={true} userId={user?.id}
                           onDelete={(id) => setDeleteConfirm(id)}
                           onEdit={editEntry}
@@ -771,6 +1061,7 @@ function GuestbookOwnerView({ user }) {
                           replyForm={getReplyForm(g.id)}
                           setReplyForm={(updater) => setReplyForm(g.id, updater)}
                           onSubmitReply={submitReply}
+                          onSubmitSubReply={submitSubReply}
                           replySubmitting={replySubmitting}
                           authLoading={false}
                           onToggleLike={toggleLike}
@@ -865,9 +1156,10 @@ export function GuestbookPage({ ownerId }) {
 
 // ── 문의/피드백 (관리자 전용) ──
 export function FeedbackPublicView({ ownerId }) {
-  const { user, profile, loading: authLoading } = useAuth()
+  const { user, profile, loading: authLoading, refreshNotifs } = useAuth()
   const [items, setItems] = useState([])
   const [allReplies, setAllReplies] = useState([])
+  const [allSubReplies, setAllSubReplies] = useState([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ nickname:'', email:'', content:'', is_private:false })
   const [submitting, setSubmitting] = useState(false)
@@ -886,13 +1178,26 @@ export function FeedbackPublicView({ ownerId }) {
     const { data } = await supabase.from('guestbook').select('*')
       .eq('owner_id', ownerId).eq('type', 'feedback').order('created_at', { ascending: false })
     const all = data || []
-    setItems(all.filter(g => !g.parent_id))
-    setAllReplies(all.filter(g => !!g.parent_id))
+    const its = all.filter(g => !g.parent_id)
+    const itemIds = new Set(its.map(i => i.id))
+    const level1 = all.filter(r => r.parent_id && itemIds.has(r.parent_id))
+    const level1Ids = new Set(level1.map(r => r.id))
+    const level2 = all.filter(r => r.parent_id && level1Ids.has(r.parent_id))
+    setItems(its)
+    setAllReplies(level1)
+    setAllSubReplies(level2)
     setLoading(false)
   }
-  useEffect(() => { loadAll() }, [ownerId, user])
+  useEffect(() => {
+    loadAll()
+    // 관리자가 자기 문의함 볼 때 알림 읽음 처리
+    if (user && user.id === ownerId) {
+      notificationsApi.markRead('feedback_comment').then(() => refreshNotifs())
+    }
+  }, [ownerId, user]) // eslint-disable-line
 
   const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
+  const getSubReplies = (commentId) => allSubReplies.filter(r => r.parent_id === commentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
 
   const submit = async () => {
     if (!form.content.trim()) return
@@ -939,6 +1244,21 @@ export function FeedbackPublicView({ ownerId }) {
     if (error) { alert('저장 실패: ' + error.message); setReplySubmitting(false); return }
     setReplyForms(f => ({...f, [parentId]: {nickname:'',content:'',is_private:false}}))
     setReplySubmitting(false); loadAll()
+  }
+
+  const submitSubReply = async (parentId, formData, parentIsPrivate = false) => {
+    if (!formData.content.trim()) return false
+    const authorName = formData.nickname.trim() || profile?.display_name || profile?.username || '익명'
+    setReplySubmitting(true)
+    const { error } = await supabase.from('guestbook').insert({
+      owner_id: ownerId, author_id: user?.id || null,
+      author_name: authorName,
+      content: formData.content.trim(), is_private: parentIsPrivate,
+      type: 'feedback', parent_id: parentId,
+    })
+    setReplySubmitting(false)
+    if (error) { alert('저장 실패: ' + error.message); return false }
+    loadAll(); return true
   }
 
   const paged = items.slice((page-1)*perPage, page*perPage)
@@ -1020,7 +1340,7 @@ export function FeedbackPublicView({ ownerId }) {
                           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                             <span style={{ fontWeight:700, fontSize:'0.88rem' }}>{g.author_name || '익명'}</span>
                             {g.is_private && <Mi size="sm" color="light">lock</Mi>}
-                            <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>{new Date(g.created_at).toLocaleDateString('ko-KR', {year:'2-digit',month:'numeric',day:'numeric'}) + ' ' + new Date(g.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}</span>
+                            <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>{fmtDT(g.created_at)}</span>
                           </div>
                         </div>
                         {(isOwner || g.author_id === user?.id) && (
@@ -1046,59 +1366,24 @@ export function FeedbackPublicView({ ownerId }) {
                           cursor:'pointer', color:'var(--color-text-light)', fontSize:'0.78rem', padding:0 }}
                           onClick={() => toggleReply(g.id)}>
                           <Mi size="sm" color="light">chat_bubble_outline</Mi>
-                          {replies.length > 0 && <span>{replies.length}</span>}
+                          {(replies.length + replies.reduce((s,r) => s + getSubReplies(r.id).length, 0)) > 0 && (
+                            <span>{replies.length + replies.reduce((s,r) => s + getSubReplies(r.id).length, 0)}</span>
+                          )}
                         </button>
                       </div>
                       {/* 댓글 영역 */}
                       {replyOpen && (
-                        <div style={{ marginTop:14, paddingLeft:16, borderLeft:'2px solid var(--color-border)' }}>
-                          {replies.map(r => (
-                            <div key={r.id} style={{ padding:'10px 0', borderBottom:'1px solid var(--color-border)' }}>
-                              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                                  <div style={{ width:26, height:26, borderRadius:'50%',
-                                    background: r.author_id === ownerId ? 'var(--color-primary)' : 'var(--color-nav-active-bg)',
-                                    display:'flex', alignItems:'center', justifyContent:'center',
-                                    fontSize:'0.68rem', fontWeight:700,
-                                    color: r.author_id === ownerId ? 'white' : 'var(--color-accent)',
-                                    flexShrink:0, border:'1px solid var(--color-border)' }}>
-                                    {(r.author_name||'?')[0]}
-                                  </div>
-                                  <span style={{ fontWeight:700, fontSize:'0.82rem' }}>{r.author_name || '익명'}</span>
-                                  {r.author_id === ownerId && (
-                                    <span className="badge badge-primary" style={{ fontSize:'0.6rem' }}>관리자</span>
-                                  )}
-                                  {r.is_private && <Mi size="sm" color="light">lock</Mi>}
-                                  <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)' }}>{new Date(r.created_at).toLocaleDateString('ko-KR',{year:'2-digit',month:'numeric',day:'numeric'})} {new Date(r.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}</span>
-                                </div>
-                                {(isOwner || r.author_id === user?.id) && (
-                                  <button className="btn btn-ghost btn-sm" style={{ color:'#e57373', padding:'1px 6px', fontSize:'0.72rem' }}
-                                    onClick={() => setDeleteConfirm(r.id)}>삭제</button>
-                                )}
-                              </div>
-                              <p style={{ fontSize:'0.84rem', color:'var(--color-text-light)', lineHeight:1.65, whiteSpace:'pre-wrap', paddingLeft:34 }}>{r.content}</p>
-                            </div>
-                          ))}
-                          {/* 댓글 입력폼 - 관리자 또는 해당 문의 작성자 본인만 */}
-                          {(isOwner || g.author_id === user?.id) && (
-                          <div style={{ marginTop:12 }}>
-                            <input className="form-input" autoComplete="off"
-                              placeholder={user ? '비워두면 내 닉네임으로 등록돼요' : '닉네임 (필수)'}
-                              value={rf.nickname} onChange={e => setReplyForm(g.id, f => ({...f, nickname:e.target.value}))}
-                              style={{ fontSize:'0.82rem', marginBottom:6 }}/>
-                            <textarea className="form-textarea" placeholder="답변을 남겨보세요..."
-                              value={rf.content} onChange={e => setReplyForm(g.id, f => ({...f, content:e.target.value}))}
-                              style={{ minHeight:52, fontSize:'0.84rem', marginBottom:8 }}/>
-                            <div className="flex justify-end">
-                              <button className="btn btn-primary btn-sm" style={{ fontSize:'0.78rem' }}
-                                onClick={() => submitReply(g.id, g.is_private)}
-                                disabled={replySubmitting || !rf.content.trim()}>
-                                {replySubmitting ? '등록 중...' : '답변 등록'}
-                              </button>
-                            </div>
-                          </div>
-                          )}
-                        </div>
+                        <FeedbackReplySection
+                          replies={replies} getSubReplies={getSubReplies}
+                          isOwner={isOwner} userId={user?.id} ownerId={ownerId}
+                          onDelete={setDeleteConfirm}
+                          canReply={isOwner || g.author_id === user?.id}
+                          rf={rf} onRfChange={(updater) => setReplyForm(g.id, updater)}
+                          onSubmitReply={() => submitReply(g.id, g.is_private)}
+                          onSubmitSubReply={(commentId, formData) => submitSubReply(commentId, formData, g.is_private)}
+                          replySubmitting={replySubmitting}
+                          authLoading={authLoading}
+                        />
                       )}
                     </div>
                   )

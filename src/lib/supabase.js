@@ -233,6 +233,28 @@ const compressToFit = async (file, bucket) => {
   return blob
 }
 
+// ── Notifications ─────────────────────────────────────────────
+export const notificationsApi = {
+  getUnreadCounts: async () => {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('type')
+      .eq('is_read', false)
+    if (error) return { guestbook: 0, feedback: 0 }
+    const arr = data || []
+    return {
+      guestbook: arr.filter(n => n.type === 'guestbook_comment').length,
+      feedback:  arr.filter(n => n.type === 'feedback_comment').length,
+    }
+  },
+  markRead: async (type) => {
+    let q = supabase.from('notifications').update({ is_read: true }).eq('is_read', false)
+    if (type) q = q.eq('type', type)
+    const { error } = await q
+    return { error }
+  },
+}
+
 export const uploadFile = async (bucket, path, file, options = {}) => {
   // 파일 형식 검증
   if (!ALLOWED_TYPES.includes(file.type)) {

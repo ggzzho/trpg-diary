@@ -32,7 +32,7 @@ function loadGroupState() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {} } catch { return {} }
 }
 
-function NavGroup({ group, pathname }) {
+function NavGroup({ group, pathname, badgeCounts = {} }) {
   const hasActive = group.items.some(i => pathname.startsWith(i.to))
   const [open, setOpen] = useState(() => {
     const s = loadGroupState()
@@ -71,7 +71,17 @@ function NavGroup({ group, pathname }) {
         <div className="nav-group-children">
           {group.items.map(item => (
             <NavLink key={item.to} to={item.to} className={({isActive})=>`nav-item nav-child ${isActive?'active':''}`}>
-              <span className="nav-icon"><span className="ms">{item.icon}</span></span>{item.label}
+              <span className="nav-icon"><span className="ms">{item.icon}</span></span>
+              {item.label}
+              {(badgeCounts[item.to] || 0) > 0 && (
+                <span style={{
+                  marginLeft:'auto', background:'var(--color-primary)', color:'white',
+                  borderRadius:100, fontSize:'0.6rem', fontWeight:700,
+                  padding:'1px 6px', minWidth:16, textAlign:'center', lineHeight:'16px',
+                }}>
+                  {badgeCounts[item.to]}
+                </span>
+              )}
             </NavLink>
           ))}
         </div>
@@ -84,7 +94,7 @@ export const FOOTER_TEXT = '© 2026 TRPG Diary v2.0.1 · Made with Claude (AI). 
 export const SITE_VERSION = 'v2.0.1'
 
 export function Layout({ children }) {
-  const { user, profile } = useAuth()
+  const { user, profile, notifCounts } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -93,6 +103,11 @@ export function Layout({ children }) {
   const initial = profile?.display_name?.[0] || profile?.username?.[0] || '?'
   const isAdmin = profile?.is_admin === true
   const [kakaoPopup, setKakaoPopup] = useState(false)
+
+  const badgeCounts = {
+    '/guestbook':       notifCounts?.guestbook || 0,
+    '/admin/feedback':  notifCounts?.feedback  || 0,
+  }
 
   return (
     <div className="app-layout">
@@ -111,7 +126,7 @@ export function Layout({ children }) {
               ? <NavLink key={item.to} to={item.to} className={({isActive})=>`nav-item ${isActive?'active':''}`}>
                   <span className="nav-icon"><span className="ms">{item.icon}</span></span>{item.label}
                 </NavLink>
-              : <NavGroup key={item.key} group={item} pathname={location.pathname} />
+              : <NavGroup key={item.key} group={item} pathname={location.pathname} badgeCounts={badgeCounts}/>
           )}
 
           <div style={{borderTop:'1px solid var(--color-border)',margin:'12px 0'}} />
@@ -144,6 +159,7 @@ export function Layout({ children }) {
                 ]
               }}
               pathname={location.pathname}
+              badgeCounts={badgeCounts}
             />
           </>)}
         </nav>
