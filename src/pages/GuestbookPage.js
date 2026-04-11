@@ -1,5 +1,6 @@
 // src/pages/GuestbookPage.js
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Mi } from '../components/Mi'
 import { supabase, notificationsApi } from '../lib/supabase'
@@ -509,7 +510,7 @@ function FeedbackReplySection({ replies, getSubReplies, isOwner, userId, ownerId
 }
 
 // ── 공개 페이지용 ──
-export function GuestbookPublicView({ ownerId }) {
+export function GuestbookPublicView({ ownerId, postId }) {
   const { user, profile, loading: authLoading } = useAuth()
   const [tab, setTab] = useState('message')
   const [messages, setMessages] = useState([])
@@ -522,6 +523,7 @@ export function GuestbookPublicView({ ownerId }) {
   const [msgPerPage, setMsgPerPage] = useState(10)
   const [myPage, setMyPage] = useState(1)
   const [myPerPage, setMyPerPage] = useState(10)
+  const cardRefs = useRef({})
   const [msgForm, setMsgForm] = useState({ nickname:'', content:'', is_private:false })
   const [msgSubmitting, setMsgSubmitting] = useState(false)
   const [msgDone, setMsgDone] = useState(false)
@@ -556,6 +558,24 @@ export function GuestbookPublicView({ ownerId }) {
     setLoading(false)
   }
   useEffect(() => { loadAll() }, [ownerId, user])
+
+  // 알림 클릭 시 해당 포스트 자동 스크롤 + 댓글 오픈 (GuestbookPublicView)
+  useEffect(() => {
+    if (!postId || loading || messages.length === 0) return
+    const idx = messages.findIndex(m => m.id === postId)
+    if (idx < 0) return
+    const targetPage = Math.floor(idx / msgPerPage) + 1
+    setMsgPage(targetPage)
+    setOpenReplies(o => ({ ...o, [postId]: true }))
+    setTimeout(() => {
+      const el = cardRefs.current[postId]
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.style.outline = '2px solid var(--color-primary)'
+      el.style.transition = 'outline 0.3s'
+      setTimeout(() => { if (el) el.style.outline = 'none' }, 2500)
+    }, 350)
+  }, [loading, postId]) // eslint-disable-line
 
   const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
   const getSubReplies = (commentId) => allSubReplies.filter(r => r.parent_id === commentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
@@ -736,22 +756,24 @@ export function GuestbookPublicView({ ownerId }) {
                     <>
                       <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                         {paged.map(g => (
-                          <GuestEntry key={g.id} g={g}
-                            replies={getReplies(g.id)}
-                            getSubReplies={getSubReplies}
-                            isOwner={isOwner} userId={user?.id}
-                            onDelete={(id) => setDeleteConfirm(id)}
-                            onEdit={editEntry}
-                            replyOpen={!!openReplies[g.id]}
-                            onToggleReply={toggleReply}
-                            replyForm={getReplyForm(g.id)}
-                            setReplyForm={(updater) => setReplyForm(g.id, updater)}
-                            onSubmitReply={submitReply}
-                            onSubmitSubReply={submitSubReply}
-                            replySubmitting={replySubmitting}
-                            authLoading={authLoading}
-                            onToggleLike={toggleLike}
-                          />
+                          <div key={g.id} ref={el => { cardRefs.current[g.id] = el }} style={{ borderRadius:12 }}>
+                            <GuestEntry g={g}
+                              replies={getReplies(g.id)}
+                              getSubReplies={getSubReplies}
+                              isOwner={isOwner} userId={user?.id}
+                              onDelete={(id) => setDeleteConfirm(id)}
+                              onEdit={editEntry}
+                              replyOpen={!!openReplies[g.id]}
+                              onToggleReply={toggleReply}
+                              replyForm={getReplyForm(g.id)}
+                              setReplyForm={(updater) => setReplyForm(g.id, updater)}
+                              onSubmitReply={submitReply}
+                              onSubmitSubReply={submitSubReply}
+                              replySubmitting={replySubmitting}
+                              authLoading={authLoading}
+                              onToggleLike={toggleLike}
+                            />
+                          </div>
                         ))}
                       </div>
                       <Pagination total={filteredMessages.length} perPage={msgPerPage} page={msgPage} onPage={setMsgPage} onPerPage={setMsgPerPage}/>
@@ -888,6 +910,9 @@ export function GuestbookPublicView({ ownerId }) {
 // ── 내 홈 방명록 관리 ──
 function GuestbookOwnerView({ user }) {
   const { refreshNotifs } = useAuth()
+  const location = useLocation()
+  const postIdParam = new URLSearchParams(location.search).get('post')
+  const cardRefs = useRef({})
   const [messages, setMessages] = useState([])
   const [allReplies, setAllReplies] = useState([])
   const [allSubReplies, setAllSubReplies] = useState([])
@@ -927,6 +952,24 @@ function GuestbookOwnerView({ user }) {
     // 방명록 알림 읽음 처리
     notificationsApi.markRead('guestbook_comment').then(() => refreshNotifs())
   }, [user]) // eslint-disable-line
+
+  // 알림 클릭 시 해당 포스트 자동 스크롤 + 댓글 오픈 (GuestbookOwnerView)
+  useEffect(() => {
+    if (!postIdParam || loading || messages.length === 0) return
+    const idx = messages.findIndex(m => m.id === postIdParam)
+    if (idx < 0) return
+    const targetPage = Math.floor(idx / msgPerPage) + 1
+    setMsgPage(targetPage)
+    setOpenReplies(o => ({ ...o, [postIdParam]: true }))
+    setTimeout(() => {
+      const el = cardRefs.current[postIdParam]
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.style.outline = '2px solid var(--color-primary)'
+      el.style.borderRadius = '12px'
+      setTimeout(() => { if (el) el.style.outline = 'none' }, 2500)
+    }, 350)
+  }, [loading, postIdParam]) // eslint-disable-line
 
   const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
   const getSubReplies = (commentId) => allSubReplies.filter(r => r.parent_id === commentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
@@ -1050,22 +1093,24 @@ function GuestbookOwnerView({ user }) {
                   <>
                     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                       {paged.map(g => (
-                        <GuestEntry key={g.id} g={g}
-                          replies={getReplies(g.id)}
-                          getSubReplies={getSubReplies}
-                          isOwner={true} userId={user?.id}
-                          onDelete={(id) => setDeleteConfirm(id)}
-                          onEdit={editEntry}
-                          replyOpen={!!openReplies[g.id]}
-                          onToggleReply={toggleReply}
-                          replyForm={getReplyForm(g.id)}
-                          setReplyForm={(updater) => setReplyForm(g.id, updater)}
-                          onSubmitReply={submitReply}
-                          onSubmitSubReply={submitSubReply}
-                          replySubmitting={replySubmitting}
-                          authLoading={false}
-                          onToggleLike={toggleLike}
-                        />
+                        <div key={g.id} ref={el => { cardRefs.current[g.id] = el }} style={{ borderRadius:12 }}>
+                          <GuestEntry g={g}
+                            replies={getReplies(g.id)}
+                            getSubReplies={getSubReplies}
+                            isOwner={true} userId={user?.id}
+                            onDelete={(id) => setDeleteConfirm(id)}
+                            onEdit={editEntry}
+                            replyOpen={!!openReplies[g.id]}
+                            onToggleReply={toggleReply}
+                            replyForm={getReplyForm(g.id)}
+                            setReplyForm={(updater) => setReplyForm(g.id, updater)}
+                            onSubmitReply={submitReply}
+                            onSubmitSubReply={submitSubReply}
+                            replySubmitting={replySubmitting}
+                            authLoading={false}
+                            onToggleLike={toggleLike}
+                          />
+                        </div>
                       ))}
                     </div>
                     <Pagination total={filteredMessages.length} perPage={msgPerPage} page={msgPage} onPage={setMsgPage} onPerPage={setMsgPerPage}/>
@@ -1155,8 +1200,9 @@ export function GuestbookPage({ ownerId }) {
 }
 
 // ── 문의/피드백 (관리자 전용) ──
-export function FeedbackPublicView({ ownerId }) {
+export function FeedbackPublicView({ ownerId, postId }) {
   const { user, profile, loading: authLoading, refreshNotifs } = useAuth()
+  const cardRefs = useRef({})
   const [items, setItems] = useState([])
   const [allReplies, setAllReplies] = useState([])
   const [allSubReplies, setAllSubReplies] = useState([])
@@ -1195,6 +1241,24 @@ export function FeedbackPublicView({ ownerId }) {
       notificationsApi.markRead('feedback_comment').then(() => refreshNotifs())
     }
   }, [ownerId, user]) // eslint-disable-line
+
+  // 알림 클릭 시 해당 포스트 자동 스크롤 + 댓글 오픈 (FeedbackPublicView)
+  useEffect(() => {
+    if (!postId || loading || items.length === 0) return
+    const idx = items.findIndex(m => m.id === postId)
+    if (idx < 0) return
+    const targetPage = Math.floor(idx / perPage) + 1
+    setPage(targetPage)
+    setOpenReplies(o => ({ ...o, [postId]: true }))
+    setTimeout(() => {
+      const el = cardRefs.current[postId]
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.style.outline = '2px solid var(--color-primary)'
+      el.style.borderRadius = '12px'
+      setTimeout(() => { if (el) el.style.outline = 'none' }, 2500)
+    }, 350)
+  }, [loading, postId]) // eslint-disable-line
 
   const getReplies = (parentId) => allReplies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
   const getSubReplies = (commentId) => allSubReplies.filter(r => r.parent_id === commentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
@@ -1329,7 +1393,8 @@ export function FeedbackPublicView({ ownerId }) {
                   const replyOpen = !!openReplies[g.id]
                   const rf = getReplyForm(g.id)
                   return (
-                    <div key={g.id} className="card" style={{ padding:'16px 20px' }}>
+                    <div key={g.id} ref={el => { cardRefs.current[g.id] = el }}
+                      className="card" style={{ padding:'16px 20px' }}>
                       <div className="flex justify-between items-center" style={{ marginBottom:10 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                           <div style={{ width:34, height:34, borderRadius:'50%', background:'var(--color-nav-active-bg)',

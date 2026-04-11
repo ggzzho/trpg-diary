@@ -174,6 +174,14 @@ export default function NotificationCenterPage() {
                   }}>
                     {n.message || n.type}
                   </div>
+                  {n.preview && (
+                    <div style={{
+                      fontSize:'0.78rem', color:'var(--color-text-light)', marginTop:3,
+                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                    }}>
+                      {n.preview}
+                    </div>
+                  )}
                 </div>
 
                 {/* 시간 */}
