@@ -232,6 +232,7 @@ export function RulebookPage() {
       await Promise.all(reordered.map((item, idx) =>
         supabase.from('rulebooks').update({ sort_order: idx }).eq('id', item.id)
       ))
+      reloadRules()
     } else if (activeItem.parent_id && overItem.parent_id && activeItem.parent_id === overItem.parent_id) {
       // 같은 부모 내 자식 정렬
       const siblings = supplMap[activeItem.parent_id] || []
