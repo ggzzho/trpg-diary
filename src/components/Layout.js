@@ -341,7 +341,15 @@ export function Layout({ children }) {
                             }}>
                               {n.message || n.type}
                             </div>
-                            <div style={{ fontSize:'0.72rem', color:'var(--color-text-light)', marginTop:2 }}>
+                            {n.preview && (
+                              <div style={{
+                                fontSize:'0.74rem', color:'var(--color-text-light)', marginTop:2,
+                                overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                              }}>
+                                {n.preview}
+                              </div>
+                            )}
+                            <div style={{ fontSize:'0.68rem', color:'var(--color-text-light)', marginTop:2, opacity:0.7 }}>
                               {fmtAgo(n.created_at)}
                             </div>
                           </div>

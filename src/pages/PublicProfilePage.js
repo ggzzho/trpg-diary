@@ -949,10 +949,10 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 방명록 ── */}
-      {activeTab==='guestbook' && <GuestbookPublicView ownerId={profile.id}/>}
+      {activeTab==='guestbook' && <GuestbookPublicView ownerId={profile.id} postId={searchParams.get('post')}/>}
 
       {/* ── 문의/피드백 (관리자 페이지만) ── */}
-      {activeTab==='feedback' && profile?.is_admin && <FeedbackPublicView ownerId={profile.id}/>}
+      {activeTab==='feedback' && profile?.is_admin && <FeedbackPublicView ownerId={profile.id} postId={searchParams.get('post')}/>}
 
       {/* 푸터 */}
       <footer style={{ marginTop:60, paddingTop:20, paddingBottom:20, borderTop:'1px solid var(--color-border)', textAlign:'center', color:'var(--color-text-light)', fontSize:'0.72rem' }}>

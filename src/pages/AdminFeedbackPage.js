@@ -1,6 +1,6 @@
 // src/pages/AdminFeedbackPage.js
-import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
@@ -69,6 +69,9 @@ function ReplyEditItem({ r, onDelete, onSaved, ownerId }) {
 export default function AdminFeedbackPage() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const postIdParam = new URLSearchParams(location.search).get('post')
+  const cardRefs = useRef({})
   const [items, setItems] = useState([])
   const [replies, setReplies] = useState([])
   const [loading, setLoading] = useState(true)
@@ -95,6 +98,22 @@ export default function AdminFeedbackPage() {
     setLoading(false)
   }
   useEffect(() => { loadAll() }, [user])
+
+  // 알림 클릭 시 해당 포스트 자동 스크롤 + 댓글 오픈
+  useEffect(() => {
+    if (!postIdParam || loading || items.length === 0) return
+    const idx = items.findIndex(m => m.id === postIdParam)
+    if (idx < 0) return
+    setOpenReplies(o => ({ ...o, [postIdParam]: true }))
+    setTimeout(() => {
+      const el = cardRefs.current[postIdParam]
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.style.outline = '2px solid var(--color-primary)'
+      el.style.borderRadius = '12px'
+      setTimeout(() => { if (el) el.style.outline = 'none' }, 2500)
+    }, 350)
+  }, [loading, postIdParam]) // eslint-disable-line
 
   const getReplies = (parentId) => replies.filter(r => r.parent_id === parentId).sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
 
@@ -174,7 +193,8 @@ export default function AdminFeedbackPage() {
               const isOpen = !!openReplies[g.id]
               const rf = getReplyForm(g.id)
               return (
-                <div key={g.id} className="card" style={{padding:'16px 20px'}}>
+                <div key={g.id} ref={el => { cardRefs.current[g.id] = el }}
+                  className="card" style={{padding:'16px 20px'}}>
                   {/* 헤더 */}
                   <div className="flex justify-between items-center" style={{marginBottom:10}}>
                     <div style={{display:'flex', alignItems:'center', gap:10}}>
