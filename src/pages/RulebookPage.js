@@ -128,6 +128,8 @@ export function RulebookPage() {
   const [tagModal, setTagModal] = useState(false)
   const [availableTags, setAvailableTags] = useState([])
   const [expanded, setExpanded] = useState({})   // 아코디언 열림 상태
+  const [isDirty, setIsDirty] = useState(false)  // 정렬 순서 변경 후 미저장 상태
+  const [saving, setSaving] = useState(false)
 
   const load = async () => {
     const { data } = await supabase.from('rulebooks').select('*').eq('user_id', user.id)
@@ -221,7 +223,7 @@ export function RulebookPage() {
     if (!activeItem || !overItem) return
 
     if (!activeItem.parent_id && !overItem.parent_id) {
-      // 부모 간 정렬
+      // 부모 간 정렬 — UI만 업데이트, DB는 저장 버튼에서 일괄 처리
       const oldIdx = parents.findIndex(i => i.id === active.id)
       const newIdx = parents.findIndex(i => i.id === over.id)
       const reordered = arrayMove(parents, oldIdx, newIdx)
@@ -229,12 +231,9 @@ export function RulebookPage() {
         const children = prev.filter(i => i.parent_id)
         return [...reordered, ...children]
       })
-      await Promise.all(reordered.map((item, idx) =>
-        supabase.from('rulebooks').update({ sort_order: idx }).eq('id', item.id)
-      ))
-      reloadRules()
+      setIsDirty(true)
     } else if (activeItem.parent_id && overItem.parent_id && activeItem.parent_id === overItem.parent_id) {
-      // 같은 부모 내 자식 정렬
+      // 같은 부모 내 자식 정렬 — UI만 업데이트
       const siblings = supplMap[activeItem.parent_id] || []
       const oldIdx = siblings.findIndex(i => i.id === active.id)
       const newIdx = siblings.findIndex(i => i.id === over.id)
@@ -243,10 +242,26 @@ export function RulebookPage() {
         const others = prev.filter(i => i.parent_id !== activeItem.parent_id)
         return [...others, ...reordered]
       })
-      await Promise.all(reordered.map((item, idx) =>
-        supabase.from('rulebooks').update({ sort_order: idx }).eq('id', item.id)
-      ))
+      setIsDirty(true)
     }
+  }
+
+  const saveOrder = async () => {
+    setSaving(true)
+    const currentParents = items.filter(i => !i.parent_id)
+    await Promise.all(currentParents.map((item, idx) =>
+      supabase.from('rulebooks').update({ sort_order: idx }).eq('id', item.id)
+    ))
+    // 서플리먼트 순서도 저장
+    const currentChildren = items.filter(i => i.parent_id)
+    const grouped = {}
+    currentChildren.forEach(c => { if (!grouped[c.parent_id]) grouped[c.parent_id] = []; grouped[c.parent_id].push(c) })
+    await Promise.all(Object.values(grouped).flatMap((siblings, _) =>
+      siblings.map((item, idx) => supabase.from('rulebooks').update({ sort_order: idx }).eq('id', item.id))
+    ))
+    await reloadRules()
+    setSaving(false)
+    setIsDirty(false)
   }
 
   // 부모/서플 분리
@@ -314,6 +329,26 @@ export function RulebookPage() {
       <div style={{ marginBottom:16 }}>
         <input className="form-input" placeholder="🔍 검색..." value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth:280 }}/>
       </div>
+
+      {/* 정렬 변경 저장 배너 */}
+      {isDirty && (
+        <div style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          background:'rgba(200,169,110,0.12)', border:'1px solid var(--color-primary)',
+          borderRadius:10, padding:'10px 16px', marginBottom:14, gap:12, flexWrap:'wrap'
+        }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <Mi style={{ color:'var(--color-primary)', fontSize:18 }}>info</Mi>
+            <span style={{ fontSize:'0.85rem', color:'var(--color-text)' }}>
+              변경된 사항을 저장해주세요.
+              <span style={{ color:'var(--color-text-light)', fontSize:'0.78rem', marginLeft:6 }}>(다른 페이지에도 적용돼요)</span>
+            </span>
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={saveOrder} disabled={saving}>
+            {saving ? '저장 중...' : '저장'}
+          </button>
+        </div>
+      )}
 
       {loading ? <LoadingSpinner/> : filteredParents.length === 0
         ? <EmptyState icon="menu_book" title="룰북이 없어요" action={<button className="btn btn-primary" onClick={openNew}>추가하기</button>}/>
