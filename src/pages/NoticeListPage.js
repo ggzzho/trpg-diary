@@ -17,7 +17,13 @@ const isNew = (dateStr) => Date.now() - new Date(dateStr).getTime() < 24 * 60 * 
 export default function NoticeListPage() {
   const [notices, setNotices] = useState([])
   const [loading, setLoading] = useState(true)
-  const { paged, page, setPage, perPage, setPerPage } = usePagination(notices, 10)
+  const [search, setSearch] = useState('')
+
+  const filtered = search
+    ? notices.filter(n => n.title?.includes(search) || n.content?.includes(search))
+    : notices
+
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 10)
 
   useEffect(() => {
     const load = async () => {
@@ -40,12 +46,17 @@ export default function NoticeListPage() {
         <p className="page-subtitle">TRPG Diary의 업데이트 및 공지를 확인해요</p>
       </div>
 
+      <div style={{marginBottom:16}}>
+        <input className="form-input" placeholder="🔍 제목, 내용으로 검색..." value={search}
+          onChange={e=>{ setSearch(e.target.value); setPage(1) }} style={{maxWidth:280}}/>
+      </div>
+
       {loading
         ? <div className="text-sm text-light" style={{textAlign:'center', padding:40}}>불러오는 중...</div>
-        : notices.length === 0
+        : filtered.length === 0
           ? <div className="card" style={{textAlign:'center', padding:48, color:'var(--color-text-light)'}}>
               <Mi style={{fontSize:36, marginBottom:12, opacity:0.3}}>campaign</Mi>
-              <p>등록된 공지가 없어요</p>
+              <p>{search ? `'${search}' 검색 결과가 없어요` : '등록된 공지가 없어요'}</p>
             </div>
           : <>
               <div style={{display:'flex', flexDirection:'column', gap:8}}>
@@ -88,7 +99,7 @@ export default function NoticeListPage() {
                   </Link>
                 ))}
               </div>
-              <Pagination total={notices.length} perPage={perPage} page={page}
+              <Pagination total={filtered.length} perPage={perPage} page={page}
                 onPage={setPage} onPerPage={setPerPage}/>
             </>
       }
