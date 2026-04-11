@@ -312,7 +312,7 @@ export function PlayLogPage() {
 
           {/* 세션카드 이미지 */}
           <div className="form-group">
-            <label className="form-label">세션카드 이미지</label>
+            <label className="form-label">세션카드 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 16:9, 800×450px)</span></label>
             <input className="form-input" autoComplete="off" placeholder="https://... (imgur 주소 등록 추천)" value={form.session_image_url||''} onChange={set('session_image_url')}/>
             {form.session_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.session_image_url} alt="preview" style={{width:60,height:34,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,session_image_url:''}))}>제거</button></div>}
           </div>
