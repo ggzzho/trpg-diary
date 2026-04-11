@@ -31,7 +31,7 @@ function SortableWrapper({ id, children }) {
 
 const cleanPayload = f => {
   const { id, user_id, created_at, status, ...rest } = f
-  return { ...rest, purchase_date:f.purchase_date||null, parent_id:f.parent_id||null, status_tags:f.status_tags||[] }
+  return { ...rest, purchase_date:f.purchase_date||null, parent_id:f.parent_id||null, status_tags:f.status_tags||[], format:f.format||null }
 }
 
 export function WishScenarioPage() {
