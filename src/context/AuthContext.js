@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [notifCounts, setNotifCounts] = useState({ guestbook: 0, feedback: 0 })
+  const [notifCounts, setNotifCounts] = useState({ guestbook: 0, feedback: 0, total: 0 })
 
   const loadProfile = async (userId) => {
     const { data } = await getProfile(userId)
@@ -30,7 +30,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) { loadProfile(session.user.id); refreshNotifs() }
-      else { setProfile(null); setNotifCounts({ guestbook: 0, feedback: 0 }) }
+      else { setProfile(null); setNotifCounts({ guestbook: 0, feedback: 0, total: 0 }) }
     })
 
     return () => subscription.unsubscribe()

@@ -15,11 +15,12 @@ const SchedulePage      = React.lazy(() => import('./pages/SchedulePage'))
 const SettingsPage      = React.lazy(() => import('./pages/SettingsPage'))
 const PublicProfilePage = React.lazy(() => import('./pages/PublicProfilePage'))
 const PrivacyPage       = React.lazy(() => import('./pages/PrivacyPage'))
-const AdminFeedbackPage = React.lazy(() => import('./pages/AdminFeedbackPage'))
-const AdminNoticePage   = React.lazy(() => import('./pages/AdminNoticePage'))
-const NoticePage        = React.lazy(() => import('./pages/NoticePage'))
-const NoticeListPage    = React.lazy(() => import('./pages/NoticeListPage'))
-const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'))
+const AdminFeedbackPage      = React.lazy(() => import('./pages/AdminFeedbackPage'))
+const AdminNoticePage        = React.lazy(() => import('./pages/AdminNoticePage'))
+const NoticePage             = React.lazy(() => import('./pages/NoticePage'))
+const NoticeListPage         = React.lazy(() => import('./pages/NoticeListPage'))
+const NotificationCenterPage = React.lazy(() => import('./pages/NotificationCenterPage'))
+const ResetPasswordPage      = React.lazy(() => import('./pages/ResetPasswordPage'))
 
 // 페이지 lazy load (named export)
 const AvailabilityPage = React.lazy(() => import('./pages/AvailabilityPage').then(m => ({ default: m.AvailabilityPage })))
@@ -124,6 +125,7 @@ function AppRoutes() {
         <Route path="/admin/notices" element={<PrivateLayout><AdminNoticePage/></PrivateLayout>}/>
         <Route path="/notices" element={<PrivateLayout><NoticeListPage/></PrivateLayout>}/>
         <Route path="/notices/:id" element={<PrivateLayout><NoticePage/></PrivateLayout>}/>
+        <Route path="/notifications" element={<PrivateLayout><NotificationCenterPage/></PrivateLayout>}/>
         <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
         <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
       </Routes>

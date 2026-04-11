@@ -240,17 +240,35 @@ export const notificationsApi = {
       .from('notifications')
       .select('type')
       .eq('is_read', false)
-    if (error) return { guestbook: 0, feedback: 0 }
+    if (error) return { guestbook: 0, feedback: 0, total: 0 }
     const arr = data || []
-    return {
-      guestbook: arr.filter(n => n.type === 'guestbook_comment').length,
-      feedback:  arr.filter(n => n.type === 'feedback_comment').length,
-    }
+    const guestbook = arr.filter(n => n.type === 'guestbook_comment' || n.type === 'guestbook_reply').length
+    const feedback  = arr.filter(n => n.type === 'feedback_comment'  || n.type === 'feedback_reply').length
+    return { guestbook, feedback, total: arr.length }
+  },
+  getAll: async (limit = 20) => {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    if (error) return []
+    return data || []
   },
   markRead: async (type) => {
     let q = supabase.from('notifications').update({ is_read: true }).eq('is_read', false)
     if (type) q = q.eq('type', type)
     const { error } = await q
+    return { error }
+  },
+  markReadById: async (id) => {
+    const { error } = await supabase
+      .from('notifications').update({ is_read: true }).eq('id', id)
+    return { error }
+  },
+  markAllRead: async () => {
+    const { error } = await supabase
+      .from('notifications').update({ is_read: true }).eq('is_read', false)
     return { error }
   },
 }

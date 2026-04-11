@@ -12,6 +12,8 @@ const fmtDT = (d) => {
     + ' ' + dt.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
 }
 
+const isNew = (dateStr) => Date.now() - new Date(dateStr).getTime() < 24 * 60 * 60 * 1000
+
 export default function NoticeListPage() {
   const [notices, setNotices] = useState([])
   const [loading, setLoading] = useState(true)
@@ -61,8 +63,16 @@ export default function NoticeListPage() {
                           </span>
                         )}
                         <span style={{flex:1, fontWeight:600, fontSize:'0.9rem',
-                          overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                          overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                          display:'flex', alignItems:'center', gap:6}}>
                           {n.title}
+                          {isNew(n.created_at) && (
+                            <span style={{
+                              fontSize:'0.6rem', fontWeight:700, color:'white',
+                              background:'var(--color-primary)', borderRadius:100,
+                              padding:'1px 6px', lineHeight:'15px', flexShrink:0,
+                            }}>NEW</span>
+                          )}
                         </span>
                         <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
                           <span style={{fontSize:'0.72rem',color:'var(--color-text-light)',display:'flex',alignItems:'center',gap:3}}>
