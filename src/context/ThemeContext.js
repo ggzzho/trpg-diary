@@ -114,7 +114,27 @@ export function ThemeProvider({ children, overrideProfile }) {
   const profile = overrideProfile || authProfile
 
   useEffect(() => {
-    if (!profile) return
+    if (!profile) {
+      // 로그인 화면 등 프로필 미로드 시 기본 파비콘만 적용
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = 32; canvas.height = 32
+        const ctx = canvas.getContext('2d')
+        ctx.fillStyle = '#faf6f0'
+        ctx.fillRect(0, 0, 32, 32)
+        ctx.fillStyle = '#c8a96e'
+        ctx.font = 'bold 22px serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('✦', 16, 17)
+        const link = document.querySelector("link[rel*='icon']") || document.createElement('link')
+        link.type = 'image/x-icon'
+        link.rel = 'shortcut icon'
+        link.href = canvas.toDataURL()
+        document.head.appendChild(link)
+      } catch(e) {}
+      return
+    }
     applyTheme(
       profile.theme_color || '#c8a96e',
       profile.theme_bg_color || '#faf6f0',
