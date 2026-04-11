@@ -199,6 +199,7 @@ export default function PublicProfilePage() {
   const [pairSort, setPairSort] = useState('asc')
   const [rulebookExpanded, setRulebookExpanded] = useState({})
   const [scenarioExpanded, setScenarioExpanded] = useState({})
+  const [wishScenarioExpanded, setWishScenarioExpanded] = useState({})
   const [kakaoPopup, setKakaoPopup] = useState(false)
   const [viewDark, setViewDark] = useState(false)
 
@@ -230,6 +231,21 @@ export default function PublicProfilePage() {
 
   const pairsPagination = usePagination(data.pairs||[], 20)
 
+  const wishScenarioParents = [...(data.wish_scenarios||[]).filter(s => !s.parent_id)].sort((a,b) =>
+    (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase(),'ko')
+  )
+  const wishScenarioChildMap = (data.wish_scenarios||[]).filter(s => !!s.parent_id).reduce((m,s) => {
+    if (!m[s.parent_id]) m[s.parent_id] = []
+    m[s.parent_id].push(s)
+    return m
+  }, {})
+  const wishScenariosPagination = usePagination(wishScenarioParents, 20)
+
+  const sortedDotori = [...(data.dotori||[])].sort((a,b) =>
+    (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase(),'ko')
+  )
+  const dotoriPagination = usePagination(sortedDotori, 20)
+
   // 공개 캘린더용 colorMap: 해당 유저의 룰북 title → color
   // ⚠️ Hook이므로 early return 전에 선언 필수
   const publicColorMap = useMemo(() => {
@@ -253,7 +269,7 @@ export default function PublicProfilePage() {
 
       const today = new Date().toISOString().split('T')[0]
       const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
-      const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks, guestbook] = await Promise.all([
+      const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks, guestbook, wish_scenarios, dotori] = await Promise.all([
         safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).limit(3000).then(r=>r)),
         safe(supabase.from('rulebooks').select('*').eq('user_id', p.id)
           .order('sort_order', { ascending: true, nullsFirst: false })
@@ -269,14 +285,16 @@ export default function PublicProfilePage() {
           .order('scheduled_date').limit(3000).then(r=>r)),
         safe(supabase.from('bookmarks').select('*').eq('user_id',p.id).order('title').limit(3000).then(r=>r)),
         safe(supabase.from('guestbook').select('id').eq('owner_id',p.id).limit(3000).then(r=>r)),
+        safe(supabase.from('wish_scenarios').select('*').eq('user_id',p.id).order('created_at',{ascending:true}).limit(3000).then(r=>r)),
+        safe(supabase.from('dotori').select('*').eq('user_id',p.id).order('title').limit(3000).then(r=>r)),
       ])
       const scheds = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
       const blocked = schedsAll.filter(s => s.entry_type === 'blocked')
-      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked, bookmarks, guestbook })
+      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked, bookmarks, guestbook, wish_scenarios, dotori })
 
       // hidden_tabs가 있으면 초기 탭이 숨겨져 있을 수 있으므로 첫 번째 보이는 탭으로 조정
       const hidden = p.hidden_tabs || []
-      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','pairs','bookmarks','guestbook']
+      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','wish_scenarios','dotori','pairs','bookmarks','guestbook']
       const requestedTab = searchParams.get('tab') || 'schedules'
       if (hidden.includes(requestedTab)) {
         const firstVisible = allTabKeys.find(k => !hidden.includes(k)) || 'guestbook'
@@ -341,7 +359,9 @@ export default function PublicProfilePage() {
     { key:'rulebooks', label:'룰북', icon:'menu_book', count:(data.rulebooks||[]).filter(r=>!r.parent_id).length },
     { key:'logs', label:'기록', icon:'auto_stories', count:publicLogs.length },
     { key:'availability', label:'공수표', icon:'event_available', count:data.availability?.length },
-    { key:'scenarios', label:'시나리오', icon:'description', count:scenarioParents.length },
+    { key:'scenarios', label:'보유 시나리오', icon:'description', count:scenarioParents.length },
+    { key:'wish_scenarios', label:'위시 시나리오', icon:'favorite', count:wishScenarioParents.length },
+    { key:'dotori', label:'도토리', icon:'forest', count:data.dotori?.length },
     { key:'pairs', label:'페어', icon:'people', count:data.pairs?.length },
     { key:'bookmarks', label:'북마크', icon:'bookmark', count:data.bookmarks?.length },
     { key:'guestbook', label:'방명록', icon:'mail' },
@@ -669,7 +689,7 @@ export default function PublicProfilePage() {
         <>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {!scenarioParents.length
-            ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>시나리오가 없어요</div>
+            ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>보유 시나리오가 없어요</div>
             : scenariosPagination.paged.map(s => {
                 const children = scenarioChildMap[s.id] || []
                 const isOpen = !!scenarioExpanded[s.id]
@@ -730,6 +750,108 @@ export default function PublicProfilePage() {
           </div>
           <Pagination total={scenarioParents.length} perPage={scenariosPagination.perPage} page={scenariosPagination.page} onPage={scenariosPagination.setPage} onPerPage={scenariosPagination.setPerPage}/>
         </>
+      )}
+
+      {/* ── 위시 시나리오 ── */}
+      {activeTab==='wish_scenarios' && (() => {
+        const renderWishItem = (item, isChild=false) => (
+          <div key={item.id}
+            style={{ display:'flex', alignItems:'center', gap:14, padding:'10px 14px',
+              background: isChild ? 'var(--color-nav-active-bg)' : undefined,
+              borderTop: isChild ? '1px solid var(--color-border)' : undefined }}>
+            <div style={{ width:40, height:40, borderRadius:7, overflow:'hidden', flexShrink:0,
+              background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center',
+              justifyContent:'center', border:'1px solid var(--color-border)' }}>
+              {item.cover_image_url
+                ? <img src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                : <span style={{ fontSize:'1.1rem', opacity:0.35 }}><Mi size='lg' color='light'>favorite</Mi></span>}
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight: isChild ? 500 : 700, fontSize:isChild?'0.85rem':'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                {item.title}
+                {(item.status_tags||[]).map(t => (
+                  <span key={t} style={{padding:'1px 7px',borderRadius:100,fontSize:'0.65rem',fontWeight:600,
+                    background:'var(--color-nav-active-bg)',color:'var(--color-accent)',border:'1px solid var(--color-border)',whiteSpace:'nowrap'}}>
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                {item.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
+                {item.author && <span className="text-xs text-light"><Mi size='sm' color='light'>edit</Mi> {item.author}</span>}
+                {item.player_count && <span className="text-xs text-light"><Mi size="sm" color="light">group</Mi> {item.player_count}</span>}
+                {item.format && <span className="text-xs text-light"><Mi size='sm' color='light'>inventory_2</Mi> {item.format==='physical'?'실물':item.format==='digital'?'전자':'실물+전자'}</span>}
+              </div>
+              {item.scenario_url && <a href={item.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:2, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
+            </div>
+          </div>
+        )
+        return (
+          <>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {!wishScenarioParents.length
+                ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>위시 시나리오가 없어요</div>
+                : wishScenariosPagination.paged.map(s => {
+                    const children = wishScenarioChildMap[s.id] || []
+                    const isOpen = !!wishScenarioExpanded[s.id]
+                    return (
+                      <div key={s.id} className="card" style={{padding:0,overflow:'hidden'}}>
+                        {renderWishItem(s)}
+                        {children.length > 0 && (
+                          <button style={{width:'100%',background:'none',border:'none',
+                            borderTop:'1px solid var(--color-border)',
+                            padding:'5px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:4,
+                            color:'var(--color-text-light)',fontSize:'0.78rem'}}
+                            onClick={() => setWishScenarioExpanded(e => ({...e, [s.id]:!e[s.id]}))}>
+                            <Mi size='sm' color='light'>{isOpen?'expand_less':'expand_more'}</Mi>
+                            {isOpen ? '접기' : `시나리오 ${children.length}개 보기`}
+                          </button>
+                        )}
+                        {isOpen && (
+                          <div style={{borderTop:'1px solid var(--color-border)'}}>
+                            {children.map(c => renderWishItem(c, true))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+              }
+            </div>
+            <Pagination total={wishScenarioParents.length} perPage={wishScenariosPagination.perPage} page={wishScenariosPagination.page} onPage={wishScenariosPagination.setPage} onPerPage={wishScenariosPagination.setPerPage}/>
+          </>
+        )
+      })()}
+
+      {/* ── 도토리 ── */}
+      {activeTab==='dotori' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {!sortedDotori.length
+            ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>도토리가 없어요</div>
+            : dotoriPagination.paged.map(d => (
+              <div key={d.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:14 }}>
+                {d.thumbnail_url
+                  ? <img src={d.thumbnail_url} alt={d.title} style={{ width:48, height:48, borderRadius:8, objectFit:'cover', flexShrink:0 }}/>
+                  : <div style={{ width:48, height:48, borderRadius:8, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <Mi color="light">forest</Mi>
+                    </div>
+                }
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.title||'제목 없음'}</div>
+                  {d.tags?.length > 0 && (
+                    <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:3 }}>
+                      {d.tags.map(t => <span key={t} style={{ padding:'1px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:600, background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)' }}>{t}</span>)}
+                    </div>
+                  )}
+                  {d.description && <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.description}</p>}
+                  {d.url && <a href={d.url} target="_blank" rel="noreferrer" style={{ fontSize:'0.72rem', color:'var(--color-primary)' }}>
+                    <Mi size='sm'>link</Mi> 링크 열기
+                  </a>}
+                </div>
+              </div>
+            ))
+          }
+          <Pagination total={sortedDotori.length} perPage={dotoriPagination.perPage} page={dotoriPagination.page} onPage={dotoriPagination.setPage} onPerPage={dotoriPagination.setPerPage}/>
+        </div>
       )}
 
       {/* ── 페어 ── */}

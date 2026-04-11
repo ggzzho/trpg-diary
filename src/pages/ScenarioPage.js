@@ -95,6 +95,7 @@ export function ScenarioPage() {
       ))
     }
     await supabase.from('scenario_status_tags').delete().eq('id', id)
+    setForm(f => ({ ...f, status_tags: (f.status_tags||[]).filter(t => t !== tag.name) }))
     await loadStatusTags()
     await load()
   }
