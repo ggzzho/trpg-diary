@@ -843,9 +843,15 @@ export default function PublicProfilePage() {
                     </div>
                   )}
                   {d.description && <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.description}</p>}
-                  {d.url && <a href={d.url} target="_blank" rel="noreferrer" style={{ fontSize:'0.72rem', color:'var(--color-primary)' }}>
-                    <Mi size='sm'>link</Mi> 링크 열기
-                  </a>}
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+                    {d.system_name
+                      ? <span style={{ fontSize:'0.7rem', color:'var(--color-accent)', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}><Mi size='sm' color='accent'>menu_book</Mi> {d.system_name}</span>
+                      : <span/>
+                    }
+                    {d.url && <a href={d.url} target="_blank" rel="noreferrer" style={{ fontSize:'0.72rem', color:'var(--color-primary)', flexShrink:0 }}>
+                      <Mi size='sm'>link</Mi> 링크 열기
+                    </a>}
+                  </div>
                 </div>
               </div>
             ))
