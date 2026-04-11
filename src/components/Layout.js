@@ -1,8 +1,25 @@
 // src/components/Layout.js
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { signOut } from '../lib/supabase'
+import { signOut, notificationsApi, supabase } from '../lib/supabase'
+
+const NOTICE_VIEWED_KEY = 'noticeLastViewed'
+
+const NOTIF_ICON = {
+  guestbook_comment: 'mail',
+  guestbook_reply:   'subdirectory_arrow_right',
+  feedback_comment:  'support_agent',
+  feedback_reply:    'mark_email_read',
+}
+
+function fmtAgo(dateStr) {
+  const diff = (Date.now() - new Date(dateStr)) / 1000
+  if (diff < 60)   return '방금 전'
+  if (diff < 3600) return `${Math.floor(diff/60)}분 전`
+  if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`
+  return `${Math.floor(diff/86400)}일 전`
+}
 
 const NAV_GROUPS = [
   { type:'item', to:'/dashboard', icon:'home', label:'Home' },
@@ -94,7 +111,7 @@ export const FOOTER_TEXT = '© 2026 TRPG Diary v2.0.1 · Made with Claude (AI). 
 export const SITE_VERSION = 'v2.0.1'
 
 export function Layout({ children }) {
-  const { user, profile, notifCounts } = useAuth()
+  const { user, profile, notifCounts, refreshNotifs } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -108,6 +125,77 @@ export function Layout({ children }) {
     '/guestbook':       notifCounts?.guestbook || 0,
     '/admin/feedback':  notifCounts?.feedback  || 0,
   }
+
+  // ── 벨 알림 드롭다운 ──────────────────────────────────────────
+  const [bellOpen, setBellOpen] = useState(false)
+  const [notifList, setNotifList] = useState([])
+  const [notifLoading, setNotifLoading] = useState(false)
+  const bellRef = useRef(null)
+
+  const loadNotifs = useCallback(async () => {
+    setNotifLoading(true)
+    const list = await notificationsApi.getAll(20)
+    setNotifList(list)
+    setNotifLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (bellOpen) loadNotifs()
+  }, [bellOpen, loadNotifs])
+
+  // 외부 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const handler = (e) => {
+      if (bellRef.current && !bellRef.current.contains(e.target)) setBellOpen(false)
+    }
+    if (bellOpen) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [bellOpen])
+
+  const handleNotifClick = async (n) => {
+    setBellOpen(false)
+    if (!n.is_read) {
+      await notificationsApi.markReadById(n.id)
+      refreshNotifs()
+    }
+    const path = n.ref_url || (
+      n.type === 'feedback_comment' || n.type === 'feedback_reply'
+        ? '/admin/feedback' : '/guestbook'
+    )
+    navigate(path)
+  }
+
+  const handleMarkAllRead = async () => {
+    await notificationsApi.markAllRead()
+    setNotifList(prev => prev.map(n => ({ ...n, is_read: true })))
+    refreshNotifs()
+  }
+
+  // ── 공지사항 NEW 뱃지 ─────────────────────────────────────────
+  const [noticeNew, setNoticeNew] = useState(false)
+
+  useEffect(() => {
+    const check = async () => {
+      const { data } = await supabase
+        .from('notices').select('created_at')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      if (!data || data.length === 0) return
+      const latestAt = new Date(data[0].created_at).getTime()
+      const viewed = parseInt(localStorage.getItem(NOTICE_VIEWED_KEY) || '0', 10)
+      setNoticeNew(latestAt > viewed)
+    }
+    check()
+  }, [location.pathname])
+
+  // /notices 방문 시 viewed 갱신
+  useEffect(() => {
+    if (location.pathname.startsWith('/notices')) {
+      localStorage.setItem(NOTICE_VIEWED_KEY, Date.now().toString())
+      setNoticeNew(false)
+    }
+  }, [location.pathname])
 
   return (
     <div className="app-layout">
@@ -143,7 +231,15 @@ export function Layout({ children }) {
             <span className="nav-icon"><span className="ms">support_agent</span></span>문의하기
           </a>
           <NavLink to="/notices" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
-            <span className="nav-icon"><span className="ms">campaign</span></span>공지사항
+            <span className="nav-icon"><span className="ms">campaign</span></span>
+            공지사항
+            {noticeNew && (
+              <span style={{
+                marginLeft:'auto', background:'var(--color-primary)', color:'white',
+                borderRadius:100, fontSize:'0.58rem', fontWeight:700,
+                padding:'1px 6px', lineHeight:'16px',
+              }}>N</span>
+            )}
           </NavLink>
 
           {/* 관리자 전용 */}
@@ -163,6 +259,106 @@ export function Layout({ children }) {
             />
           </>)}
         </nav>
+        {/* 알림 센터 벨 */}
+        <div ref={bellRef} style={{ position:'relative', padding:'8px 12px 0' }}>
+          <button
+            onClick={() => setBellOpen(o => !o)}
+            style={{
+              width:'100%', display:'flex', alignItems:'center', gap:8,
+              padding:'8px 10px', borderRadius:8, border:'1px solid var(--color-border)',
+              background: bellOpen ? 'var(--color-nav-active-bg)' : 'transparent',
+              cursor:'pointer', color:'var(--color-text)',
+            }}
+          >
+            <span className="ms" style={{ fontSize:18 }}>notifications</span>
+            <span style={{ fontSize:'0.83rem', flex:1, textAlign:'left' }}>알림</span>
+            {(notifCounts?.total || 0) > 0 && (
+              <span style={{
+                background:'var(--color-primary)', color:'white',
+                borderRadius:100, fontSize:'0.6rem', fontWeight:700,
+                padding:'1px 7px', minWidth:18, textAlign:'center', lineHeight:'17px',
+              }}>
+                {notifCounts.total}
+              </span>
+            )}
+          </button>
+
+          {bellOpen && (
+            <div style={{
+              position:'absolute', bottom:'calc(100% + 4px)', left:12, right:12,
+              background:'var(--color-surface)', border:'1px solid var(--color-border)',
+              borderRadius:12, boxShadow:'0 4px 20px rgba(0,0,0,0.18)',
+              zIndex:200, overflow:'hidden', maxHeight:420,
+              display:'flex', flexDirection:'column',
+            }}>
+              {/* 헤더 */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+                padding:'10px 14px', borderBottom:'1px solid var(--color-border)', flexShrink:0 }}>
+                <span style={{ fontWeight:700, fontSize:'0.88rem' }}>알림</span>
+                <div style={{ display:'flex', gap:6 }}>
+                  <button
+                    onClick={handleMarkAllRead}
+                    style={{ fontSize:'0.72rem', color:'var(--color-text-light)',
+                      background:'none', border:'none', cursor:'pointer', padding:'2px 4px' }}>
+                    모두 읽음
+                  </button>
+                  <button
+                    onClick={() => { setBellOpen(false); navigate('/notifications') }}
+                    style={{ fontSize:'0.72rem', color:'var(--color-accent)',
+                      background:'none', border:'none', cursor:'pointer', padding:'2px 4px' }}>
+                    전체 보기
+                  </button>
+                </div>
+              </div>
+
+              {/* 목록 */}
+              <div style={{ overflowY:'auto', flex:1 }}>
+                {notifLoading
+                  ? <div style={{ padding:20, textAlign:'center', fontSize:'0.8rem',
+                      color:'var(--color-text-light)' }}>불러오는 중...</div>
+                  : notifList.length === 0
+                    ? <div style={{ padding:24, textAlign:'center', fontSize:'0.8rem',
+                        color:'var(--color-text-light)' }}>알림이 없어요</div>
+                    : notifList.map(n => (
+                        <button key={n.id} onClick={() => handleNotifClick(n)}
+                          style={{
+                            width:'100%', display:'flex', alignItems:'flex-start', gap:10,
+                            padding:'10px 14px', borderBottom:'1px solid var(--color-border)',
+                            background: n.is_read ? 'transparent' : 'rgba(200,169,110,0.07)',
+                            border:'none', cursor:'pointer', textAlign:'left',
+                          }}>
+                          <span className="ms" style={{
+                            fontSize:18, flexShrink:0, marginTop:1,
+                            color: n.is_read ? 'var(--color-text-light)' : 'var(--color-accent)',
+                          }}>
+                            {NOTIF_ICON[n.type] || 'notifications'}
+                          </span>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{
+                              fontSize:'0.82rem', fontWeight: n.is_read ? 400 : 600,
+                              color:'var(--color-text)',
+                              overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                            }}>
+                              {n.message || n.type}
+                            </div>
+                            <div style={{ fontSize:'0.72rem', color:'var(--color-text-light)', marginTop:2 }}>
+                              {fmtAgo(n.created_at)}
+                            </div>
+                          </div>
+                          {!n.is_read && (
+                            <div style={{
+                              width:7, height:7, borderRadius:'50%',
+                              background:'var(--color-primary)', flexShrink:0, marginTop:6,
+                            }} />
+                          )}
+                        </button>
+                      ))
+                }
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="sidebar-user">
           <div className="sidebar-user-info">
             <div className="user-avatar">
