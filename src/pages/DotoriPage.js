@@ -5,8 +5,9 @@ import { dotoriApi, dotoriTagsApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
+import { RuleSelect } from '../components/RuleSelect'
 
-const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[] }
+const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[], system_name:'' }
 
 async function fetchOgMeta(url) {
   try {
@@ -67,6 +68,7 @@ export function DotoriPage() {
   const [tags, setTags] = useState([])
   const [tagModal, setTagModal] = useState(false)
   const [tagFilter, setTagFilter] = useState('all')
+  const [ruleFilter, setRuleFilter] = useState('')
   const [search, setSearch] = useState('')
   const [sortOrder, setSortOrder] = useState('asc')
   const [fetching, setFetching] = useState(false)
@@ -126,9 +128,10 @@ export function DotoriPage() {
   }
 
   const filtered = useMemo(()=>items.filter(i=>{
-    const ms=!search||i.title?.includes(search)||i.url?.includes(search)||i.memo?.includes(search)
+    const ms=!search||i.title?.includes(search)||i.url?.includes(search)||i.memo?.includes(search)||i.system_name?.includes(search)
     const mt=tagFilter==='all'||i.tags?.includes(tagFilter)
-    return ms&&mt
+    const mr=!ruleFilter||i.system_name===ruleFilter
+    return ms&&mt&&mr
   }).sort((a,b)=>{
     const ta=(a.title||a.url||'').toLowerCase(), tb=(b.title||b.url||'').toLowerCase()
     return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
@@ -150,12 +153,16 @@ export function DotoriPage() {
       </div>
       <div style={{marginBottom:20}}>
         <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:tags.length>0?10:0,flexWrap:'wrap'}}>
-          <input className="form-input" placeholder="🔍 제목, URL, 메모로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
+          <input className="form-input" placeholder="🔍 제목, URL, 메모, 룰로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
+          <div style={{minWidth:160}}>
+            <RuleSelect value={ruleFilter} onChange={v=>setRuleFilter(v)} placeholder="룰 전체"/>
+          </div>
           <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
             onClick={()=>setSortOrder(o=>o==='asc'?'desc':'asc')}>
             <Mi size='sm' color={sortOrder==='asc'?'white':'accent'}>{sortOrder==='asc'?'sort':'sort'}</Mi>
             가나다순 {sortOrder==='asc'?'↑':'↓'}
           </button>
+          {ruleFilter&&<button className="btn btn-ghost btn-sm" style={{color:'var(--color-text-light)'}} onClick={()=>setRuleFilter('')}>필터 초기화</button>}
         </div>
         {tags.length>0&&(
           <div className="flex gap-8" style={{flexWrap:'wrap',marginTop:8}}>
@@ -190,6 +197,7 @@ export function DotoriPage() {
                 onClick={()=>window.open(item.url,'_blank','noopener,noreferrer')}
               >
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.title||item.url}</div>
+                {item.system_name&&<div style={{fontSize:'0.7rem',color:'var(--color-accent)',fontWeight:600}}><Mi size='sm' color='accent'>menu_book</Mi> {item.system_name}</div>}
                 {item.description&&<div style={{fontSize:'0.72rem',color:'var(--color-text-light)',lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.description}</div>}
                 <div style={{fontSize:'0.65rem',color:'var(--color-text-light)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'auto',paddingTop:4}}><><Mi size='sm' color='light'>link</Mi> {item.url}</></div>
                 {item.memo&&<div style={{fontSize:'0.72rem',color:'var(--color-accent)',padding:'5px 8px',borderRadius:6,background:'var(--color-nav-active-bg)',marginTop:4,wordBreak:'break-all',overflowWrap:'break-word',whiteSpace:'pre-wrap'}}><><Mi size='sm' color='accent'>edit_note</Mi> {item.memo}</></div>}
@@ -217,6 +225,7 @@ export function DotoriPage() {
         </div>
         {form.thumbnail_url&&<div style={{marginBottom:12,borderRadius:8,overflow:'hidden',height:100,background:'var(--color-nav-active-bg)'}}><img src={form.thumbnail_url} alt="thumbnail" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/></div>}
         <div className="form-group"><label className="form-label">제목</label><input className="form-input" placeholder="자동으로 가져와요" value={form.title||''} onChange={set('title')}/></div>
+        <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name||''} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
         <div className="form-group"><label className="form-label">썸네일 이미지 URL</label><input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.thumbnail_url||''} onChange={set('thumbnail_url')}/></div>
         <div className="form-group">
           <label className="form-label">태그<button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button></label>
