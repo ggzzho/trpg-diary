@@ -11,7 +11,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from '@dnd-kit/utilities'
 
 const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
-const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', digital_purchase:'전자(구매)', digital_free:'전자(공개배포)', physical_digital:'실물+전자', other:'기타' }
+const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', digital_purchase:'전자', digital_free:'전자', physical_digital:'실물+전자', other:'기타' }
 const DEFAULT_STATUS_TAGS = ['미구매', '구매 예정', '품절']
 
 function SortableWrapper({ id, children }) {
@@ -386,8 +386,7 @@ export function WishScenarioPage() {
               <option value="">선택 안함</option>
               <option value="physical_soft">실물(소프트)</option>
               <option value="physical_hard">실물(하드)</option>
-              <option value="digital_purchase">전자(구매)</option>
-              <option value="digital_free">전자(공개배포)</option>
+              <option value="digital">전자</option>
               <option value="physical_digital">실물+전자</option>
               <option value="other">기타</option>
             </select>
