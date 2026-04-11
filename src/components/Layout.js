@@ -260,7 +260,7 @@ export function Layout({ children }) {
           </>)}
         </nav>
         {/* 알림 센터 벨 */}
-        <div ref={bellRef} style={{ position:'relative', padding:'8px 12px 12px', marginTop:8, borderTop:'1px solid var(--color-border)' }}>
+        <div ref={bellRef} style={{ position:'relative', padding:'8px 12px 12px', marginTop:8 }}>
           <button
             onClick={() => setBellOpen(o => !o)}
             style={{
