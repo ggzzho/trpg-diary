@@ -10,8 +10,8 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'physical', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
-const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자' }
+const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
+const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', digital_purchase:'전자(구매)', digital_free:'전자(공개배포)', other:'기타' }
 const DEFAULT_STATUS_TAGS = ['미플', 'PL 완료', 'GM 완료', '위시리스트']
 
 function SortableWrapper({ id, children }) {
@@ -386,8 +386,13 @@ export function ScenarioPage() {
         <div className="grid-2">
           <div className="form-group"><label className="form-label">인원</label><input className="form-input" placeholder="3~5인, 다인, 타이..." value={form.player_count||''} onChange={set('player_count')}/></div>
           <div className="form-group"><label className="form-label">형태</label>
-            <select className="form-select" value={form.format||'physical'} onChange={set('format')}>
-              <option value="physical">실물</option><option value="digital">전자</option><option value="both">실물+전자</option>
+            <select className="form-select" value={form.format||''} onChange={set('format')}>
+              <option value="">선택 안함</option>
+              <option value="physical_soft">실물(소프트)</option>
+              <option value="physical_hard">실물(하드)</option>
+              <option value="digital_purchase">전자(구매)</option>
+              <option value="digital_free">전자(공개배포)</option>
+              <option value="other">기타</option>
             </select>
           </div>
         </div>

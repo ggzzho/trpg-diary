@@ -17,6 +17,7 @@ export function RuleProvider({ children }) {
       .select('id, title, color')
       .eq('user_id', user.id)
       .is('parent_id', null)
+      .order('sort_order', { ascending: true, nullsFirst: false })
       .order('title')
     setRules((data || []).map(r => ({ id:r.id, name:r.title, color:r.color||null })))
   }
