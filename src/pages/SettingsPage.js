@@ -219,7 +219,7 @@ export default function SettingsPage() {
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}>프로필 설정</h2>
             {/* 헤더 이미지 */}
             <div className="form-group">
-              <label className="form-label">공개 페이지 헤더 이미지</label>
+              <label className="form-label">공개 페이지 헤더 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 1200×400px)</span></label>
               {form.header_image_url&&<div style={{borderRadius:8,overflow:'hidden',marginBottom:8,height:90,background:'var(--color-nav-active-bg)'}}><img src={form.header_image_url} alt="header" style={{width:'100%',height:'100%',objectFit:'cover'}} /></div>}
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.header_image_url||''} onChange={set('header_image_url')} style={{flex:1}} />
@@ -228,7 +228,7 @@ export default function SettingsPage() {
             </div>
             {/* 아바타 */}
             <div className="form-group">
-              <label className="form-label">프로필 이미지</label>
+              <label className="form-label">프로필 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 정사각형, 200×200px 이상)</span></label>
               <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:10}}>
                 <div className="user-avatar" style={{width:56,height:56,fontSize:'1.3rem',flexShrink:0}}>
                   {(form.avatar_url||profile?.avatar_url)
@@ -355,7 +355,7 @@ export default function SettingsPage() {
               ))}
             </div>
             <div className="form-group">
-              <label className="form-label">배경 이미지</label>
+              <label className="form-label">배경 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 1920×1080px)</span></label>
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.background_image_url} onChange={e=>handleBgUrlChange(e.target.value)} style={{flex:1}} />
               </div>
