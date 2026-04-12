@@ -19,16 +19,16 @@ function hexToRgb(hex) {
   catch { return [200,169,110] }
 }
 const WIDGET_OPTIONS = [
-  {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
   {key:'rulebooks', label:'보유 룰북', icon:'menu_book'},
   {key:'scenarios', label:'보유 시나리오', icon:'description'},
   {key:'wish_scenarios', label:'위시 시나리오', icon:'favorite'},
-  {key:'dotori', label:'도토리', icon:'catching_pokemon'},
-  {key:'pairs', label:'페어 목록', icon:'people'},
-  {key:'schedule', label:'일정 관리', icon:'calendar_month'},
+  {key:'dotori', label:'도토리', icon:'forest'},
   {key:'availability', label:'공수표', icon:'event_available'},
-  {key:'guestbook', label:'방명록', icon:'mail'},
+  {key:'schedule', label:'일정 관리', icon:'calendar_month'},
+  {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
+  {key:'pairs', label:'페어 목록', icon:'people'},
   {key:'bookmarks', label:'북마크', icon:'bookmark'},
+  {key:'guestbook', label:'방명록', icon:'mail'},
 ]
 
 const DEFAULT_SECTIONS = [
