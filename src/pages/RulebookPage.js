@@ -214,6 +214,19 @@ export function RulebookPage() {
 
   const toggleExpand = id => setExpanded(e => ({ ...e, [id]:!e[id] }))
 
+  // 검색 시 자식(서플리먼트)이 매칭되면 아코디언 자동 오픈
+  useEffect(() => {
+    if (!search || !parents.length) return
+    const s = search.toLowerCase()
+    const matchItem = i =>
+      i.title?.toLowerCase().includes(s) || i.publisher?.toLowerCase().includes(s) ||
+      i.system_name?.toLowerCase().includes(s) || i.memo?.toLowerCase().includes(s) ||
+      i.tags?.some(t => t.toLowerCase().includes(s))
+    const autoExpand = {}
+    parents.forEach(p => { if (supplMap[p.id]?.some(c => matchItem(c))) autoExpand[p.id] = true })
+    setExpanded(prev => ({ ...prev, ...autoExpand }))
+  }, [search, parents, supplMap]) // eslint-disable-line
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const handleDragEnd = async ({ active, over }) => {
@@ -275,10 +288,15 @@ export function RulebookPage() {
     return m
   }, [items])
 
-  const filteredParents = parents.filter(i =>
-    !search || i.title.includes(search) || i.publisher?.includes(search) ||
-    supplMap[i.id]?.some(s => s.title.includes(search) || s.publisher?.includes(search))
-  )
+  const filteredParents = useMemo(() => {
+    if (!search) return parents
+    const s = search.toLowerCase()
+    const matchItem = i =>
+      i.title?.toLowerCase().includes(s) || i.publisher?.toLowerCase().includes(s) ||
+      i.system_name?.toLowerCase().includes(s) || i.memo?.toLowerCase().includes(s) ||
+      i.tags?.some(t => t.toLowerCase().includes(s))
+    return parents.filter(i => matchItem(i) || supplMap[i.id]?.some(c => matchItem(c)))
+  }, [parents, search, supplMap])
 
   const { paged: pagedRulebooks, page: rbPage, setPage: setRbPage, perPage: rbPerPage, setPerPage: setRbPerPage } = usePagination(filteredParents, 20)
 

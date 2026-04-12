@@ -169,6 +169,8 @@ export function WishScenarioPage() {
     const matchItem = i => !!(
       i.title?.toLowerCase().includes(s) || i.system_name?.toLowerCase().includes(s)
       || i.author?.toLowerCase().includes(s) || i.memo?.toLowerCase().includes(s)
+      || i.player_count?.toLowerCase().includes(s)
+      || i.status_tags?.some(t => t.toLowerCase().includes(s))
     )
     const autoExpand = {}
     parents.forEach(p => { if (childMap[p.id]?.some(c => matchItem(c))) autoExpand[p.id] = true })
@@ -180,6 +182,8 @@ export function WishScenarioPage() {
     const matchItem = i => !s
       || i.title?.toLowerCase().includes(s) || i.system_name?.toLowerCase().includes(s)
       || i.author?.toLowerCase().includes(s) || i.memo?.toLowerCase().includes(s)
+      || i.player_count?.toLowerCase().includes(s)
+      || i.status_tags?.some(t => t.toLowerCase().includes(s))
 
     return parents
       .filter(i => {
