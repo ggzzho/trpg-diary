@@ -507,7 +507,9 @@ export default function PublicProfilePage() {
             const ALL_PUBLIC_STATS = [
               {key:'logs', label:'기록', v:publicLogs.length||0},
               {key:'rulebooks', label:'룰북', v:(data.rulebooks||[]).filter(r=>!r.parent_id).length},
-              {key:'scenarios', label:'시나리오', v:data.scenarios?.length||0},
+              {key:'scenarios', label:'보유 시나리오', v:data.scenarios?.length||0},
+              {key:'wish_scenarios', label:'위시 시나리오', v:data.wish_scenarios?.length||0},
+              {key:'dotori', label:'도토리', v:data.dotori?.length||0},
               {key:'pairs', label:'페어', v:data.pairs?.length||0},
               {key:'schedule', label:'일정', v:data.schedules?.length||0},
               {key:'availability', label:'공수표', v:data.availability?.length||0},
