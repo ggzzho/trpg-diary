@@ -429,13 +429,13 @@ export default function SettingsPage() {
             <p className="text-sm text-light" style={{marginBottom:14}}>공개 페이지에서 숨기고 싶은 탭을 선택하세요. 본인은 항상 볼 수 있어요.</p>
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
               {[
-                {key:'schedules', label:'일정', icon:'calendar_month'},
-                {key:'rulebooks', label:'룰북', icon:'menu_book'},
-                {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
-                {key:'availability', label:'공수표', icon:'event_available'},
+                {key:'rulebooks', label:'보유 룰북', icon:'menu_book'},
                 {key:'scenarios', label:'보유 시나리오', icon:'description'},
                 {key:'wish_scenarios', label:'위시 시나리오', icon:'favorite'},
                 {key:'dotori', label:'도토리', icon:'forest'},
+                {key:'availability', label:'공수표', icon:'event_available'},
+                {key:'schedules', label:'일정 관리', icon:'calendar_month'},
+                {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
                 {key:'pairs', label:'페어', icon:'people'},
                 {key:'bookmarks', label:'북마크', icon:'bookmark'},
                 {key:'guestbook', label:'방명록', icon:'mail'},
