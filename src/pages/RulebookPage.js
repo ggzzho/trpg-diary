@@ -214,6 +214,17 @@ export function RulebookPage() {
 
   const toggleExpand = id => setExpanded(e => ({ ...e, [id]:!e[id] }))
 
+  // 부모/서플 분리 (useEffect보다 먼저 선언해야 TDZ 오류 없음)
+  const parents = useMemo(() => items.filter(i => !i.parent_id), [items])
+  const supplMap = useMemo(() => {
+    const m = {}
+    items.filter(i => i.parent_id).forEach(i => {
+      if (!m[i.parent_id]) m[i.parent_id] = []
+      m[i.parent_id].push(i)
+    })
+    return m
+  }, [items])
+
   // 검색 시 자식(서플리먼트)이 매칭되면 아코디언 자동 오픈
   useEffect(() => {
     if (!search || !parents.length) return
@@ -276,17 +287,6 @@ export function RulebookPage() {
     setSaving(false)
     setIsDirty(false)
   }
-
-  // 부모/서플 분리
-  const parents = useMemo(() => items.filter(i => !i.parent_id), [items])
-  const supplMap = useMemo(() => {
-    const m = {}
-    items.filter(i => i.parent_id).forEach(i => {
-      if (!m[i.parent_id]) m[i.parent_id] = []
-      m[i.parent_id].push(i)
-    })
-    return m
-  }, [items])
 
   const filteredParents = useMemo(() => {
     if (!search) return parents
