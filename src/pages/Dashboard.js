@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { schedulesApi, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
+import { schedulesApi, playLogsApi, rulebooksApi, scenariosApi, wishScenariosApi, dotoriApi, pairsApi, supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -10,7 +10,7 @@ import { MarkdownRenderer } from './AdminNoticePage'
 
 export default function Dashboard() {
   const { user, profile } = useAuth()
-  const [stats, setStats] = useState({ logs:0, rulebooks:0, scenarios:0, pairs:0, schedule:0, availability:0, guestbook:0, bookmarks:0 })
+  const [stats, setStats] = useState({ logs:0, rulebooks:0, scenarios:0, wish_scenarios:0, dotori:0, pairs:0, schedule:0, availability:0, guestbook:0, bookmarks:0 })
   const [upcoming, setUpcoming] = useState([])
   const [recentLogs, setRecentLogs] = useState([])
   const [favorites, setFavorites] = useState([])
@@ -24,10 +24,12 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return
     const load = async () => {
-      const [l,r,sc,p,s,fav,noticeRes,avail,guest,book] = await Promise.all([
+      const [l,r,sc,wish,dot,p,s,fav,noticeRes,avail,guest,book] = await Promise.all([
         playLogsApi.getAll(user.id),
         rulebooksApi.getAll(user.id),
         scenariosApi.getAll(user.id),
+        wishScenariosApi.getAll(user.id),
+        dotoriApi.getAll(user.id),
         pairsApi.getAll(user.id),
         schedulesApi.getAll(user.id),
         supabase.from('favorites').select('*').eq('user_id',user.id).order('created_at',{ascending:false}),
@@ -37,7 +39,7 @@ export default function Dashboard() {
         supabase.from('bookmarks').select('id',{count:'exact',head:true}).eq('user_id',user.id),
       ])
       const upcomingData = (s.data||[]).filter(x=>x.entry_type!=='blocked'&&x.scheduled_date>=todayStr&&x.status!=='cancelled'&&x.status!=='completed')
-      setStats({logs:l.data?.length||0,rulebooks:r.data?.length||0,scenarios:sc.data?.length||0,pairs:p.data?.length||0,schedule:upcomingData.length,availability:avail.count||0,guestbook:guest.count||0,bookmarks:book.count||0})
+      setStats({logs:l.data?.length||0,rulebooks:r.data?.length||0,scenarios:sc.data?.length||0,wish_scenarios:wish.data?.length||0,dotori:dot.data?.length||0,pairs:p.data?.length||0,schedule:upcomingData.length,availability:avail.count||0,guestbook:guest.count||0,bookmarks:book.count||0})
       setUpcoming(upcomingData.sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date)).slice(0,5))
       setRecentLogs((l.data||[]).slice(0,4))
       setFavorites(fav.data||[])
@@ -68,7 +70,9 @@ export default function Dashboard() {
   const ALL_STAT_CARDS = [
     {key:'logs', label:'다녀온 기록', value:stats.logs, icon:'auto_stories', to:'/logs', unit:'회'},
     {key:'rulebooks', label:'보유 룰북', value:stats.rulebooks, icon:'menu_book', to:'/rulebooks', unit:'권'},
-    {key:'scenarios', label:'시나리오 목록', value:stats.scenarios, icon:'description', to:'/scenarios', unit:'개'},
+    {key:'scenarios', label:'보유 시나리오', value:stats.scenarios, icon:'description', to:'/scenarios', unit:'개'},
+    {key:'wish_scenarios', label:'위시 시나리오', value:stats.wish_scenarios, icon:'favorite', to:'/wish-scenarios', unit:'개'},
+    {key:'dotori', label:'도토리', value:stats.dotori, icon:'catching_pokemon', to:'/dotori', unit:'개'},
     {key:'pairs', label:'페어 목록', value:stats.pairs, icon:'people', to:'/pairs', unit:'명'},
     {key:'schedule', label:'일정 관리', value:stats.schedule, icon:'calendar_month', to:'/schedule', unit:'개'},
     {key:'availability', label:'공수표', value:stats.availability, icon:'event_available', to:'/availability', unit:'개'},
