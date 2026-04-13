@@ -128,14 +128,15 @@ export function DotoriPage() {
   }
 
   const filtered = useMemo(()=>items.filter(i=>{
-    const ms=!search||i.title?.includes(search)||i.url?.includes(search)||i.memo?.includes(search)||i.system_name?.includes(search)
+    const s=search.toLowerCase()
+    const ms=!s||i.title?.toLowerCase().includes(s)||i.url?.toLowerCase().includes(s)||i.memo?.toLowerCase().includes(s)||i.system_name?.toLowerCase().includes(s)||i.tags?.some(t=>t.toLowerCase().includes(s))
     const mt=tagFilter==='all'||i.tags?.includes(tagFilter)
     const mr=!ruleFilter||i.system_name===ruleFilter
     return ms&&mt&&mr
   }).sort((a,b)=>{
     const ta=(a.title||a.url||'').toLowerCase(), tb=(b.title||b.url||'').toLowerCase()
     return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
-  }),[items,search,tagFilter,sortOrder])
+  }),[items,search,tagFilter,ruleFilter,sortOrder])
 
   const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
 
@@ -153,7 +154,7 @@ export function DotoriPage() {
       </div>
       <div style={{marginBottom:20}}>
         <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:tags.length>0?10:0,flexWrap:'wrap'}}>
-          <input className="form-input" placeholder="🔍 제목, URL, 메모, 룰로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
+          <input className="form-input" placeholder="🔍 제목, URL, 메모, 태그, 룰로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
           <div style={{minWidth:160}}>
             <RuleSelect value={ruleFilter} onChange={v=>setRuleFilter(v)} placeholder="룰 전체"/>
           </div>
