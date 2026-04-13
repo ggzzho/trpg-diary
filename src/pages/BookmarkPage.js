@@ -138,7 +138,8 @@ export function BookmarkPage() {
   }
 
   const filtered = useMemo(()=>items.filter(i=>{
-    const ms=!search||i.title?.includes(search)||i.url?.includes(search)||i.memo?.includes(search)
+    const s=search.toLowerCase()
+    const ms=!s||i.title?.toLowerCase().includes(s)||i.url?.toLowerCase().includes(s)||i.memo?.toLowerCase().includes(s)||i.tags?.some(t=>t.toLowerCase().includes(s))
     const mt=tagFilter==='all'||i.tags?.includes(tagFilter)
     return ms&&mt
   }).sort((a,b)=>{
@@ -159,7 +160,7 @@ export function BookmarkPage() {
       </div>
       <div style={{marginBottom:20}}>
         <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:tags.length>0?10:0,flexWrap:'wrap'}}>
-          <input className="form-input" placeholder="🔍 제목, URL, 메모로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
+          <input className="form-input" placeholder="🔍 제목, URL, 메모, 태그로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
           <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
             onClick={()=>setSortOrder(o=>o==='asc'?'desc':'asc')}>
             <Mi size='sm' color={sortOrder==='asc'?'white':'accent'}>{sortOrder==='asc'?'sort':'sort'}</Mi>
