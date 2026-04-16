@@ -1216,6 +1216,7 @@ export function FeedbackPublicView({ ownerId, postId }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
+  const [search, setSearch] = useState('')
 
   const isOwner = !!(user && ownerId && user.id === ownerId)
 
@@ -1325,7 +1326,10 @@ export function FeedbackPublicView({ ownerId, postId }) {
     loadAll(); return true
   }
 
-  const paged = items.slice((page-1)*perPage, page*perPage)
+  const filteredItems = search
+    ? items.filter(g => (g.content||'').toLowerCase().includes(search.toLowerCase()) || (g.author_name||'').toLowerCase().includes(search.toLowerCase()))
+    : items
+  const paged = filteredItems.slice((page-1)*perPage, page*perPage)
 
   return (
     <div>
@@ -1376,6 +1380,13 @@ export function FeedbackPublicView({ ownerId, postId }) {
           </div>
         </div>
       </div>
+
+      {/* 검색 */}
+      {!loading && items.length > 0 && (
+        <div style={{ marginBottom:14 }}>
+          <input className="form-input" placeholder="내용, 작성자 검색..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} style={{ maxWidth:320 }}/>
+        </div>
+      )}
 
       {/* 문의 목록 (비공개면 본인+주인만 보임) */}
       {loading
@@ -1454,7 +1465,7 @@ export function FeedbackPublicView({ ownerId, postId }) {
                   )
                 })}
               </div>
-              <Pagination total={items.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
+              <Pagination total={filteredItems.length} perPage={perPage} page={page} onPage={setPage} onPerPage={setPerPage}/>
             </>
       }
 
