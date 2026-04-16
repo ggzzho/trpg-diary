@@ -203,10 +203,23 @@ export default function PublicProfilePage() {
   const [wishScenarioExpanded, setWishScenarioExpanded] = useState({})
   const [kakaoPopup, setKakaoPopup] = useState(false)
   const [viewDark, setViewDark] = useState(false)
+  const [tabSearch, setTabSearch] = useState('')
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
   const publicLogs = (data.logs||[]).filter(l => !l.is_private)
-  const logsPagination = usePagination(publicLogs, 20)
+  const filteredLogs = useMemo(() => {
+    if (!tabSearch) return publicLogs
+    const s = tabSearch.toLowerCase()
+    return publicLogs.filter(l =>
+      (l.title||'').toLowerCase().includes(s) ||
+      (l.system_name||'').toLowerCase().includes(s) ||
+      (l.series_tag||'').toLowerCase().includes(s) ||
+      (l.character_name||'').toLowerCase().includes(s) ||
+      (l.together_with||'').toLowerCase().includes(s)
+    )
+  }, [publicLogs, tabSearch])
+  const logsPagination = usePagination(filteredLogs, 20)
+
   const scenarioParents = [...(data.scenarios||[]).filter(s => !s.parent_id)].sort((a,b) => {
     const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
     return (profile?.scenario_sort_order||'asc')==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
@@ -216,21 +229,68 @@ export default function PublicProfilePage() {
     m[s.parent_id].push(s)
     return m
   }, {})
-  const scenariosPagination = usePagination(scenarioParents, 20)
+  const filteredScenarioParents = useMemo(() => {
+    if (!tabSearch) return scenarioParents
+    const s = tabSearch.toLowerCase()
+    return scenarioParents.filter(p =>
+      (p.title||'').toLowerCase().includes(s) ||
+      (p.system_name||'').toLowerCase().includes(s) ||
+      (p.author||'').toLowerCase().includes(s) ||
+      (scenarioChildMap[p.id]||[]).some(c =>
+        (c.title||'').toLowerCase().includes(s) || (c.system_name||'').toLowerCase().includes(s)
+      )
+    )
+  }, [scenarioParents, scenarioChildMap, tabSearch])
+  const scenariosPagination = usePagination(filteredScenarioParents, 20)
 
   const sortedAvailability = [...(data.availability||[])].sort((a,b) => {
     const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
     return (profile?.availability_sort_order||'asc')==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
   })
-  const availabilityPagination = usePagination(sortedAvailability, 20)
+  const filteredAvailability = useMemo(() => {
+    if (!tabSearch) return sortedAvailability
+    const s = tabSearch.toLowerCase()
+    return sortedAvailability.filter(a =>
+      (a.title||'').toLowerCase().includes(s) ||
+      (a.system_name||'').toLowerCase().includes(s) ||
+      (a.description||'').toLowerCase().includes(s) ||
+      (a.together_with||'').toLowerCase().includes(s)
+    )
+  }, [sortedAvailability, tabSearch])
+  const availabilityPagination = usePagination(filteredAvailability, 20)
 
   const sortedBookmarks = [...(data.bookmarks||[])].sort((a,b) => {
     const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
     return (profile?.bookmark_sort_order||'asc')==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
   })
-  const bookmarksPagination = usePagination(sortedBookmarks, 20)
+  const filteredBookmarks = useMemo(() => {
+    if (!tabSearch) return sortedBookmarks
+    const s = tabSearch.toLowerCase()
+    return sortedBookmarks.filter(b =>
+      (b.title||'').toLowerCase().includes(s) ||
+      (b.description||'').toLowerCase().includes(s) ||
+      b.tags?.some(t => t.toLowerCase().includes(s))
+    )
+  }, [sortedBookmarks, tabSearch])
+  const bookmarksPagination = usePagination(filteredBookmarks, 20)
 
-  const pairsPagination = usePagination(data.pairs||[], 20)
+  const sortedFilteredPairs = useMemo(() => {
+    const sorted = [...(data.pairs||[])].sort((a,b) => {
+      const da=a.first_met_date||'', db=b.first_met_date||''
+      const noA=!a.first_met_date, noB=!b.first_met_date
+      if (noA && noB) return pairSort==='asc'?(a.name||'').localeCompare(b.name||'','ko'):(b.name||'').localeCompare(a.name||'','ko')
+      if (noA) return 1; if (noB) return -1
+      return pairSort==='asc'?da.localeCompare(db):db.localeCompare(da)
+    })
+    if (!tabSearch) return sorted
+    const s = tabSearch.toLowerCase()
+    return sorted.filter(p =>
+      (p.name||'').toLowerCase().includes(s) ||
+      (p.memo||'').toLowerCase().includes(s) ||
+      (p.relations||[]).some(r => r.toLowerCase().includes(s))
+    )
+  }, [data.pairs, pairSort, tabSearch])
+  const pairsPagination = usePagination(sortedFilteredPairs, 20)
 
   const wishScenarioParents = [...(data.wish_scenarios||[]).filter(s => !s.parent_id)].sort((a,b) =>
     (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase(),'ko')
@@ -240,12 +300,34 @@ export default function PublicProfilePage() {
     m[s.parent_id].push(s)
     return m
   }, {})
-  const wishScenariosPagination = usePagination(wishScenarioParents, 20)
+  const filteredWishScenarioParents = useMemo(() => {
+    if (!tabSearch) return wishScenarioParents
+    const s = tabSearch.toLowerCase()
+    return wishScenarioParents.filter(p =>
+      (p.title||'').toLowerCase().includes(s) ||
+      (p.system_name||'').toLowerCase().includes(s) ||
+      (p.author||'').toLowerCase().includes(s) ||
+      (wishScenarioChildMap[p.id]||[]).some(c =>
+        (c.title||'').toLowerCase().includes(s) || (c.system_name||'').toLowerCase().includes(s)
+      )
+    )
+  }, [wishScenarioParents, wishScenarioChildMap, tabSearch])
+  const wishScenariosPagination = usePagination(filteredWishScenarioParents, 20)
 
   const sortedDotori = [...(data.dotori||[])].sort((a,b) =>
     (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase(),'ko')
   )
-  const dotoriPagination = usePagination(sortedDotori, 20)
+  const filteredDotori = useMemo(() => {
+    if (!tabSearch) return sortedDotori
+    const s = tabSearch.toLowerCase()
+    return sortedDotori.filter(d =>
+      (d.title||'').toLowerCase().includes(s) ||
+      (d.description||'').toLowerCase().includes(s) ||
+      (d.system_name||'').toLowerCase().includes(s) ||
+      d.tags?.some(t => t.toLowerCase().includes(s))
+    )
+  }, [sortedDotori, tabSearch])
+  const dotoriPagination = usePagination(filteredDotori, 20)
 
   // 공개 캘린더용 colorMap: 해당 유저의 룰북 title → color
   // ⚠️ Hook이므로 early return 전에 선언 필수
@@ -369,22 +451,7 @@ export default function PublicProfilePage() {
     ...(profile?.is_admin ? [{ key:'feedback', label:'문의/피드백', icon:'support_agent' }] : []),
   ].filter(t => !hiddenTabs.includes(t.key))
 
-  // 정렬 연동
-  const scenarioSortOrder = profile?.scenario_sort_order || 'asc'
-  const bookmarkSortOrder = profile?.bookmark_sort_order || 'asc'
-  const availabilitySortOrder = profile?.availability_sort_order || 'asc'
-
-  const sortedPairs = [...(data.pairs||[])].sort((a,b) => {
-    const da = a.first_met_date||'', db = b.first_met_date||''
-    const noA = !a.first_met_date, noB = !b.first_met_date
-    if (noA && noB) return pairSort === 'asc' ? (a.name||'').localeCompare(b.name||'','ko') : (b.name||'').localeCompare(a.name||'','ko')
-    if (noA) return 1
-    if (noB) return -1
-    return pairSort === 'asc' ? da.localeCompare(db) : db.localeCompare(da)
-  })
-
-  // 각 탭 페이지네이션 - pagedPairs 계산
-  const pagedPairs = sortedPairs.slice((pairsPagination.page-1)*pairsPagination.perPage, pairsPagination.page*pairsPagination.perPage)
+  const pagedPairs = pairsPagination.paged
 
   const ogTitle = profile ? `${profile.display_name || profile.username}의 TRPG Diary` : 'TRPG Diary ✦'
   const ogDesc  = profile?.play_style || (profile ? `${profile.display_name || profile.username}님의 TRPG 다이어리 - trpg-diary.co.kr` : '나만의 TRPG Diary')
@@ -558,17 +625,24 @@ export default function PublicProfilePage() {
       </div>
 
       {/* 탭 */}
-      <div className="flex gap-8" style={{ marginBottom:20, flexWrap:'wrap' }}>
+      <div className="flex gap-8" style={{ marginBottom:12, flexWrap:'wrap' }}>
         {TABS.map(t => (
           <button key={t.key}
             className={`btn btn-sm ${activeTab===t.key?'btn-primary':'btn-outline'}`}
-            onClick={() => setActiveTab(t.key)}
+            onClick={() => { setActiveTab(t.key); setTabSearch('') }}
             style={{ display:'flex', alignItems:'center', gap:4 }}>
             <Mi size="sm" color={activeTab===t.key?'white':'accent'}>{t.icon}</Mi>
             {t.label}{t.count !== undefined ? ` (${t.count})` : ''}
           </button>
         ))}
       </div>
+
+      {/* 탭 검색바 (일정·방명록·피드백 제외) */}
+      {!['schedules','guestbook','feedback'].includes(activeTab) && (
+        <div style={{ marginBottom:16 }}>
+          <input className="form-input" placeholder="검색..." value={tabSearch} onChange={e => setTabSearch(e.target.value)} style={{ maxWidth:320 }}/>
+        </div>
+      )}
 
       {/* ── 일정 (캘린더) ── */}
       {activeTab==='schedules' && <PublicCalendar schedules={data.schedules||[]} blocked={data.blocked||[]} colorMap={publicColorMap}/>}
@@ -624,7 +698,7 @@ export default function PublicProfilePage() {
               ))
             }
           </div>
-          <Pagination total={publicLogs.length} perPage={logsPagination.perPage} page={logsPagination.page} onPage={logsPagination.setPage} onPerPage={logsPagination.setPerPage}/>
+          <Pagination total={filteredLogs.length} perPage={logsPagination.perPage} page={logsPagination.page} onPage={logsPagination.setPage} onPerPage={logsPagination.setPerPage}/>
           <Modal isOpen={!!selectedLog} onClose={()=>setSelectedLog(null)} title={selectedLog?.title}
             footer={<button className="btn btn-outline btn-sm" onClick={()=>setSelectedLog(null)}>닫기</button>}
           >
@@ -635,7 +709,10 @@ export default function PublicProfilePage() {
 
       {/* ── 룰북 ── */}
       {activeTab==='rulebooks' && (() => {
-        const parents = (data.rulebooks||[]).filter(r => !r.parent_id)
+        const allRbParents = (data.rulebooks||[]).filter(r => !r.parent_id)
+        const parents = tabSearch
+          ? (() => { const s=tabSearch.toLowerCase(); return allRbParents.filter(r=>(r.title||'').toLowerCase().includes(s)||(r.publisher||'').toLowerCase().includes(s)||r.tags?.some(t=>t.toLowerCase().includes(s))) })()
+          : allRbParents
         const supplMap = {}
         ;(data.rulebooks||[]).filter(r => r.parent_id).forEach(r => {
           if (!supplMap[r.parent_id]) supplMap[r.parent_id] = []
@@ -693,7 +770,7 @@ export default function PublicProfilePage() {
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {!scenarioParents.length
             ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>보유 시나리오가 없어요</div>
-            : scenariosPagination.paged.map(s => {
+            : scenariosPagination.paged.map(s => { // paged from filteredScenarioParents
                 const children = scenarioChildMap[s.id] || []
                 const isOpen = !!scenarioExpanded[s.id]
                 const renderScenarioItem = (item, isChild=false) => (
@@ -751,7 +828,7 @@ export default function PublicProfilePage() {
               })
           }
           </div>
-          <Pagination total={scenarioParents.length} perPage={scenariosPagination.perPage} page={scenariosPagination.page} onPage={scenariosPagination.setPage} onPerPage={scenariosPagination.setPerPage}/>
+          <Pagination total={filteredScenarioParents.length} perPage={scenariosPagination.perPage} page={scenariosPagination.page} onPage={scenariosPagination.setPage} onPerPage={scenariosPagination.setPerPage}/>
         </>
       )}
 
@@ -820,7 +897,7 @@ export default function PublicProfilePage() {
                   })
               }
             </div>
-            <Pagination total={wishScenarioParents.length} perPage={wishScenariosPagination.perPage} page={wishScenariosPagination.page} onPage={wishScenariosPagination.setPage} onPerPage={wishScenariosPagination.setPerPage}/>
+            <Pagination total={filteredWishScenarioParents.length} perPage={wishScenariosPagination.perPage} page={wishScenariosPagination.page} onPage={wishScenariosPagination.setPage} onPerPage={wishScenariosPagination.setPerPage}/>
           </>
         )
       })()}
@@ -859,7 +936,7 @@ export default function PublicProfilePage() {
               </div>
             ))
           }
-          <Pagination total={sortedDotori.length} perPage={dotoriPagination.perPage} page={dotoriPagination.page} onPage={dotoriPagination.setPage} onPerPage={dotoriPagination.setPerPage}/>
+          <Pagination total={filteredDotori.length} perPage={dotoriPagination.perPage} page={dotoriPagination.page} onPage={dotoriPagination.setPage} onPerPage={dotoriPagination.setPerPage}/>
         </div>
       )}
 
@@ -897,7 +974,7 @@ export default function PublicProfilePage() {
               })
             }
           </div>
-          <Pagination total={sortedPairs.length} perPage={pairsPagination.perPage} page={pairsPagination.page} onPage={pairsPagination.setPage} onPerPage={pairsPagination.setPerPage}/>
+          <Pagination total={sortedFilteredPairs.length} perPage={pairsPagination.perPage} page={pairsPagination.page} onPage={pairsPagination.setPage} onPerPage={pairsPagination.setPerPage}/>
         </>
       )}
 
@@ -926,7 +1003,7 @@ export default function PublicProfilePage() {
               </div>
             ))
           }
-          <Pagination total={sortedAvailability.length} perPage={availabilityPagination.perPage} page={availabilityPagination.page} onPage={availabilityPagination.setPage} onPerPage={availabilityPagination.setPerPage}/>
+          <Pagination total={filteredAvailability.length} perPage={availabilityPagination.perPage} page={availabilityPagination.page} onPage={availabilityPagination.setPage} onPerPage={availabilityPagination.setPerPage}/>
         </div>
       )}
 
@@ -953,7 +1030,7 @@ export default function PublicProfilePage() {
               </div>
             ))
           }
-          <Pagination total={sortedBookmarks.length} perPage={bookmarksPagination.perPage} page={bookmarksPagination.page} onPage={bookmarksPagination.setPage} onPerPage={bookmarksPagination.setPerPage}/>
+          <Pagination total={filteredBookmarks.length} perPage={bookmarksPagination.perPage} page={bookmarksPagination.page} onPage={bookmarksPagination.setPage} onPerPage={bookmarksPagination.setPerPage}/>
         </div>
       )}
 
