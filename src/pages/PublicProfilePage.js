@@ -944,7 +944,7 @@ export default function PublicProfilePage() {
       {activeTab==='pairs' && (
         <>
           <div className="grid-auto">
-            {!sortedPairs.length
+            {!sortedFilteredPairs.length
               ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>페어 목록이 없어요</div>
               : pagedPairs.map(p => {
                 const dday = calcDday(p.first_met_date)

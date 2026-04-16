@@ -51,12 +51,12 @@ export function PairsPage() {
     setRelationTags(data||[])
   }
   const loadHistories = async (pairId) => {
-    const {data}=await supabase.from('pair_histories').select('id, play_log_id, play_logs(id,title,play_date,system_name,my_role)').eq('pair_id',pairId).order('created_at',{ascending:false})
+    const {data}=await supabase.from('pair_histories').select('id, play_log_id, play_logs(id,title,played_date,system_name,my_role)').eq('pair_id',pairId).order('created_at',{ascending:false})
     setHistoriesMap(m=>({...m,[pairId]:(data||[]).map(r=>({history_id:r.id,...r.play_logs}))}))
   }
   const loadAllLogs = async () => {
     if (logsLoaded) return
-    const {data}=await supabase.from('play_logs').select('id,title,play_date,system_name,my_role').eq('user_id',user.id).order('play_date',{ascending:false})
+    const {data}=await supabase.from('play_logs').select('id,title,played_date,system_name,my_role').eq('user_id',user.id).order('played_date',{ascending:false})
     setAllLogs(data||[])
     setLogsLoaded(true)
   }
@@ -129,7 +129,7 @@ export function PairsPage() {
     return allLogs.filter(l => {
       if (linked.has(l.id)) return false
       if (!s) return true
-      return (l.title||'').toLowerCase().includes(s) || (l.system_name||'').toLowerCase().includes(s) || (l.play_date||'').includes(s)
+      return (l.title||'').toLowerCase().includes(s) || (l.system_name||'').toLowerCase().includes(s) || (l.played_date||'').includes(s)
     })
   }, [historySearch, allLogs, historyModal, historiesMap])
 
@@ -208,7 +208,7 @@ export function PairsPage() {
                             <div key={h.history_id} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 8px',background:'var(--color-bg)',borderRadius:6,border:'1px solid var(--color-border)'}}>
                               <div style={{flex:1,minWidth:0}}>
                                 <div style={{fontSize:'0.82rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.title||'(제목 없음)'}</div>
-                                <div className="text-xs text-light">{h.play_date||''}{h.system_name?` · ${h.system_name}`:''}{h.my_role?` · ${h.my_role}`:''}</div>
+                                <div className="text-xs text-light">{h.played_date||''}{h.system_name?` · ${h.system_name}`:''}{h.my_role?` · ${h.my_role}`:''}</div>
                               </div>
                               <button className="btn btn-ghost btn-sm" style={{color:'#e57373',flexShrink:0,padding:'2px 4px'}} onClick={()=>removeHistory(item.id,h.history_id)}><Mi size='sm'>close</Mi></button>
                             </div>
@@ -257,7 +257,7 @@ export function PairsPage() {
               <div key={l.id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,border:'1px solid var(--color-border)'}}>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:'0.85rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.title||'(제목 없음)'}</div>
-                  <div className="text-xs text-light">{l.play_date||''}{l.system_name?` · ${l.system_name}`:''}{l.my_role?` · ${l.my_role}`:''}</div>
+                  <div className="text-xs text-light">{l.played_date||''}{l.system_name?` · ${l.system_name}`:''}{l.my_role?` · ${l.my_role}`:''}</div>
                 </div>
                 <button className="btn btn-primary btn-sm" style={{flexShrink:0}} onClick={async()=>{await addHistory(historyModal,l.id);setHistoryModal(null)}}>연결</button>
               </div>
