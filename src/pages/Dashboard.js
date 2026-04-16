@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { schedulesApi, playLogsApi, rulebooksApi, scenariosApi, wishScenariosApi, dotoriApi, pairsApi, supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -24,35 +24,57 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return
     const load = async () => {
-      const [l,r,sc,wish,dot,p,s,fav,noticeRes,avail,guest,book] = await Promise.all([
-        playLogsApi.getAll(user.id),
-        rulebooksApi.getAll(user.id),
-        scenariosApi.getAll(user.id),
-        wishScenariosApi.getAll(user.id),
-        dotoriApi.getAll(user.id),
-        pairsApi.getAll(user.id),
-        schedulesApi.getAll(user.id),
+      const [
+        logsCount, recentLogsRes,
+        rbCount, scCount, wishCount, dotCount, pairsCount,
+        schedRes, fav, noticeRes, avail, guest, book
+      ] = await Promise.all([
+        // 카운트만 필요한 테이블: head:true로 행 전송 없이 카운트만
+        supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',user.id),
+        supabase.from('play_logs')
+          .select('id,title,is_gm,system_name,npc,start_date,played_date')
+          .eq('user_id',user.id).order('played_date',{ascending:false,nullsFirst:false}).limit(4),
+        supabase.from('rulebooks').select('id',{count:'exact',head:true}).eq('user_id',user.id),
+        supabase.from('scenarios').select('id',{count:'exact',head:true}).eq('user_id',user.id),
+        supabase.from('wish_scenarios').select('id',{count:'exact',head:true}).eq('user_id',user.id),
+        supabase.from('dotori').select('id',{count:'exact',head:true}).eq('user_id',user.id),
+        supabase.from('pairs').select('id',{count:'exact',head:true}).eq('user_id',user.id),
+        // 일정: 오늘 이후 미완료·미취소·비차단 건만 소량 fetch
+        supabase.from('schedules')
+          .select('id,title,scheduled_date,scheduled_time,system_name,is_gm,status,entry_type')
+          .eq('user_id',user.id)
+          .neq('entry_type','blocked').neq('status','cancelled').neq('status','completed')
+          .gte('scheduled_date',todayStr)
+          .order('scheduled_date').limit(10),
         supabase.from('favorites').select('*').eq('user_id',user.id).order('created_at',{ascending:false}),
         supabase.from('notices').select('*').eq('is_active',true).order('created_at',{ascending:false}),
         supabase.from('availability').select('id',{count:'exact',head:true}).eq('user_id',user.id),
         supabase.from('guestbook').select('id',{count:'exact',head:true}).eq('owner_id',user.id),
         supabase.from('bookmarks').select('id',{count:'exact',head:true}).eq('user_id',user.id),
       ])
-      const upcomingData = (s.data||[]).filter(x=>x.entry_type!=='blocked'&&x.scheduled_date>=todayStr&&x.status!=='cancelled'&&x.status!=='completed')
-      setStats({logs:l.data?.length||0,rulebooks:r.data?.length||0,scenarios:sc.data?.length||0,wish_scenarios:wish.data?.length||0,dotori:dot.data?.length||0,pairs:p.data?.length||0,schedule:upcomingData.length,availability:avail.count||0,guestbook:guest.count||0,bookmarks:book.count||0})
-      setUpcoming(upcomingData.sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date)).slice(0,5))
-      setRecentLogs((l.data||[]).slice(0,4))
+      const upcomingData = schedRes.data || []
+      setStats({
+        logs: logsCount.count||0,
+        rulebooks: rbCount.count||0,
+        scenarios: scCount.count||0,
+        wish_scenarios: wishCount.count||0,
+        dotori: dotCount.count||0,
+        pairs: pairsCount.count||0,
+        schedule: upcomingData.length,
+        availability: avail.count||0,
+        guestbook: guest.count||0,
+        bookmarks: book.count||0,
+      })
+      setUpcoming(upcomingData.slice(0,5))
+      setRecentLogs(recentLogsRes.data||[])
       setFavorites(fav.data||[])
       const activeNotices = noticeRes.data || []
       setNotices(activeNotices)
-      // 팝업: 오늘 닫지 않은 가장 최신 팝업 공지
       const popups = activeNotices.filter(n => n.is_popup)
       if (popups.length > 0) {
         const latest = popups[0]
         const dismissedKey = `notice_dismissed_${latest.id}_${todayStr}`
-        if (!localStorage.getItem(dismissedKey)) {
-          setPopupNotice(latest)
-        }
+        if (!localStorage.getItem(dismissedKey)) setPopupNotice(latest)
       }
       setLoading(false)
     }
