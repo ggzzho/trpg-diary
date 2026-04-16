@@ -128,31 +128,21 @@ export default function NotificationCenterPage() {
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
             {paged.map(n => (
               <button key={n.id} onClick={() => handleClick(n)}
-                className="card"
-                style={{
-                  display:'flex', alignItems:'center', gap:12,
-                  padding:'12px 16px', cursor:'pointer', border:'none', textAlign:'left',
-                  background: n.is_read ? 'var(--color-surface)' : 'rgba(200,169,110,0.07)',
-                  transition:'opacity 0.15s', width:'100%',
-                }}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                className={`card notif-item`}
+                style={{ background: n.is_read ? 'var(--color-surface)' : 'rgba(200,169,110,0.07)' }}>
                 {/* 아이콘 */}
                 <div style={{
                   width:36, height:36, borderRadius:'50%', flexShrink:0,
                   background: n.is_read ? 'var(--color-nav-active-bg)' : 'rgba(200,169,110,0.15)',
                   display:'flex', alignItems:'center', justifyContent:'center',
                 }}>
-                  <Mi style={{
-                    fontSize:18,
-                    color: n.is_read ? 'var(--color-text-light)' : 'var(--color-accent)',
-                  }}>
+                  <Mi style={{ fontSize:18, color: n.is_read ? 'var(--color-text-light)' : 'var(--color-accent)' }}>
                     {NOTIF_ICON[n.type] || 'notifications'}
                   </Mi>
                 </div>
 
                 {/* 내용 */}
-                <div style={{ flex:1, minWidth:0 }}>
+                <div className="notif-content">
                   <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
                     <span style={{
                       fontSize:'0.72rem', fontWeight:600,
@@ -163,35 +153,23 @@ export default function NotificationCenterPage() {
                       {NOTIF_LABEL[n.type] || n.type}
                     </span>
                     {!n.is_read && (
-                      <div style={{ width:6, height:6, borderRadius:'50%',
-                        background:'var(--color-primary)', flexShrink:0 }} />
+                      <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--color-primary)', flexShrink:0 }} />
                     )}
                   </div>
-                  <div style={{
-                    fontSize:'0.88rem', fontWeight: n.is_read ? 400 : 600,
-                    color:'var(--color-text)',
-                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                  }}>
+                  <div style={{ fontSize:'0.88rem', fontWeight: n.is_read ? 400 : 600, color:'var(--color-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                     {n.message || n.type}
                   </div>
                   {n.preview && (
-                    <div style={{
-                      fontSize:'0.78rem', color:'var(--color-text-light)', marginTop:3,
-                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                    }}>
+                    <div style={{ fontSize:'0.78rem', color:'var(--color-text-light)', marginTop:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {n.preview}
                     </div>
                   )}
                 </div>
 
                 {/* 시간 */}
-                <div style={{ textAlign:'right', flexShrink:0 }}>
-                  <div style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>
-                    {fmtAgo(n.created_at)}
-                  </div>
-                  <div style={{ fontSize:'0.65rem', color:'var(--color-text-light)', marginTop:2, opacity:0.6 }}>
-                    {fmtDT(n.created_at)}
-                  </div>
+                <div className="notif-time">
+                  <div style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>{fmtAgo(n.created_at)}</div>
+                  <div className="notif-time-abs">{fmtDT(n.created_at)}</div>
                 </div>
               </button>
             ))}
