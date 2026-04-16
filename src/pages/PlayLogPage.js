@@ -12,9 +12,9 @@ const BLANK = {
   title:'', start_date:'', played_date:'', system_name:'', role:'PL',
   character_name:'', together_with:'', npc:'', memo:'',
   session_image_url:'', scenario_link:'', series_tag:'', session_log_url:'',
-  spoiler_content:'', spoiler_password:'', is_private:false
+  spoiler_content:'', spoiler_password:'', is_private:false, extra_urls:[]
 }
-const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, played_date:f.played_date||null, start_date:f.start_date||null} }
+const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, played_date:f.played_date||null, start_date:f.start_date||null, extra_urls:f.extra_urls||[]} }
 
 // ── 태그칩: 완전 불투명 ──
 const TAG_COLORS = {
@@ -107,7 +107,10 @@ export function LogDetailContent({ detail, isOwner }) {
         </div>
       )}
       {detail.scenario_link && <div style={{marginBottom:6}}><a href={detail.scenario_link} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}><Mi size='sm'>link</Mi> 시나리오 링크</a></div>}
-      {detail.session_log_url && <div style={{marginBottom:12}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}><Mi size='sm'>save</Mi> 세션 로그 백업</a></div>}
+      {detail.session_log_url && <div style={{marginBottom:6}}><a href={detail.session_log_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}><Mi size='sm'>save</Mi> 세션 로그 백업</a></div>}
+      {(detail.extra_urls||[]).filter(u=>u.url).map((u,i)=>(
+        <div key={i} style={{marginBottom:6}}><a href={u.url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem'}}><Mi size='sm'>link</Mi> {u.label||'링크'}</a></div>
+      ))}
       <SpoilerBlock detail={detail} isOwner={!!isOwner}/>
     </div>
   )
@@ -319,6 +322,28 @@ export function PlayLogPage() {
 
           <div className="form-group"><label className="form-label">시나리오 링크 URL</label><input className="form-input" autoComplete="off" placeholder="https://..." value={form.scenario_link||''} onChange={set('scenario_link')}/></div>
           <div className="form-group"><label className="form-label">세션 로그 백업 URL</label><input className="form-input" autoComplete="off" placeholder="https://..." value={form.session_log_url||''} onChange={set('session_log_url')}/></div>
+
+          {/* 추가 URL */}
+          <div className="form-group">
+            <label className="form-label">추가 URL</label>
+            {(form.extra_urls||[]).map((u,i)=>(
+              <div key={i} style={{display:'flex',gap:6,marginBottom:6,alignItems:'center'}}>
+                <input className="form-input" placeholder="링크 이름" value={u.label||''} style={{flex:'0 0 110px'}}
+                  onChange={e=>setForm(f=>({...f,extra_urls:f.extra_urls.map((x,j)=>j===i?{...x,label:e.target.value}:x)}))}/>
+                <input className="form-input" placeholder="https://..." value={u.url||''} style={{flex:1}}
+                  onChange={e=>setForm(f=>({...f,extra_urls:f.extra_urls.map((x,j)=>j===i?{...x,url:e.target.value}:x)}))}/>
+                <button type="button" className="btn btn-ghost btn-sm" style={{color:'#e57373',flexShrink:0}}
+                  onClick={()=>setForm(f=>({...f,extra_urls:f.extra_urls.filter((_,j)=>j!==i)}))}>
+                  <Mi size='sm'>close</Mi>
+                </button>
+              </div>
+            ))}
+            <button type="button" className="btn btn-outline btn-sm" style={{marginTop:2}}
+              onClick={()=>setForm(f=>({...f,extra_urls:[...(f.extra_urls||[]),{label:'',url:''}]}))}>
+              <Mi size='sm'>add</Mi> URL 추가
+            </button>
+          </div>
+
           <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" autoComplete="off" value={form.memo||''} onChange={set('memo')}/></div>
 
           {/* 스포일러 섹션 */}
