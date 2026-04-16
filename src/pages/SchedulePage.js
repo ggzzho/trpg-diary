@@ -41,6 +41,7 @@ const hexToRgba = (hex, alpha) => {
 export default function SchedulePage() {
   const { user } = useAuth()
   const { colorMap } = useRules()
+  const today = new Date().toISOString().split('T')[0]
   const [items, setItems] = useState([])
   const [blockedItems, setBlockedItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -74,6 +75,7 @@ export default function SchedulePage() {
   const [calPopup, setCalPopup] = useState(null) // 월뷰 상세 팝업
   const [selectedDate, setSelectedDate] = useState(null) // 월뷰 날짜 선택 패널
   const [seriesConfirm, setSeriesConfirm] = useState(null) // 시리즈 삭제 확인
+  const [seriesEditConfirm, setSeriesEditConfirm] = useState(null) // 시리즈 일괄 수정 확인
   const prevViewMode = React.useRef('calendar')
   // 반복 일정 폼 state
   const [isRepeat, setIsRepeat] = useState(false)
@@ -84,7 +86,14 @@ export default function SchedulePage() {
 
   const load = async () => {
     const {data} = await schedulesApi.getAll(user.id)
-    const all = data || []
+    let all = data || []
+    // 오늘 이전이고 status==='planned'인 일정 자동 완료 처리
+    const pastPlanned = all.filter(i => i.entry_type !== 'blocked' && i.scheduled_date < today && i.status === 'planned')
+    if (pastPlanned.length > 0) {
+      await supabase.from('schedules').update({ status: 'completed' }).in('id', pastPlanned.map(i => i.id))
+      const {data: updated} = await schedulesApi.getAll(user.id)
+      all = updated || []
+    }
     setItems(all.filter(i => i.entry_type !== 'blocked'))
     setBlockedItems(all.filter(i => i.entry_type === 'blocked'))
     setLoading(false)
@@ -179,6 +188,17 @@ export default function SchedulePage() {
   }
   const openCopy = (item,e) => { e?.stopPropagation(); setCopyTarget(item); setCopyDate(item.scheduled_date); setCopyMode('copy'); setCopyModal(true) }
 
+  const saveSeriesAll = async () => {
+    if (!seriesEditConfirm) return
+    const { payload, seriesId } = seriesEditConfirm
+    // 날짜 제외 공통 항목만 일괄 업데이트
+    const { scheduled_date, ...commonFields } = payload
+    const { error } = await supabase.from('schedules').update(commonFields).eq('series_id', seriesId).eq('user_id', user.id)
+    if (error) { alert('저장 실패: ' + error.message); return }
+    setSeriesEditConfirm(null)
+    load()
+  }
+
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
     if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 일정 관리를 정리해주세요.'); return }
@@ -186,6 +206,12 @@ export default function SchedulePage() {
     const payload = {...formFields, scheduled_time:form.scheduled_time||null, end_time:form.end_time||null}
     let error
     if (editing) {
+      if (editing.series_id) {
+        // 반복 일정이면 일괄 수정 여부 확인
+        setSeriesEditConfirm({ payload, seriesId: editing.series_id, editingId: editing.id })
+        setModal(false)
+        return
+      }
       ;({ error } = await schedulesApi.update(editing.id, payload))
     } else if (isRepeat && repeatPreview.length > 1) {
       // 반복 일정 일괄 등록
@@ -224,11 +250,11 @@ export default function SchedulePage() {
     setCopyModal(false); setCopyTarget(null); setCopyDate(''); load()
   }
 
-  const today = new Date().toISOString().split('T')[0]
-
-  // 탭별 필터 - 예정: 완료 숨김
+  // 탭별 필터 - 검색 중이면 날짜 제한 없이 전체 검색
   const filtered = items.filter(i => {
-    const matchTab = filter==='upcoming' ? (i.scheduled_date>=today && i.status!=='cancelled' && i.status!=='completed')
+    const matchTab = search
+      ? true // 검색 시 탭 날짜 필터 무시, 전체 대상
+      : filter==='upcoming' ? (i.scheduled_date>=today && i.status!=='cancelled' && i.status!=='completed')
       : filter==='completed' ? i.status==='completed'
       : filter==='cancelled' ? i.status==='cancelled'
       : true
@@ -522,6 +548,7 @@ export default function SchedulePage() {
                                 }
                                 {item.is_intro&&<span className="badge badge-green">입문탁{item.intro_rule?` · ${item.intro_rule}`:''}</span>}
                               </div>
+                              {item.description&&<p className="text-xs text-light" style={{marginTop:5,lineHeight:1.55,whiteSpace:'pre-wrap'}}>{item.description}</p>}
                             </div>
                             <div style={{display:'flex',gap:4,flexShrink:0}}>
                               <button className="btn btn-ghost btn-sm" title="복사/이동" onClick={e=>openCopy(item,e)}><Mi size='sm'>content_copy</Mi></button>
@@ -897,6 +924,36 @@ export default function SchedulePage() {
                     </div>
                   </>
               }
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 시리즈 일괄 수정 confirm */}
+      {seriesEditConfirm && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:10000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div style={{background:'var(--color-surface)',borderRadius:16,padding:24,width:'100%',maxWidth:360,border:'1px solid var(--color-border)'}}>
+            <h3 style={{fontWeight:700,marginBottom:8,fontSize:'0.95rem'}}>일정 수정</h3>
+            <p style={{fontSize:'0.85rem',color:'var(--color-text-light)',marginBottom:20,lineHeight:1.65}}>
+              이 일정은 반복 일정 시리즈예요.<br/>어떻게 수정할까요?<br/>
+              <span style={{fontSize:'0.78rem'}}>(일괄 수정 시 날짜는 변경되지 않아요)</span>
+            </p>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <button className="btn btn-outline btn-sm" style={{justifyContent:'center'}}
+                onClick={async ()=>{
+                  const { payload, editingId } = seriesEditConfirm
+                  const { error } = await schedulesApi.update(editingId, payload)
+                  if (error) { alert('저장 실패: ' + error.message); return }
+                  setSeriesEditConfirm(null); load()
+                }}>
+                이 일정만 수정
+              </button>
+              <button className="btn btn-primary btn-sm" style={{justifyContent:'center'}}
+                onClick={()=>saveSeriesAll()}>
+                시리즈 전체 수정
+              </button>
+              <button className="btn btn-ghost btn-sm" style={{justifyContent:'center'}}
+                onClick={()=>setSeriesEditConfirm(null)}>취소</button>
             </div>
           </div>
         </div>
