@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { notificationsApi } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Mi } from '../components/Mi'
+import { fmtDT, fmtAgo } from '../lib/dateFormatters'
 
 const NOTIF_ICON = {
   guestbook_comment: 'mail',
@@ -17,20 +18,6 @@ const NOTIF_LABEL = {
   guestbook_reply:   '방명록 답글',
   feedback_comment:  '문의함 댓글',
   feedback_reply:    '문의 답변',
-}
-
-function fmtDT(d) {
-  const dt = new Date(d)
-  return dt.toLocaleDateString('ko-KR', { year:'numeric', month:'numeric', day:'numeric' })
-    + ' ' + dt.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
-}
-
-function fmtAgo(dateStr) {
-  const diff = (Date.now() - new Date(dateStr)) / 1000
-  if (diff < 60)    return '방금 전'
-  if (diff < 3600)  return `${Math.floor(diff/60)}분 전`
-  if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`
-  return `${Math.floor(diff/86400)}일 전`
 }
 
 const PER_PAGE = 30

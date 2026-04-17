@@ -1,5 +1,5 @@
 // src/pages/PublicProfilePage.js
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
@@ -209,6 +209,10 @@ export default function PublicProfilePage() {
   const [pubHistoryViewPair, setPubHistoryViewPair] = useState(null)
   const [pubHistoryViewSearch, setPubHistoryViewSearch] = useState('')
   const [pubHistoryViewPage, setPubHistoryViewPage] = useState(1)
+  // 탭별 lazy load
+  const [counts, setCounts] = useState({})
+  const [tabLoading, setTabLoading] = useState({})
+  const loadedRef = useRef(new Set())
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
   const publicLogs = (data.logs||[]).filter(l => !l.is_private)
@@ -357,54 +361,83 @@ export default function PublicProfilePage() {
     return m
   }, [data.rulebooks])
 
+  const loadTabData = async (tab, profileId) => {
+    if (loadedRef.current.has(tab)) return
+    if (['guestbook','feedback'].includes(tab)) { loadedRef.current.add(tab); return }
+    loadedRef.current.add(tab)
+    setTabLoading(t => ({...t, [tab]: true}))
+    const safeQ = async p => { try { const r = await p; return r.data || [] } catch { return [] } }
+    let updates = {}
+    if (tab === 'schedules') {
+      const today = new Date().toISOString().split('T')[0]
+      const [schedsAll, rbooks] = await Promise.all([
+        safeQ(supabase.from('schedules').select('*').eq('user_id',profileId).order('scheduled_date').limit(2500)),
+        loadedRef.current.has('rulebooks')
+          ? Promise.resolve(null)
+          : safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(2500))
+      ])
+      updates.schedules = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
+      updates.blocked = schedsAll.filter(s => s.entry_type === 'blocked')
+      if (rbooks !== null) { updates.rulebooks = rbooks; loadedRef.current.add('rulebooks') }
+    } else if (tab === 'logs') {
+      updates.logs = await safeQ(supabase.from('play_logs').select('*').eq('user_id',profileId).order('played_date',{ascending:false,nullsFirst:false}).limit(2500))
+    } else if (tab === 'rulebooks') {
+      updates.rulebooks = await safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(2500))
+    } else if (tab === 'scenarios') {
+      updates.scenarios = await safeQ(supabase.from('scenarios').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:true}).limit(2500))
+    } else if (tab === 'wish_scenarios') {
+      updates.wish_scenarios = await safeQ(supabase.from('wish_scenarios').select('*').eq('user_id',profileId).order('created_at',{ascending:true}).limit(2500))
+    } else if (tab === 'dotori') {
+      updates.dotori = await safeQ(supabase.from('dotori').select('*').eq('user_id',profileId).order('title').limit(2500))
+    } else if (tab === 'pairs') {
+      updates.pairs = await safeQ(pairsApi.getAll(profileId))
+    } else if (tab === 'availability') {
+      updates.availability = await safeQ(supabase.from('availability').select('*').eq('user_id',profileId).eq('is_active',true).limit(2500))
+    } else if (tab === 'bookmarks') {
+      updates.bookmarks = await safeQ(supabase.from('bookmarks').select('*').eq('user_id',profileId).order('title').limit(2500))
+    }
+    setData(d => ({...d, ...updates}))
+    setTabLoading(t => ({...t, [tab]: false}))
+  }
+
   useEffect(() => {
     const load = async () => {
       const { data:p, error } = await getProfile(username)
       if (error || !p) { setNotFound(true); setLoading(false); return }
       setProfile(p)
 
-      // 페어 정렬 설정 동기화
       if (p.pair_sort_order) setPairSort(p.pair_sort_order)
-
-      // 방문자 뷰 모드: localStorage 우선, 없으면 오너 dark_mode 기본값
       const saved = localStorage.getItem(`trpg_view_${username}`)
       setViewDark(saved !== null ? saved === 'dark' : (p.dark_mode || false))
 
+      // 탭 카운트 + 통계용 경량 head 쿼리
       const today = new Date().toISOString().split('T')[0]
-      const safe = async fn => { try { const r = await fn; return r.data || [] } catch { return [] } }
-      const [logs, rulebooks, scenarios, pairs, avail, schedsAll, bookmarks, guestbook, wish_scenarios, dotori] = await Promise.all([
-        safe(supabase.from('play_logs').select('*').eq('user_id', p.id).order('played_date', { ascending: false, nullsFirst: false }).limit(3000).then(r=>r)),
-        safe(supabase.from('rulebooks').select('*').eq('user_id', p.id)
-          .order('sort_order', { ascending: true, nullsFirst: false })
-          .order('created_at', { ascending: false })
-          .limit(3000).then(r=>r)),
-        safe(supabase.from('scenarios').select('*').eq('user_id', p.id)
-          .order('sort_order', { ascending: true, nullsFirst: false })
-          .order('created_at', { ascending: true })
-          .limit(3000).then(r=>r)),
-        safe(pairsApi.getAll(p.id)),
-        safe(supabase.from('availability').select('*').eq('user_id',p.id).eq('is_active',true).limit(3000).then(r=>r)),
-        safe(supabase.from('schedules').select('*').eq('user_id',p.id)
-          .order('scheduled_date').limit(3000).then(r=>r)),
-        safe(supabase.from('bookmarks').select('*').eq('user_id',p.id).order('title').limit(3000).then(r=>r)),
-        safe(supabase.from('guestbook').select('id').eq('owner_id',p.id).limit(3000).then(r=>r)),
-        safe(supabase.from('wish_scenarios').select('*').eq('user_id',p.id).order('created_at',{ascending:true}).limit(3000).then(r=>r)),
-        safe(supabase.from('dotori').select('*').eq('user_id',p.id).order('title').limit(3000).then(r=>r)),
+      const safeC = async pr => { try { const r = await pr; return r.count || 0 } catch { return 0 } }
+      const [logsCount, rulebooksCount, scenariosCount, wishCount, dotoriCount, pairsCount, schedsCount, availCount, guestbookCount, bookmarksCount] = await Promise.all([
+        safeC(supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',p.id).eq('is_private',false)),
+        safeC(supabase.from('rulebooks').select('id',{count:'exact',head:true}).eq('user_id',p.id).is('parent_id',null)),
+        safeC(supabase.from('scenarios').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
+        safeC(supabase.from('wish_scenarios').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
+        safeC(supabase.from('dotori').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
+        safeC(supabase.from('pairs').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
+        safeC(supabase.from('schedules').select('id',{count:'exact',head:true}).eq('user_id',p.id).neq('entry_type','blocked').neq('status','cancelled').neq('status','completed').gte('scheduled_date',today)),
+        safeC(supabase.from('availability').select('id',{count:'exact',head:true}).eq('user_id',p.id).eq('is_active',true)),
+        safeC(supabase.from('guestbook').select('id',{count:'exact',head:true}).eq('owner_id',p.id)),
+        safeC(supabase.from('bookmarks').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
       ])
-      const scheds = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
-      const blocked = schedsAll.filter(s => s.entry_type === 'blocked')
-      setData({ logs, rulebooks, scenarios, pairs, availability:avail, schedules:scheds, blocked, bookmarks, guestbook, wish_scenarios, dotori })
+      setCounts({ logs:logsCount, rulebooks:rulebooksCount, scenarios:scenariosCount, wish_scenarios:wishCount, dotori:dotoriCount, pairs:pairsCount, schedule:schedsCount, availability:availCount, guestbook:guestbookCount, bookmarks:bookmarksCount })
 
-      // hidden_tabs가 있으면 초기 탭이 숨겨져 있을 수 있으므로 첫 번째 보이는 탭으로 조정
       const hidden = p.hidden_tabs || []
       const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','wish_scenarios','dotori','pairs','bookmarks','guestbook']
       const requestedTab = searchParams.get('tab') || 'schedules'
+      let initialTab = requestedTab
       if (hidden.includes(requestedTab)) {
-        const firstVisible = allTabKeys.find(k => !hidden.includes(k)) || 'guestbook'
-        setActiveTab(firstVisible)
+        initialTab = allTabKeys.find(k => !hidden.includes(k)) || 'guestbook'
+        setActiveTab(initialTab)
       }
 
       setLoading(false)
+      await loadTabData(initialTab, p.id)
     }
     load()
   }, [username])
@@ -472,16 +505,16 @@ export default function PublicProfilePage() {
 
   const hiddenTabs = profile?.hidden_tabs || []
   const TABS = [
-    { key:'schedules', label:'일정', icon:'calendar_month', count:data.schedules?.length },
-    { key:'rulebooks', label:'룰북', icon:'menu_book', count:(data.rulebooks||[]).filter(r=>!r.parent_id).length },
-    { key:'logs', label:'기록', icon:'auto_stories', count:publicLogs.length },
-    { key:'availability', label:'공수표', icon:'event_available', count:data.availability?.length },
-    { key:'scenarios', label:'보유 시나리오', icon:'description', count:scenarioParents.length },
-    { key:'wish_scenarios', label:'위시 시나리오', icon:'favorite', count:wishScenarioParents.length },
-    { key:'dotori', label:'도토리', icon:'forest', count:data.dotori?.length },
-    { key:'pairs', label:'페어', icon:'people', count:data.pairs?.length },
-    { key:'bookmarks', label:'북마크', icon:'bookmark', count:data.bookmarks?.length },
-    { key:'guestbook', label:'방명록', icon:'mail' },
+    { key:'schedules', label:'일정', icon:'calendar_month', count: data.schedules?.length ?? counts.schedule },
+    { key:'rulebooks', label:'룰북', icon:'menu_book', count: data.rulebooks !== undefined ? (data.rulebooks||[]).filter(r=>!r.parent_id).length : counts.rulebooks },
+    { key:'logs', label:'기록', icon:'auto_stories', count: data.logs !== undefined ? publicLogs.length : counts.logs },
+    { key:'availability', label:'공수표', icon:'event_available', count: data.availability?.length ?? counts.availability },
+    { key:'scenarios', label:'보유 시나리오', icon:'description', count: data.scenarios !== undefined ? scenarioParents.length : counts.scenarios },
+    { key:'wish_scenarios', label:'위시 시나리오', icon:'favorite', count: data.wish_scenarios !== undefined ? wishScenarioParents.length : counts.wish_scenarios },
+    { key:'dotori', label:'도토리', icon:'forest', count: data.dotori?.length ?? counts.dotori },
+    { key:'pairs', label:'페어', icon:'people', count: data.pairs?.length ?? counts.pairs },
+    { key:'bookmarks', label:'북마크', icon:'bookmark', count: data.bookmarks?.length ?? counts.bookmarks },
+    { key:'guestbook', label:'방명록', icon:'mail', count: counts.guestbook },
     ...(profile?.is_admin ? [{ key:'feedback', label:'문의/피드백', icon:'support_agent' }] : []),
   ].filter(t => !hiddenTabs.includes(t.key))
 
@@ -607,16 +640,16 @@ export default function PublicProfilePage() {
           {/* 통계 */}
           {(() => {
             const ALL_PUBLIC_STATS = [
-              {key:'logs', label:'기록', v:publicLogs.length||0},
-              {key:'rulebooks', label:'룰북', v:(data.rulebooks||[]).filter(r=>!r.parent_id).length},
-              {key:'scenarios', label:'보유 시나리오', v:data.scenarios?.length||0},
-              {key:'wish_scenarios', label:'위시 시나리오', v:data.wish_scenarios?.length||0},
-              {key:'dotori', label:'도토리', v:data.dotori?.length||0},
-              {key:'pairs', label:'페어', v:data.pairs?.length||0},
-              {key:'schedule', label:'일정', v:data.schedules?.length||0},
-              {key:'availability', label:'공수표', v:data.availability?.length||0},
-              {key:'guestbook', label:'방명록', v:data.guestbook?.length||0},
-              {key:'bookmarks', label:'북마크', v:data.bookmarks?.length||0},
+              {key:'logs', label:'기록', v: data.logs !== undefined ? publicLogs.length : (counts.logs||0)},
+              {key:'rulebooks', label:'룰북', v: data.rulebooks !== undefined ? (data.rulebooks||[]).filter(r=>!r.parent_id).length : (counts.rulebooks||0)},
+              {key:'scenarios', label:'보유 시나리오', v: data.scenarios?.length || (counts.scenarios||0)},
+              {key:'wish_scenarios', label:'위시 시나리오', v: data.wish_scenarios?.length || (counts.wish_scenarios||0)},
+              {key:'dotori', label:'도토리', v: data.dotori?.length || (counts.dotori||0)},
+              {key:'pairs', label:'페어', v: data.pairs?.length || (counts.pairs||0)},
+              {key:'schedule', label:'일정', v: data.schedules?.length || (counts.schedule||0)},
+              {key:'availability', label:'공수표', v: data.availability?.length || (counts.availability||0)},
+              {key:'guestbook', label:'방명록', v: counts.guestbook||0},
+              {key:'bookmarks', label:'북마크', v: data.bookmarks?.length || (counts.bookmarks||0)},
             ]
             const dashCards = profile?.dashboard_cards || ['logs','rulebooks','scenarios','pairs']
             const publicStats = ALL_PUBLIC_STATS.filter(s=>dashCards.includes(s.key))
@@ -663,7 +696,7 @@ export default function PublicProfilePage() {
         {TABS.map(t => (
           <button key={t.key}
             className={`btn btn-sm ${activeTab===t.key?'btn-primary':'btn-outline'}`}
-            onClick={() => { setActiveTab(t.key); setTabSearch('') }}
+            onClick={() => { setActiveTab(t.key); setTabSearch(''); loadTabData(t.key, profile.id) }}
             style={{ display:'flex', alignItems:'center', gap:4 }}>
             <Mi size="sm" color={activeTab===t.key?'white':'accent'}>{t.icon}</Mi>
             {t.label}{t.count !== undefined ? ` (${t.count})` : ''}
@@ -672,17 +705,24 @@ export default function PublicProfilePage() {
       </div>
 
       {/* 탭 검색바 (일정·방명록·피드백 제외) */}
-      {!['schedules','guestbook','feedback'].includes(activeTab) && (
+      {!['schedules','guestbook','feedback'].includes(activeTab) && !tabLoading[activeTab] && (
         <div style={{ marginBottom:16 }}>
           <input className="form-input" placeholder="검색..." value={tabSearch} onChange={e => setTabSearch(e.target.value)} style={{ maxWidth:320 }}/>
         </div>
       )}
 
+      {/* 탭별 로딩 인디케이터 */}
+      {tabLoading[activeTab] && (
+        <div style={{ textAlign:'center', padding:'48px 0', color:'var(--color-text-light)', fontSize:'0.85rem' }}>
+          불러오는 중...
+        </div>
+      )}
+
       {/* ── 일정 (캘린더) ── */}
-      {activeTab==='schedules' && <PublicCalendar schedules={data.schedules||[]} blocked={data.blocked||[]} colorMap={publicColorMap}/>}
+      {!tabLoading[activeTab] && activeTab==='schedules' && <PublicCalendar schedules={data.schedules||[]} blocked={data.blocked||[]} colorMap={publicColorMap}/>}
 
       {/* ── 기록 (카드 + 팝업) ── */}
-      {activeTab==='logs' && (
+      {!tabLoading[activeTab] && activeTab==='logs' && (
         <>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(238px,1fr))', gap:13 }}>
             {!data.logs?.length
@@ -742,7 +782,7 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 룰북 ── */}
-      {activeTab==='rulebooks' && (() => {
+      {!tabLoading[activeTab] && activeTab==='rulebooks' && (() => {
         const allRbParents = (data.rulebooks||[]).filter(r => !r.parent_id)
         const parents = tabSearch
           ? (() => { const s=tabSearch.toLowerCase(); return allRbParents.filter(r=>(r.title||'').toLowerCase().includes(s)||(r.publisher||'').toLowerCase().includes(s)||r.tags?.some(t=>t.toLowerCase().includes(s))) })()
@@ -799,7 +839,7 @@ export default function PublicProfilePage() {
       })()}
 
       {/* ── 시나리오 ── */}
-      {activeTab==='scenarios' && (
+      {!tabLoading[activeTab] && activeTab==='scenarios' && (
         <>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {!scenarioParents.length
@@ -867,7 +907,7 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 위시 시나리오 ── */}
-      {activeTab==='wish_scenarios' && (() => {
+      {!tabLoading[activeTab] && activeTab==='wish_scenarios' && (() => {
         const renderWishItem = (item, isChild=false) => (
           <div key={item.id}
             style={{ display:'flex', alignItems:'center', gap:14, padding:'10px 14px',
@@ -937,7 +977,7 @@ export default function PublicProfilePage() {
       })()}
 
       {/* ── 도토리 ── */}
-      {activeTab==='dotori' && (
+      {!tabLoading[activeTab] && activeTab==='dotori' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {!sortedDotori.length
             ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>도토리가 없어요</div>
@@ -975,7 +1015,7 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 페어 ── */}
-      {activeTab==='pairs' && (
+      {!tabLoading[activeTab] && activeTab==='pairs' && (
         <>
           <div className="grid-auto">
             {!sortedFilteredPairs.length
@@ -1018,7 +1058,7 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 공수표 ── */}
-      {activeTab==='availability' && (
+      {!tabLoading[activeTab] && activeTab==='availability' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {!sortedAvailability.length
             ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>활성화된 공수표가 없어요</div>
@@ -1047,7 +1087,7 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 북마크 ── */}
-      {activeTab==='bookmarks' && (
+      {!tabLoading[activeTab] && activeTab==='bookmarks' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {!sortedBookmarks.length
             ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>북마크가 없어요</div>
@@ -1074,10 +1114,10 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 방명록 ── */}
-      {activeTab==='guestbook' && <GuestbookPublicView ownerId={profile.id} postId={searchParams.get('post')}/>}
+      {!tabLoading[activeTab] && activeTab==='guestbook' && <GuestbookPublicView ownerId={profile.id} postId={searchParams.get('post')}/>}
 
       {/* ── 문의/피드백 (관리자 페이지만) ── */}
-      {activeTab==='feedback' && profile?.is_admin && <FeedbackPublicView ownerId={profile.id} postId={searchParams.get('post')}/>}
+      {!tabLoading[activeTab] && activeTab==='feedback' && profile?.is_admin && <FeedbackPublicView ownerId={profile.id} postId={searchParams.get('post')}/>}
 
       {/* 푸터 */}
       <footer style={{ marginTop:60, paddingTop:20, paddingBottom:20, borderTop:'1px solid var(--color-border)', textAlign:'center', color:'var(--color-text-light)', fontSize:'0.72rem' }}>

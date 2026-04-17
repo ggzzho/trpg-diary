@@ -1,5 +1,5 @@
 // src/pages/Dashboard.js
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -101,10 +101,10 @@ export default function Dashboard() {
     {key:'guestbook', label:'방명록', value:stats.guestbook, icon:'mail', to:'/guestbook', unit:'개'},
   ]
   const dashboardCards = profile?.dashboard_cards || ['logs','rulebooks','scenarios','pairs']
-  const STAT_CARDS = ALL_STAT_CARDS.filter(c => dashboardCards.includes(c.key))
+  const STAT_CARDS = useMemo(() => ALL_STAT_CARDS.filter(c => dashboardCards.includes(c.key)), [stats, profile])
 
   // 오늘 세션 있는지 확인
-  const hasTodaySession = upcoming.some(s => s.scheduled_date === todayStr)
+  const hasTodaySession = useMemo(() => upcoming.some(s => s.scheduled_date === todayStr), [upcoming, todayStr])
 
   return (
     <div className="fade-in">

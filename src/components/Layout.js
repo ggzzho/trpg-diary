@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signOut, notificationsApi, supabase } from '../lib/supabase'
+import { fmtAgo } from '../lib/dateFormatters'
 
 const NOTICE_VIEWED_KEY = 'noticeLastViewed'
 
@@ -11,14 +12,6 @@ const NOTIF_ICON = {
   guestbook_reply:   'subdirectory_arrow_right',
   feedback_comment:  'support_agent',
   feedback_reply:    'mark_email_read',
-}
-
-function fmtAgo(dateStr) {
-  const diff = (Date.now() - new Date(dateStr)) / 1000
-  if (diff < 60)   return '방금 전'
-  if (diff < 3600) return `${Math.floor(diff/60)}분 전`
-  if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`
-  return `${Math.floor(diff/86400)}일 전`
 }
 
 const NAV_GROUPS = [

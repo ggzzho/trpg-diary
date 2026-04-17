@@ -4,12 +4,7 @@ import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Mi } from '../components/Mi'
 import { supabase, notificationsApi } from '../lib/supabase'
-
-const fmtDT = (d) => {
-  const dt = new Date(d)
-  return dt.toLocaleDateString('ko-KR', { year:'2-digit', month:'numeric', day:'numeric' })
-    + ' ' + dt.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
-}
+import { fmtDTShort as fmtDT } from '../lib/dateFormatters'
 
 const parseEntry = (g) => {
   const raw = g.content || ''
