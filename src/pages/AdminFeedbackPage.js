@@ -5,12 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 import { ConfirmDialog, LoadingSpinner, EmptyState } from '../components/Layout'
-
-const fmtDT = (d) => {
-  const dt = new Date(d)
-  return dt.toLocaleDateString('ko-KR', { year:'2-digit', month:'numeric', day:'numeric' })
-    + ' ' + dt.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
-}
+import { fmtDTShort as fmtDT } from '../lib/dateFormatters'
 
 function ReplyEditItem({ r, onDelete, onSaved, ownerId }) {
   const [editing, setEditing] = useState(false)

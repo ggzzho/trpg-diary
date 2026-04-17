@@ -90,9 +90,11 @@ export default function SchedulePage() {
     // 오늘 이전이고 status==='planned'인 일정 자동 완료 처리
     const pastPlanned = all.filter(i => i.entry_type !== 'blocked' && i.scheduled_date < today && i.status === 'planned')
     if (pastPlanned.length > 0) {
-      await supabase.from('schedules').update({ status: 'completed' }).in('id', pastPlanned.map(i => i.id))
-      const {data: updated} = await schedulesApi.getAll(user.id)
-      all = updated || []
+      const { error } = await supabase.from('schedules').update({ status: 'completed' }).in('id', pastPlanned.map(i => i.id))
+      if (!error) {
+        const {data: updated} = await schedulesApi.getAll(user.id)
+        all = updated || []
+      }
     }
     setItems(all.filter(i => i.entry_type !== 'blocked'))
     setBlockedItems(all.filter(i => i.entry_type === 'blocked'))
@@ -201,7 +203,7 @@ export default function SchedulePage() {
 
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
-    if (!editing && items.length >= 3000) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 일정 관리를 정리해주세요.'); return }
+    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 일정 관리를 정리해주세요.'); return }
     const { id, user_id, created_at, ...formFields } = form
     const payload = {...formFields, scheduled_time:form.scheduled_time||null, end_time:form.end_time||null}
     let error

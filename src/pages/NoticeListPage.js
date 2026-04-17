@@ -5,14 +5,7 @@ import { supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 import { usePagination } from '../hooks/usePagination'
 import { Pagination } from '../components/Layout'
-
-const fmtDT = (d) => {
-  const dt = new Date(d)
-  return dt.toLocaleDateString('ko-KR', { year:'numeric', month:'numeric', day:'numeric' })
-    + ' ' + dt.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
-}
-
-const isNew = (dateStr) => Date.now() - new Date(dateStr).getTime() < 24 * 60 * 60 * 1000
+import { fmtDT, isNew } from '../lib/dateFormatters'
 
 export default function NoticeListPage() {
   const [notices, setNotices] = useState([])
