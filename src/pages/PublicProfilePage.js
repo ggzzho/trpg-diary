@@ -204,6 +204,11 @@ export default function PublicProfilePage() {
   const [kakaoPopup, setKakaoPopup] = useState(false)
   const [viewDark, setViewDark] = useState(false)
   const [tabSearch, setTabSearch] = useState('')
+  // 공개 페이지 페어 히스토리 뷰
+  const [pairHistoriesMap, setPairHistoriesMap] = useState({})
+  const [pubHistoryViewPair, setPubHistoryViewPair] = useState(null)
+  const [pubHistoryViewSearch, setPubHistoryViewSearch] = useState('')
+  const [pubHistoryViewPage, setPubHistoryViewPage] = useState(1)
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
   const publicLogs = (data.logs||[]).filter(l => !l.is_private)
@@ -291,6 +296,21 @@ export default function PublicProfilePage() {
     )
   }, [data.pairs, pairSort, tabSearch])
   const pairsPagination = usePagination(sortedFilteredPairs, 20)
+
+  const pubHistoryViewLogs = useMemo(() => {
+    if (!pubHistoryViewPair) return []
+    const s = pubHistoryViewSearch.toLowerCase()
+    const list = pairHistoriesMap[pubHistoryViewPair.id] || []
+    if (!s) return list
+    return list.filter(h =>
+      (h.title||'').toLowerCase().includes(s) ||
+      (h.system_name||'').toLowerCase().includes(s) ||
+      (h.played_date||'').includes(s)
+    )
+  }, [pubHistoryViewPair, pubHistoryViewSearch, pairHistoriesMap])
+  const PHV_PER_PAGE = 10
+  const phvTotalPages = Math.ceil(pubHistoryViewLogs.length / PHV_PER_PAGE) || 1
+  const phvPaged = pubHistoryViewLogs.slice((pubHistoryViewPage-1)*PHV_PER_PAGE, pubHistoryViewPage*PHV_PER_PAGE)
 
   const wishScenarioParents = [...(data.wish_scenarios||[]).filter(s => !s.parent_id)].sort((a,b) =>
     (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase(),'ko')
@@ -411,6 +431,20 @@ export default function PublicProfilePage() {
   useEffect(() => {
     return () => { document.title = 'TRPG Diary ✦' }
   }, [])
+
+  const loadPairHistories = async (pairId) => {
+    const { data } = await supabase.from('pair_histories')
+      .select('id, play_log_id, play_logs(id,title,played_date,system_name,my_role)')
+      .eq('pair_id', pairId)
+      .order('created_at', { ascending: false })
+    setPairHistoriesMap(m => ({ ...m, [pairId]: (data||[]).map(r => ({ history_id: r.id, ...r.play_logs })) }))
+  }
+  const openPubHistoryView = async (pair) => {
+    setPubHistoryViewPair(pair)
+    setPubHistoryViewSearch('')
+    setPubHistoryViewPage(1)
+    if (pairHistoriesMap[pair.id] === undefined) await loadPairHistories(pair.id)
+  }
 
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -969,6 +1003,11 @@ export default function PublicProfilePage() {
                       {p.first_met_date && <div className="text-xs text-light"><Mi size='sm' color='light'>calendar_today</Mi> {p.first_met_date} 첫 만남</div>}
                       {p.memo && <p className="text-xs text-light" style={{ marginTop:8, borderTop:'1px solid var(--color-border)', paddingTop:8 }}>{p.memo}</p>}
                     </div>
+                    <div style={{ padding:'8px 14px', borderTop:'1px solid var(--color-border)' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>openPubHistoryView(p)}>
+                        <Mi size='sm'>history</Mi> 히스토리{pairHistoriesMap[p.id]!==undefined&&` (${pairHistoriesMap[p.id].length})`}
+                      </button>
+                    </div>
                   </div>
                 )
               })
@@ -1068,6 +1107,35 @@ export default function PublicProfilePage() {
         </div>
         {FOOTER_TEXT}
       </footer>
+
+      {/* 페어 히스토리 뷰 모달 (읽기 전용) */}
+      <Modal isOpen={!!pubHistoryViewPair} onClose={()=>setPubHistoryViewPair(null)} title={`${pubHistoryViewPair?.name || ''} 히스토리`}
+        footer={<button className="btn btn-outline btn-sm" onClick={()=>setPubHistoryViewPair(null)}>닫기</button>}
+      >
+        <input className="form-input" placeholder="제목, 시스템, 날짜 검색..." value={pubHistoryViewSearch} onChange={e=>{setPubHistoryViewSearch(e.target.value);setPubHistoryViewPage(1)}} style={{marginBottom:10}}/>
+        {pubHistoryViewPair && pairHistoriesMap[pubHistoryViewPair.id]===undefined
+          ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>로딩 중...</div>
+          :pubHistoryViewLogs.length===0
+            ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>연결된 기록이 없어요.</div>
+            :<div style={{display:'flex',flexDirection:'column',gap:4}}>
+              {phvPaged.map(h=>(
+                <div key={h.history_id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,border:'1px solid var(--color-border)'}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:'0.85rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.title||'(제목 없음)'}</div>
+                    <div className="text-xs text-light">{h.played_date||''}{h.system_name?` · ${h.system_name}`:''}{h.my_role?` · ${h.my_role}`:''}</div>
+                  </div>
+                </div>
+              ))}
+              {phvTotalPages>1&&(
+                <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:8,marginTop:8}}>
+                  <button className="btn btn-ghost btn-sm" disabled={pubHistoryViewPage===1} onClick={()=>setPubHistoryViewPage(p=>p-1)}>‹</button>
+                  <span className="text-xs text-light">{pubHistoryViewPage} / {phvTotalPages}</span>
+                  <button className="btn btn-ghost btn-sm" disabled={pubHistoryViewPage===phvTotalPages} onClick={()=>setPubHistoryViewPage(p=>p+1)}>›</button>
+                </div>
+              )}
+            </div>
+        }
+      </Modal>
 
       {/* 카카오페이 PC 안내 팝업 */}
       {kakaoPopup && (

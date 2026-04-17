@@ -29,12 +29,14 @@ export function PairsPage() {
   // localStorage에서 초기값 로드
   const [sortOrder, setSortOrderState] = useState(() => localStorage.getItem(SORT_KEY) || 'asc')
   // 페어 히스토리
-  const [historiesMap, setHistoriesMap] = useState({}) // pair_id → [{history_id, play_log}]
-  const [expandedPairs, setExpandedPairs] = useState({}) // pair_id → bool
-  const [historyModal, setHistoryModal] = useState(null) // pair_id | null
+  const [historiesMap, setHistoriesMap] = useState({}) // pair_id → [{history_id, ...play_log}]
+  const [historyModal, setHistoryModal] = useState(null) // pair_id | null (기록 연결 모달)
   const [historySearch, setHistorySearch] = useState('')
   const [allLogs, setAllLogs] = useState([])
   const [logsLoaded, setLogsLoaded] = useState(false)
+  const [historyViewPair, setHistoryViewPair] = useState(null) // 히스토리 뷰 모달
+  const [historyViewSearch, setHistoryViewSearch] = useState('')
+  const [historyViewPage, setHistoryViewPage] = useState(1)
 
   // 정렬 변경 시 localStorage + Supabase 동시 저장
   const setSortOrder = async (order) => {
@@ -60,10 +62,11 @@ export function PairsPage() {
     setAllLogs(data||[])
     setLogsLoaded(true)
   }
-  const toggleHistory = async (pairId) => {
-    const next = !expandedPairs[pairId]
-    setExpandedPairs(m=>({...m,[pairId]:next}))
-    if (next && historiesMap[pairId] === undefined) await loadHistories(pairId)
+  const openHistoryView = async (pair) => {
+    setHistoryViewPair(pair)
+    setHistoryViewSearch('')
+    setHistoryViewPage(1)
+    if (historiesMap[pair.id] === undefined) await loadHistories(pair.id)
   }
   const openHistoryModal = async (pairId) => {
     await loadAllLogs()
@@ -133,6 +136,21 @@ export function PairsPage() {
     })
   }, [historySearch, allLogs, historyModal, historiesMap])
 
+  const historyViewLogs = useMemo(() => {
+    if (!historyViewPair) return []
+    const s = historyViewSearch.toLowerCase()
+    const list = historiesMap[historyViewPair.id] || []
+    if (!s) return list
+    return list.filter(h =>
+      (h.title||'').toLowerCase().includes(s) ||
+      (h.system_name||'').toLowerCase().includes(s) ||
+      (h.played_date||'').includes(s)
+    )
+  }, [historyViewPair, historyViewSearch, historiesMap])
+  const HV_PER_PAGE = 10
+  const hvTotalPages = Math.ceil(historyViewLogs.length / HV_PER_PAGE) || 1
+  const hvPaged = historyViewLogs.slice((historyViewPage-1)*HV_PER_PAGE, historyViewPage*HV_PER_PAGE)
+
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
@@ -185,38 +203,12 @@ export function PairsPage() {
                   {item.memo&&<p className="text-xs text-light" style={{marginTop:8,borderTop:'1px solid var(--color-border)',paddingTop:8}}>{item.memo}</p>}
                 </div>
                 <div style={{padding:'8px 14px',borderTop:'1px solid var(--color-border)',display:'flex',gap:8,justifyContent:'flex-end'}}>
-                  <button className="btn btn-ghost btn-sm" onClick={()=>toggleHistory(item.id)} style={{marginRight:'auto'}}>
-                    <Mi size='sm'>history</Mi> 히스토리 {expandedPairs[item.id]?'▲':'▼'}
+                  <button className="btn btn-ghost btn-sm" onClick={()=>openHistoryView(item)} style={{marginRight:'auto'}}>
+                    <Mi size='sm'>history</Mi> 히스토리{historiesMap[item.id]!==undefined&&` (${historiesMap[item.id].length})`}
                   </button>
                   <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
                   <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
                 </div>
-                {expandedPairs[item.id]&&(
-                  <div style={{padding:'10px 14px',borderTop:'1px solid var(--color-border)',background:'var(--color-bg-secondary)'}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                      <span className="text-xs text-light" style={{fontWeight:600}}>연결된 기록 ({(historiesMap[item.id]||[]).length})</span>
-                      <button className="btn btn-outline btn-sm" style={{fontSize:'0.72rem',padding:'2px 8px'}} onClick={()=>openHistoryModal(item.id)}>
-                        <Mi size='sm'>add</Mi> 기록 연결
-                      </button>
-                    </div>
-                    {historiesMap[item.id]===undefined
-                      ?<div className="text-xs text-light">로딩 중...</div>
-                      :(historiesMap[item.id]||[]).length===0
-                        ?<div className="text-xs text-light">연결된 기록이 없어요.</div>
-                        :<div style={{display:'flex',flexDirection:'column',gap:4}}>
-                          {(historiesMap[item.id]||[]).map(h=>(
-                            <div key={h.history_id} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 8px',background:'var(--color-bg)',borderRadius:6,border:'1px solid var(--color-border)'}}>
-                              <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontSize:'0.82rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.title||'(제목 없음)'}</div>
-                                <div className="text-xs text-light">{h.played_date||''}{h.system_name?` · ${h.system_name}`:''}{h.my_role?` · ${h.my_role}`:''}</div>
-                              </div>
-                              <button className="btn btn-ghost btn-sm" style={{color:'#e57373',flexShrink:0,padding:'2px 4px'}} onClick={()=>removeHistory(item.id,h.history_id)}><Mi size='sm'>close</Mi></button>
-                            </div>
-                          ))}
-                        </div>
-                    }
-                  </div>
-                )}
               </div>
             )
           })}
@@ -246,6 +238,42 @@ export function PairsPage() {
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
       ><TagManager tags={relationTags} onAdd={addTag} onEdit={editTag} onRemove={removeTag} placeholder="연인, 친구, 가족..."/></Modal>
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 페어를 삭제하시겠어요?"/>
+      {/* 히스토리 뷰 모달 */}
+      <Modal isOpen={!!historyViewPair} onClose={()=>setHistoryViewPair(null)} title={`${historyViewPair?.name || ''} 히스토리`}
+        footer={
+          <div style={{display:'flex',gap:8,width:'100%',justifyContent:'space-between'}}>
+            <button className="btn btn-outline btn-sm" onClick={()=>openHistoryModal(historyViewPair?.id)}>
+              <Mi size='sm'>add</Mi> 기록 연결
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={()=>setHistoryViewPair(null)}>닫기</button>
+          </div>
+        }
+      >
+        <input className="form-input" placeholder="제목, 시스템, 날짜 검색..." value={historyViewSearch} onChange={e=>{setHistoryViewSearch(e.target.value);setHistoryViewPage(1)}} style={{marginBottom:10}}/>
+        {historyViewPair && historiesMap[historyViewPair.id]===undefined
+          ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>로딩 중...</div>
+          :historyViewLogs.length===0
+            ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>연결된 기록이 없어요.</div>
+            :<div style={{display:'flex',flexDirection:'column',gap:4}}>
+              {hvPaged.map(h=>(
+                <div key={h.history_id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,border:'1px solid var(--color-border)'}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:'0.85rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.title||'(제목 없음)'}</div>
+                    <div className="text-xs text-light">{h.played_date||''}{h.system_name?` · ${h.system_name}`:''}{h.my_role?` · ${h.my_role}`:''}</div>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373',flexShrink:0,padding:'2px 4px'}} onClick={()=>removeHistory(historyViewPair.id,h.history_id)}><Mi size='sm'>close</Mi></button>
+                </div>
+              ))}
+              {hvTotalPages>1&&(
+                <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:8,marginTop:8}}>
+                  <button className="btn btn-ghost btn-sm" disabled={historyViewPage===1} onClick={()=>setHistoryViewPage(p=>p-1)}>‹</button>
+                  <span className="text-xs text-light">{historyViewPage} / {hvTotalPages}</span>
+                  <button className="btn btn-ghost btn-sm" disabled={historyViewPage===hvTotalPages} onClick={()=>setHistoryViewPage(p=>p+1)}>›</button>
+                </div>
+              )}
+            </div>
+        }
+      </Modal>
       <Modal isOpen={!!historyModal} onClose={()=>setHistoryModal(null)} title="기록 연결"
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setHistoryModal(null)}>닫기</button>}
       >
