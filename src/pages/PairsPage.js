@@ -280,19 +280,35 @@ export function PairsPage() {
           </div>
         }
       >
-        <input className="form-input" placeholder="제목, 시스템, 날짜 검색..." value={historyViewSearch} onChange={e=>{setHistoryViewSearch(e.target.value);setHistoryViewPage(1)}} style={{marginBottom:10}}/>
+        <input className="form-input" placeholder="🔍 제목, 시리즈, 룰, 날짜 검색..." value={historyViewSearch} onChange={e=>{setHistoryViewSearch(e.target.value);setHistoryViewPage(1)}} style={{marginBottom:12}}/>
         {historyViewPair && historiesMap[historyViewPair.id]===undefined
-          ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>로딩 중...</div>
+          ?<div className="text-xs text-light" style={{textAlign:'center',padding:'24px 0'}}>로딩 중...</div>
           :historyViewLogs.length===0
-            ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>연결된 기록이 없어요.</div>
-            :<div style={{display:'flex',flexDirection:'column',gap:4}}>
+            ?<div className="text-xs text-light" style={{textAlign:'center',padding:'24px 0'}}>연결된 기록이 없어요.</div>
+            :<div style={{display:'flex',flexDirection:'column',gap:8}}>
               {hvPaged.map(h=>(
-                <div key={h.history_id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,border:'1px solid var(--color-border)'}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:'0.85rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.title||'(제목 없음)'}</div>
-                    <div className="text-xs text-light">{h.played_date||''}{h.system_name?` · ${h.system_name}`:''}{h.role?` · ${h.role}`:''}</div>
+                <div key={h.history_id} style={{display:'flex',gap:10,alignItems:'center',padding:'10px 10px',borderRadius:10,border:'1px solid var(--color-border)',background:'var(--color-surface)'}}>
+                  {/* 썸네일 */}
+                  <div style={{width:56,height:56,borderRadius:7,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    {h.session_image_url
+                      ?<img src={h.session_image_url} alt={h.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                      :<Mi size="lg" color="light">auto_stories</Mi>
+                    }
                   </div>
-                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373',flexShrink:0,padding:'2px 4px'}} onClick={()=>removeHistory(historyViewPair.id,h.history_id)}><Mi size='sm'>close</Mi></button>
+                  {/* 정보 */}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:4}}>{h.title||'(제목 없음)'}</div>
+                    <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:3}}>
+                      {h.series_tag && <TagChip type="series" label={h.series_tag}/>}
+                      {h.role && <TagChip type="role" label={h.role}/>}
+                      {h.system_name && <TagChip type="rule" label={h.system_name}/>}
+                    </div>
+                    <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',display:'flex',gap:8,flexWrap:'wrap'}}>
+                      {h.start_date && <span>Start. {format(new Date(h.start_date),'yyyy.MM.dd')}</span>}
+                      {h.played_date && <span>End. {format(new Date(h.played_date),'yyyy.MM.dd')}</span>}
+                    </div>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" style={{color:'#e57373',flexShrink:0,padding:'4px 6px'}} onClick={()=>removeHistory(historyViewPair.id,h.history_id)}><Mi size='sm'>close</Mi></button>
                 </div>
               ))}
               {hvTotalPages>1&&(

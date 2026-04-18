@@ -394,7 +394,7 @@ export default function PublicProfilePage() {
       updates.pairs = pairs
       // 히스토리 카운트 즉시 표시를 위해 전체 pre-load
       const { data: hData } = await supabase.from('pair_histories')
-        .select('id, pair_id, play_log_id, play_logs(id,title,played_date,system_name,role)')
+        .select('id, pair_id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url,together_with,character_name)')
         .eq('user_id', profileId).order('created_at', {ascending:false})
       const hMap = {}
       pairs.forEach(p => { hMap[p.id] = [] })
@@ -479,7 +479,7 @@ export default function PublicProfilePage() {
 
   const loadPairHistories = async (pairId) => {
     const { data } = await supabase.from('pair_histories')
-      .select('id, play_log_id, play_logs(id,title,played_date,system_name,role)')
+      .select('id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url,together_with,character_name)')
       .eq('pair_id', pairId)
       .order('created_at', { ascending: false })
     setPairHistoriesMap(m => ({ ...m, [pairId]: (data||[]).map(r => ({ history_id: r.id, ...r.play_logs })) }))
@@ -1206,12 +1206,28 @@ export default function PublicProfilePage() {
           ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>로딩 중...</div>
           :pubHistoryViewLogs.length===0
             ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>연결된 기록이 없어요.</div>
-            :<div style={{display:'flex',flexDirection:'column',gap:4}}>
+            :<div style={{display:'flex',flexDirection:'column',gap:8}}>
               {phvPaged.map(h=>(
-                <div key={h.history_id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,border:'1px solid var(--color-border)'}}>
+                <div key={h.history_id} style={{display:'flex',gap:10,alignItems:'center',padding:'10px',borderRadius:10,border:'1px solid var(--color-border)',background:'var(--color-surface)'}}>
+                  {/* 썸네일 */}
+                  <div style={{width:56,height:56,borderRadius:7,overflow:'hidden',flexShrink:0,background:'var(--color-bg)',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid var(--color-border)'}}>
+                    {h.session_image_url
+                      ?<img src={h.session_image_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                      :<Mi size="lg" color="light">auto_stories</Mi>
+                    }
+                  </div>
+                  {/* 정보 */}
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:'0.85rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.title||'(제목 없음)'}</div>
-                    <div className="text-xs text-light">{h.played_date||''}{h.system_name?` · ${h.system_name}`:''}{h.role?` · ${h.role}`:''}</div>
+                    <div style={{fontWeight:700,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{h.title||'(제목 없음)'}</div>
+                    <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:3}}>
+                      {h.series_tag && <Chip type="series" label={h.series_tag}/>}
+                      {h.role && <Chip type="role" label={h.role}/>}
+                      {h.system_name && <Chip type="rule" label={h.system_name}/>}
+                    </div>
+                    <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',display:'flex',gap:8,flexWrap:'wrap'}}>
+                      {h.start_date && <span>Start. {format(new Date(h.start_date),'yyyy.MM.dd')}</span>}
+                      {h.played_date && <span>End. {format(new Date(h.played_date),'yyyy.MM.dd')}</span>}
+                    </div>
                   </div>
                 </div>
               ))}
