@@ -96,7 +96,7 @@ export default function Dashboard() {
     {key:'dotori', label:'도토리', value:stats.dotori, icon:'forest', to:'/dotori', unit:'개'},
     {key:'availability', label:'공수표', value:stats.availability, icon:'event_available', to:'/availability', unit:'개'},
     {key:'logs', label:'다녀온 기록', value:stats.logs, icon:'auto_stories', to:'/logs', unit:'회'},
-    {key:'pairs', label:'페어 목록', value:stats.pairs, icon:'people', to:'/pairs', unit:'명'},
+    {key:'pairs', label:'페어/팀 목록', value:stats.pairs, icon:'people', to:'/pairs', unit:'명'},
     {key:'bookmarks', label:'북마크', value:stats.bookmarks, icon:'bookmark', to:'/bookmarks', unit:'개'},
     {key:'guestbook', label:'방명록', value:stats.guestbook, icon:'mail', to:'/guestbook', unit:'개'},
   ]

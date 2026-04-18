@@ -120,7 +120,7 @@ export function PairsPage() {
   const openEdit = item => { setEditing(item); setForm({...item,relations:item.relations||[]}); setModal(true) }
   const save = async () => {
     if (!form.name) return
-    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 페어 목록을 정리해주세요.'); return }
+    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 페어/팀 목록을 정리해주세요.'); return }
     const validTagNames = relationTags.map(t=>t.name)
     const cleanedRelations = (form.relations||[]).filter(r=>validTagNames.includes(r))
     const payload = cleanPayload({...form,relations:cleanedRelations})
@@ -185,7 +185,7 @@ export function PairsPage() {
   return (
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
-        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>people</Mi>페어 목록</h1><p className="page-subtitle">함께한 소중한 동료들을 기록해요 ({items.length}명)</p></div>
+        <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>people</Mi>페어/팀 목록</h1><p className="page-subtitle">함께한 소중한 동료들을 기록해요 ({items.length}명)</p></div>
         <div className="flex gap-8">
           <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}><Mi size='sm'>sell</Mi> 관계 관리</button>
           <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 페어 추가</button>
