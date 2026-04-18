@@ -190,13 +190,41 @@ export default function SchedulePage() {
   }
   const openCopy = (item,e) => { e?.stopPropagation(); setCopyTarget(item); setCopyDate(item.scheduled_date); setCopyMode('copy'); setCopyModal(true) }
 
-  const saveSeriesAll = async () => {
+  const saveSeriesAll = async (includeDates = false) => {
     if (!seriesEditConfirm) return
-    const { payload, seriesId } = seriesEditConfirm
-    // 날짜 제외 공통 항목만 일괄 업데이트
-    const { scheduled_date, ...commonFields } = payload
-    const { error } = await supabase.from('schedules').update(commonFields).eq('series_id', seriesId).eq('user_id', user.id)
-    if (error) { alert('저장 실패: ' + error.message); return }
+    const { payload, seriesId, originalDate } = seriesEditConfirm
+    const { scheduled_date: newDate, ...commonFields } = payload
+
+    if (includeDates && newDate && originalDate && newDate !== originalDate) {
+      // 시리즈 fetch 후 날짜 오프셋 일괄 적용
+      const { data: seriesItems, error: fetchErr } = await supabase
+        .from('schedules').select('id, scheduled_date')
+        .eq('series_id', seriesId).eq('user_id', user.id)
+      if (fetchErr || !seriesItems) { alert('시리즈를 불러올 수 없어요.'); return }
+
+      const diffDays = Math.round(
+        (new Date(newDate + 'T00:00:00') - new Date(originalDate + 'T00:00:00')) / 86400000
+      )
+      // 공통 필드 일괄 업데이트
+      const { error: err1 } = await supabase.from('schedules').update(commonFields)
+        .eq('series_id', seriesId).eq('user_id', user.id)
+      if (err1) { alert('저장 실패: ' + err1.message); return }
+      // 각 항목 날짜에 오프셋 적용
+      const results = await Promise.all(
+        seriesItems.map(i => {
+          const d = new Date(i.scheduled_date + 'T00:00:00')
+          d.setDate(d.getDate() + diffDays)
+          return supabase.from('schedules').update({ scheduled_date: format(d, 'yyyy-MM-dd') }).eq('id', i.id)
+        })
+      )
+      const dateErr = results.find(r => r.error)
+      if (dateErr) { alert('날짜 저장 실패: ' + dateErr.error.message); return }
+    } else {
+      // 날짜 제외 공통 항목만 일괄 업데이트
+      const { error } = await supabase.from('schedules').update(commonFields)
+        .eq('series_id', seriesId).eq('user_id', user.id)
+      if (error) { alert('저장 실패: ' + error.message); return }
+    }
     setSeriesEditConfirm(null)
     load()
   }
@@ -210,7 +238,7 @@ export default function SchedulePage() {
     if (editing) {
       if (editing.series_id) {
         // 반복 일정이면 일괄 수정 여부 확인
-        setSeriesEditConfirm({ payload, seriesId: editing.series_id, editingId: editing.id })
+        setSeriesEditConfirm({ payload, seriesId: editing.series_id, editingId: editing.id, originalDate: editing.scheduled_date })
         setModal(false)
         return
       }
@@ -935,34 +963,54 @@ export default function SchedulePage() {
       )}
 
       {/* 시리즈 일괄 수정 confirm */}
-      {seriesEditConfirm && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:10000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-          <div style={{background:'var(--color-surface)',borderRadius:16,padding:24,width:'100%',maxWidth:360,border:'1px solid var(--color-border)'}}>
-            <h3 style={{fontWeight:700,marginBottom:8,fontSize:'0.95rem'}}>일정 수정</h3>
-            <p style={{fontSize:'0.85rem',color:'var(--color-text-light)',marginBottom:20,lineHeight:1.65}}>
-              이 일정은 반복 일정 시리즈예요.<br/>어떻게 수정할까요?<br/>
-              <span style={{fontSize:'0.78rem'}}>(일괄 수정 시 날짜는 변경되지 않아요)</span>
-            </p>
-            <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              <button className="btn btn-outline btn-sm" style={{justifyContent:'center'}}
-                onClick={async ()=>{
-                  const { payload, editingId } = seriesEditConfirm
-                  const { error } = await schedulesApi.update(editingId, payload)
-                  if (error) { alert('저장 실패: ' + error.message); return }
-                  setSeriesEditConfirm(null); load()
-                }}>
-                이 일정만 수정
-              </button>
-              <button className="btn btn-primary btn-sm" style={{justifyContent:'center'}}
-                onClick={()=>saveSeriesAll()}>
-                시리즈 전체 수정
-              </button>
-              <button className="btn btn-ghost btn-sm" style={{justifyContent:'center'}}
-                onClick={()=>setSeriesEditConfirm(null)}>취소</button>
+      {seriesEditConfirm && (()=>{
+        const { payload, originalDate } = seriesEditConfirm
+        const dateChanged = payload.scheduled_date && originalDate && payload.scheduled_date !== originalDate
+        const diffDays = dateChanged ? Math.round(
+          (new Date(payload.scheduled_date + 'T00:00:00') - new Date(originalDate + 'T00:00:00')) / 86400000
+        ) : 0
+        return (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:10000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+            <div style={{background:'var(--color-surface)',borderRadius:16,padding:24,width:'100%',maxWidth:360,border:'1px solid var(--color-border)'}}>
+              <h3 style={{fontWeight:700,marginBottom:8,fontSize:'0.95rem'}}>일정 수정</h3>
+              <p style={{fontSize:'0.85rem',color:'var(--color-text-light)',marginBottom:20,lineHeight:1.65}}>
+                이 일정은 반복 일정 시리즈예요.<br/>어떻게 수정할까요?
+                {dateChanged && (
+                  <><br/><span style={{fontSize:'0.78rem',color:'var(--color-primary)',fontWeight:600}}>
+                    📅 날짜 {diffDays > 0 ? `+${diffDays}일` : `${diffDays}일`} 변경됨
+                  </span></>
+                )}
+              </p>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                <button className="btn btn-outline btn-sm" style={{justifyContent:'center'}}
+                  onClick={async ()=>{
+                    const { payload, editingId } = seriesEditConfirm
+                    const { error } = await schedulesApi.update(editingId, payload)
+                    if (error) { alert('저장 실패: ' + error.message); return }
+                    setSeriesEditConfirm(null); load()
+                  }}>
+                  이 일정만 수정
+                </button>
+                <button className="btn btn-primary btn-sm" style={{justifyContent:'center'}}
+                  onClick={()=>saveSeriesAll(false)}>
+                  {dateChanged ? '날짜 제외 전체 수정' : '시리즈 전체 수정'}
+                </button>
+                {dateChanged && (
+                  <button className="btn btn-primary btn-sm" style={{justifyContent:'center'}}
+                    onClick={()=>saveSeriesAll(true)}>
+                    날짜 포함 전체 수정
+                    <span style={{fontSize:'0.72rem',opacity:0.85,marginLeft:4}}>
+                      (전체 {diffDays > 0 ? `+${diffDays}일` : `${diffDays}일`} 이동)
+                    </span>
+                  </button>
+                )}
+                <button className="btn btn-ghost btn-sm" style={{justifyContent:'center'}}
+                  onClick={()=>setSeriesEditConfirm(null)}>취소</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* 시리즈 삭제 confirm */}
       {seriesConfirm && (
