@@ -467,7 +467,7 @@ export default function PublicProfilePage() {
 
   const loadPairHistories = async (pairId) => {
     const { data } = await supabase.from('pair_histories')
-      .select('id, play_log_id, play_logs(id,title,played_date,system_name,my_role)')
+      .select('id, play_log_id, play_logs(id,title,played_date,system_name,role)')
       .eq('pair_id', pairId)
       .order('created_at', { ascending: false })
     setPairHistoriesMap(m => ({ ...m, [pairId]: (data||[]).map(r => ({ history_id: r.id, ...r.play_logs })) }))
@@ -1162,7 +1162,7 @@ export default function PublicProfilePage() {
                 <div key={h.history_id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,border:'1px solid var(--color-border)'}}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:'0.85rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.title||'(제목 없음)'}</div>
-                    <div className="text-xs text-light">{h.played_date||''}{h.system_name?` · ${h.system_name}`:''}{h.my_role?` · ${h.my_role}`:''}</div>
+                    <div className="text-xs text-light">{h.played_date||''}{h.system_name?` · ${h.system_name}`:''}{h.role?` · ${h.role}`:''}</div>
                   </div>
                 </div>
               ))}
