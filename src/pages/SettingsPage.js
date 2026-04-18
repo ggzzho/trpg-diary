@@ -435,7 +435,7 @@ export default function SettingsPage() {
                 {key:'dotori', label:'도토리', icon:'forest'},
                 {key:'availability', label:'공수표', icon:'event_available'},
                 {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
-                {key:'pairs', label:'페어', icon:'people'},
+                {key:'pairs', label:'페어/팀', icon:'people'},
                 {key:'bookmarks', label:'북마크', icon:'bookmark'},
                 {key:'guestbook', label:'방명록', icon:'mail'},
               ].map(t => {
