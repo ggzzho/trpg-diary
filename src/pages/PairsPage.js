@@ -5,6 +5,19 @@ import { pairsApi, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
+import { format } from 'date-fns'
+
+// PlayLogPage와 동일한 TagChip
+const TAG_COLORS = {
+  series:{bg:'#c8a96e',color:'#fff',border:'#b8944e'},
+  role_PL:{bg:'#4a7ad4',color:'#fff',border:'#3a6ac4'},
+  role_GM:{bg:'#7a5ab8',color:'#fff',border:'#6a4aa8'},
+  rule:{bg:'#5a8a40',color:'#fff',border:'#4a7a30'},
+}
+function TagChip({ type, label }) {
+  const c = type==='series'?TAG_COLORS.series:type==='role'?(label==='GM'?TAG_COLORS.role_GM:TAG_COLORS.role_PL):TAG_COLORS.rule
+  return <span style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:100,fontSize:'0.63rem',fontWeight:700,background:c.bg,color:c.color,border:`1px solid ${c.border}`,whiteSpace:'nowrap'}}>{label}</span>
+}
 
 const BLANK = { name:'', nickname:'', memo:'', relations:[], first_met_date:'', pair_image_url:'' }
 const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, first_met_date:f.first_met_date||null, relations:f.relations||[]} }
@@ -47,18 +60,36 @@ export function PairsPage() {
     }
   }
 
-  const load = async () => { const {data}=await pairsApi.getAll(user.id); setItems(data||[]); setLoading(false) }
+  const LOG_SELECT = 'id,title,played_date,start_date,system_name,role,series_tag,session_image_url,together_with,character_name'
+  const HIST_SELECT = `id, play_log_id, pair_id, play_logs(${LOG_SELECT})`
+
+  const load = async () => {
+    const {data} = await pairsApi.getAll(user.id)
+    const pairs = data || []
+    setItems(pairs)
+    setLoading(false)
+    // 히스토리 전체 pre-load → 카운트 즉시 표시
+    const {data: hData} = await supabase.from('pair_histories').select(HIST_SELECT)
+      .eq('user_id', user.id).order('created_at', {ascending:false})
+    const map = {}
+    pairs.forEach(p => { map[p.id] = [] }) // 카운트 0인 페어도 즉시 표시
+    ;(hData||[]).forEach(r => {
+      if (!map[r.pair_id]) map[r.pair_id] = []
+      map[r.pair_id].push({history_id:r.id, ...r.play_logs})
+    })
+    setHistoriesMap(map)
+  }
   const loadTags = async () => {
     const {data}=await supabase.from('pair_relations').select('*').eq('user_id',user.id).order('name')
     setRelationTags(data||[])
   }
   const loadHistories = async (pairId) => {
-    const {data}=await supabase.from('pair_histories').select('id, play_log_id, play_logs(id,title,played_date,system_name,role)').eq('pair_id',pairId).order('created_at',{ascending:false})
+    const {data}=await supabase.from('pair_histories').select(HIST_SELECT).eq('pair_id',pairId).order('created_at',{ascending:false})
     setHistoriesMap(m=>({...m,[pairId]:(data||[]).map(r=>({history_id:r.id,...r.play_logs}))}))
   }
   const loadAllLogs = async () => {
     if (logsLoaded) return
-    const {data}=await supabase.from('play_logs').select('id,title,played_date,system_name,role').eq('user_id',user.id).order('played_date',{ascending:false}).limit(2500)
+    const {data}=await supabase.from('play_logs').select(LOG_SELECT).eq('user_id',user.id).order('played_date',{ascending:false}).limit(2500)
     setAllLogs(data||[])
     setLogsLoaded(true)
   }
@@ -66,7 +97,7 @@ export function PairsPage() {
     setHistoryViewPair(pair)
     setHistoryViewSearch('')
     setHistoryViewPage(1)
-    if (historiesMap[pair.id] === undefined) await loadHistories(pair.id)
+    await loadHistories(pair.id) // 항상 최신 데이터로 갱신
   }
   const openHistoryModal = async (pairId) => {
     await loadAllLogs()
@@ -81,7 +112,7 @@ export function PairsPage() {
     await supabase.from('pair_histories').delete().eq('id',historyId)
     setHistoriesMap(m=>({...m,[pairId]:(m[pairId]||[]).filter(h=>h.history_id!==historyId)}))
   }
-  useEffect(() => { load(); loadTags() }, [user])
+  useEffect(() => { load(); loadTags() }, [user]) // eslint-disable-line
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const toggleRelation = tag => setForm(f=>({...f,relations:f.relations?.includes(tag)?f.relations.filter(r=>r!==tag):[...(f.relations||[]),tag]}))
@@ -204,7 +235,7 @@ export function PairsPage() {
                 </div>
                 <div style={{padding:'8px 14px',borderTop:'1px solid var(--color-border)',display:'flex',gap:8,justifyContent:'flex-end'}}>
                   <button className="btn btn-ghost btn-sm" onClick={()=>openHistoryView(item)} style={{marginRight:'auto'}}>
-                    <Mi size='sm'>history</Mi> 히스토리{historiesMap[item.id]!==undefined&&` (${historiesMap[item.id].length})`}
+                    <Mi size='sm'>history</Mi> 히스토리{historiesMap[item.id]?.length > 0 && ` (${historiesMap[item.id].length})`}
                   </button>
                   <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
                   <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
@@ -277,15 +308,31 @@ export function PairsPage() {
       <Modal isOpen={!!historyModal} onClose={()=>setHistoryModal(null)} title="기록 연결"
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setHistoryModal(null)}>닫기</button>}
       >
-        <input className="form-input" placeholder="제목, 시스템, 날짜 검색..." value={historySearch} onChange={e=>setHistorySearch(e.target.value)} style={{marginBottom:10}}/>
+        <input className="form-input" placeholder="🔍 제목, 시리즈, 룰, 날짜 검색..." value={historySearch} onChange={e=>setHistorySearch(e.target.value)} style={{marginBottom:12}}/>
         {filteredLogs.length===0
-          ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>연결할 기록이 없어요.</div>
-          :<div style={{display:'flex',flexDirection:'column',gap:4,maxHeight:340,overflowY:'auto'}}>
+          ?<div className="text-xs text-light" style={{textAlign:'center',padding:'24px 0'}}>연결할 기록이 없어요.</div>
+          :<div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:400,overflowY:'auto'}}>
             {filteredLogs.map(l=>(
-              <div key={l.id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,border:'1px solid var(--color-border)'}}>
+              <div key={l.id} style={{display:'flex',gap:10,alignItems:'center',padding:'10px 10px',borderRadius:10,border:'1px solid var(--color-border)',background:'var(--color-surface)'}}>
+                {/* 썸네일 */}
+                <div style={{width:56,height:56,borderRadius:7,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+                  {l.session_image_url
+                    ?<img src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                    :<Mi size="lg" color="light">auto_stories</Mi>
+                  }
+                </div>
+                {/* 정보 */}
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:'0.85rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.title||'(제목 없음)'}</div>
-                  <div className="text-xs text-light">{l.played_date||''}{l.system_name?` · ${l.system_name}`:''}{l.role?` · ${l.role}`:''}</div>
+                  <div style={{fontWeight:700,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:4}}>{l.title||'(제목 없음)'}</div>
+                  <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:3}}>
+                    {l.series_tag && <TagChip type="series" label={l.series_tag}/>}
+                    {l.role && <TagChip type="role" label={l.role}/>}
+                    {l.system_name && <TagChip type="rule" label={l.system_name}/>}
+                  </div>
+                  <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',display:'flex',gap:8,flexWrap:'wrap'}}>
+                    {l.start_date && <span>Start. {format(new Date(l.start_date),'yyyy.MM.dd')}</span>}
+                    {l.played_date && <span>End. {format(new Date(l.played_date),'yyyy.MM.dd')}</span>}
+                  </div>
                 </div>
                 <button className="btn btn-primary btn-sm" style={{flexShrink:0}} onClick={async()=>{await addHistory(historyModal,l.id);setHistoryModal(null)}}>연결</button>
               </div>
