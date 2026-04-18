@@ -390,7 +390,19 @@ export default function PublicProfilePage() {
     } else if (tab === 'dotori') {
       updates.dotori = await safeQ(supabase.from('dotori').select('*').eq('user_id',profileId).order('title').limit(2500))
     } else if (tab === 'pairs') {
-      updates.pairs = await safeQ(pairsApi.getAll(profileId))
+      const pairs = await safeQ(pairsApi.getAll(profileId))
+      updates.pairs = pairs
+      // 히스토리 카운트 즉시 표시를 위해 전체 pre-load
+      const { data: hData } = await supabase.from('pair_histories')
+        .select('id, pair_id, play_log_id, play_logs(id,title,played_date,system_name,role)')
+        .eq('user_id', profileId).order('created_at', {ascending:false})
+      const hMap = {}
+      pairs.forEach(p => { hMap[p.id] = [] })
+      ;(hData||[]).forEach(r => {
+        if (!hMap[r.pair_id]) hMap[r.pair_id] = []
+        hMap[r.pair_id].push({history_id:r.id, ...r.play_logs})
+      })
+      setPairHistoriesMap(hMap)
     } else if (tab === 'availability') {
       updates.availability = await safeQ(supabase.from('availability').select('*').eq('user_id',profileId).eq('is_active',true).limit(2500))
     } else if (tab === 'bookmarks') {
@@ -776,7 +788,44 @@ export default function PublicProfilePage() {
           <Modal isOpen={!!selectedLog} onClose={()=>setSelectedLog(null)} title={selectedLog?.title}
             footer={<button className="btn btn-outline btn-sm" onClick={()=>setSelectedLog(null)}>닫기</button>}
           >
-            {selectedLog && <LogDetailContent detail={selectedLog}/>}
+            {selectedLog && (() => {
+              const relatedItems = selectedLog.series_tag
+                ? publicLogs.filter(l => l.series_tag === selectedLog.series_tag && l.id !== selectedLog.id)
+                    .sort((a,b) => (a.played_date||'').localeCompare(b.played_date||''))
+                : []
+              return (
+                <div>
+                  <LogDetailContent detail={selectedLog}/>
+                  {relatedItems.length > 0 && (
+                    <div style={{borderTop:'1px solid var(--color-border)',paddingTop:14,marginTop:14}}>
+                      <div style={{fontWeight:700,fontSize:'0.82rem',color:'var(--color-accent)',marginBottom:10}}>
+                        <Mi size="sm">auto_stories</Mi> {selectedLog.series_tag} 시리즈의 다른 기록 ({relatedItems.length})
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',gap:7}}>
+                        {relatedItems.map(r=>(
+                          <div key={r.id} style={{display:'flex',gap:10,alignItems:'center',padding:'8px 10px',borderRadius:8,background:'var(--color-nav-active-bg)',cursor:'pointer'}} onClick={()=>setSelectedLog(r)}>
+                            <div style={{width:44,height:44,borderRadius:6,overflow:'hidden',flexShrink:0,background:'var(--color-border)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                              {r.session_image_url
+                                ?<img src={r.session_image_url} alt={r.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                                :<Mi size="lg" color="light">auto_stories</Mi>
+                              }
+                            </div>
+                            <div style={{flex:1,overflow:'hidden'}}>
+                              <div style={{fontWeight:600,fontSize:'0.84rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.title}</div>
+                              <div style={{display:'flex',gap:6,marginTop:3,flexWrap:'wrap'}}>
+                                {r.role && <Chip type="role" label={r.role}/>}
+                                {r.system_name && <Chip type="rule" label={r.system_name}/>}
+                                <span className="text-xs text-light">{r.played_date && format(new Date(r.played_date),'yyyy.MM.dd')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </Modal>
         </>
       )}
@@ -1045,7 +1094,7 @@ export default function PublicProfilePage() {
                     </div>
                     <div style={{ padding:'8px 14px', borderTop:'1px solid var(--color-border)' }}>
                       <button className="btn btn-ghost btn-sm" onClick={()=>openPubHistoryView(p)}>
-                        <Mi size='sm'>history</Mi> 히스토리{pairHistoriesMap[p.id]!==undefined&&` (${pairHistoriesMap[p.id].length})`}
+                        <Mi size='sm'>history</Mi> 히스토리{pairHistoriesMap[p.id]?.length > 0 && ` (${pairHistoriesMap[p.id].length})`}
                       </button>
                     </div>
                   </div>
