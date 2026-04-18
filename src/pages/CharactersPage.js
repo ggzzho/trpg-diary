@@ -23,6 +23,23 @@ function TagChip({ type, label }) {
 function RuleChip({ label }) {
   return <span style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:100,fontSize:'0.63rem',fontWeight:700,background:'#7a5ab8',color:'#fff',border:'1px solid #6a4aa8',whiteSpace:'nowrap'}}>{label}</span>
 }
+// 상세 모달용 헬퍼
+function InfoRow({ label, value }) {
+  return (
+    <div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}>
+      <div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>{label}</div>
+      <div style={{fontSize:'0.88rem',fontWeight:600}}>{value}</div>
+    </div>
+  )
+}
+function DetailSection({ label, value }) {
+  return (
+    <div style={{marginBottom:14}}>
+      <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>{label}</div>
+      <div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap',color:'var(--color-text)'}}>{value}</div>
+    </div>
+  )
+}
 
 const BLANK = {
   name:'', age:'', gender:'', height_weight:'', job:'',
@@ -49,6 +66,7 @@ export function CharactersPage() {
   const [tagModal, setTagModal] = useState(false)
   const [search, setSearch] = useState('')
   const [ruleFilter, setRuleFilter] = useState('all')
+  const [detailChar, setDetailChar] = useState(null)
 
   // 히스토리
   const [historiesMap, setHistoriesMap] = useState({})
@@ -248,14 +266,16 @@ export function CharactersPage() {
               const displayRules = (item.rules||[]).filter(r=>validTagNames.includes(r))
               return (
                 <div key={item.id} className="card" style={{padding:0,overflow:'hidden'}}>
-                  {/* 두상 이미지 */}
-                  <div style={{height:160,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+                  {/* 두상 이미지 — 1:1 */}
+                  <div style={{position:'relative',width:'100%',paddingTop:'100%',background:'var(--color-nav-active-bg)',overflow:'hidden',cursor:'pointer'}}
+                    onClick={()=>setDetailChar(item)}>
                     {item.image_url
-                      ? <img src={item.image_url} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                      : <span style={{fontSize:'4rem',opacity:0.25}}>🧑</span>
+                      ? <img src={item.image_url} alt={item.name} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+                      : <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{fontSize:'4rem',opacity:0.25}}>🧑</span></div>
                     }
                   </div>
-                  <div style={{padding:'12px 14px'}}>
+                  {/* 카드 정보 — 클릭 시 상세 팝업 */}
+                  <div style={{padding:'12px 14px',cursor:'pointer'}} onClick={()=>setDetailChar(item)}>
                     <div style={{fontWeight:700,fontSize:'1rem',marginBottom:3}}>{item.name}</div>
                     {(item.age||item.gender||item.job)&&(
                       <div className="text-xs text-light" style={{marginBottom:5}}>
@@ -274,11 +294,11 @@ export function CharactersPage() {
                     )}
                   </div>
                   <div style={{padding:'8px 14px',borderTop:'1px solid var(--color-border)',display:'flex',gap:8,justifyContent:'flex-end'}}>
-                    <button className="btn btn-ghost btn-sm" style={{marginRight:'auto'}} onClick={()=>openHistoryView(item)}>
+                    <button className="btn btn-ghost btn-sm" style={{marginRight:'auto'}} onClick={e=>{e.stopPropagation();openHistoryView(item)}}>
                       <Mi size='sm'>history</Mi> 히스토리{historiesMap[item.id]?.length>0&&` (${historiesMap[item.id].length})`}
                     </button>
-                    <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>
-                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setConfirm(item.id)}>삭제</button>
+                    <button className="btn btn-ghost btn-sm" onClick={e=>{e.stopPropagation();openEdit(item)}}>수정</button>
+                    <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={e=>{e.stopPropagation();setConfirm(item.id)}}>삭제</button>
                   </div>
                 </div>
               )
@@ -393,6 +413,66 @@ export function CharactersPage() {
         footer={<button className="btn btn-outline btn-sm" onClick={()=>setTagModal(false)}>닫기</button>}
       >
         <TagManager tags={ruleTags} onAdd={addTag} onEdit={editTag} onRemove={removeTag} placeholder="CoC, D&D, 신화기계..."/>
+      </Modal>
+
+      {/* ── 상세 보기 모달 ── */}
+      <Modal isOpen={!!detailChar} onClose={()=>setDetailChar(null)} title={detailChar?.name||'PC 상세'}
+        footer={
+          <div style={{display:'flex',gap:8,width:'100%',justifyContent:'space-between'}}>
+            <button className="btn btn-outline btn-sm" onClick={()=>openHistoryView(detailChar)}>
+              <Mi size='sm'>history</Mi> 히스토리{historiesMap[detailChar?.id]?.length>0&&` (${historiesMap[detailChar.id].length})`}
+            </button>
+            <div style={{display:'flex',gap:8}}>
+              <button className="btn btn-outline btn-sm" onClick={()=>{setDetailChar(null);setTimeout(()=>openEdit(detailChar),50)}}>수정</button>
+              <button className="btn btn-outline btn-sm" onClick={()=>setDetailChar(null)}>닫기</button>
+            </div>
+          </div>
+        }
+      >
+        {detailChar&&<>
+          {/* 이미지 */}
+          {detailChar.image_url&&(
+            <div style={{width:'100%',aspectRatio:'1/1',maxHeight:260,overflow:'hidden',borderRadius:12,marginBottom:16,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <img src={detailChar.image_url} alt={detailChar.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+            </div>
+          )}
+          {/* 기본 정보 그리드 */}
+          {(detailChar.age||detailChar.gender||detailChar.height_weight||detailChar.job)&&(
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
+              {detailChar.age&&<InfoRow label="나이" value={`${detailChar.age}세`}/>}
+              {detailChar.gender&&<InfoRow label="성별" value={detailChar.gender}/>}
+              {detailChar.height_weight&&<InfoRow label="키/몸무게" value={detailChar.height_weight}/>}
+              {detailChar.job&&<InfoRow label="직업" value={detailChar.job}/>}
+            </div>
+          )}
+          {/* 룰 태그 */}
+          {detailChar.rules?.length>0&&(
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:6}}>룰</div>
+              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                {detailChar.rules.map(r=><RuleChip key={r} label={r}/>)}
+              </div>
+            </div>
+          )}
+          {/* 텍스트 섹션 */}
+          {detailChar.personality&&<DetailSection label="성격" value={detailChar.personality}/>}
+          {detailChar.background&&<DetailSection label="배경" value={detailChar.background}/>}
+          {detailChar.extra_settings&&<DetailSection label="기타설정" value={detailChar.extra_settings}/>}
+          {detailChar.memo&&<DetailSection label="메모" value={detailChar.memo}/>}
+          {/* 기타 URL */}
+          {(detailChar.extra_urls||[]).filter(u=>u.url).length>0&&(
+            <div style={{marginTop:4}}>
+              <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:6}}>링크</div>
+              {(detailChar.extra_urls||[]).filter(u=>u.url).map((u,i)=>(
+                <div key={i} style={{marginBottom:6}}>
+                  <a href={u.url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem',display:'inline-flex',alignItems:'center',gap:4}}>
+                    <Mi size='sm'>link</Mi>{u.label||'링크'}
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </>}
       </Modal>
 
       {/* ── 삭제 확인 ── */}

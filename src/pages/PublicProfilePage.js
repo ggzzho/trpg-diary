@@ -1171,8 +1171,11 @@ export default function PublicProfilePage() {
                 const displayRules = c.rules||[]
                 return (
                   <div key={c.id} className="card" style={{ padding:0, overflow:'hidden' }}>
-                    <div style={{ height:160, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
-                      {c.image_url ? <img src={c.image_url} alt={c.name} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'4rem', opacity:0.25 }}>🧑</span>}
+                    <div style={{ position:'relative', width:'100%', paddingTop:'100%', background:'var(--color-nav-active-bg)', overflow:'hidden' }}>
+                      {c.image_url
+                        ? <img src={c.image_url} alt={c.name} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}/>
+                        : <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:'4rem', opacity:0.25 }}>🧑</span></div>
+                      }
                     </div>
                     <div style={{ padding:'12px 14px' }}>
                       <div style={{ fontWeight:700, fontSize:'1rem', marginBottom:3 }}>{c.name}</div>
