@@ -313,13 +313,14 @@ export default function SchedulePage() {
               const ev=item
               const evColor = colorMap?.[ev.system_name]
               const isPast = dateStr < today
-              const colorStyle = evColor && ev.status !== 'cancelled' ? {
+              const isCompleted = ev.status === 'completed'
+              const colorStyle = evColor && ev.status !== 'cancelled' && !isCompleted ? {
                 background: isPast ? hexToRgba(evColor,0.3) : ev.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7),
                 color: isPast ? hexToRgba(evColor,0.85) : 'white',
               } : {}
               return (
                 <div key={ev.id}
-                  className={`calendar-event ${evColor?'':''}${ev.is_gm&&!evColor?'gm':''} ${ev.status==='cancelled'?'cancelled':''} ${ev.status==='completed'&&!evColor?'completed':''}`}
+                  className={`calendar-event ${ev.is_gm&&!evColor&&!isCompleted?'gm':''} ${ev.status==='cancelled'?'cancelled':''} ${isCompleted?'completed':''}`}
                   style={colorStyle}
                   onClick={e=>{e.stopPropagation();setCalPopup(ev)}} title={ev.title}
                 >
@@ -385,10 +386,12 @@ export default function SchedulePage() {
                   const isPast = i.scheduled_date < today
                   const bg = i.status==='cancelled'
                     ? '#e57373'
-                    : evColor
-                      ? isPast ? hexToRgba(evColor,0.3) : i.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7)
-                      : i.is_gm ? 'var(--color-accent)' : 'var(--color-primary)'
-                  const textColor = evColor && isPast ? hexToRgba(evColor,0.85) : 'white'
+                    : i.status==='completed'
+                      ? '#aaa'
+                      : evColor
+                        ? isPast ? hexToRgba(evColor,0.3) : i.is_gm ? hexToRgba(evColor,1.0) : hexToRgba(evColor,0.7)
+                        : i.is_gm ? 'var(--color-accent)' : 'var(--color-primary)'
+                  const textColor = i.status==='completed' || (evColor && isPast) ? 'rgba(255,255,255,0.85)' : 'white'
                   return (
                     <div key={i.id} style={{fontSize:'0.6rem',padding:'2px 5px',borderRadius:3,marginBottom:2,background:bg,color:textColor,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:i.status==='cancelled'?'line-through':'none'}}>
                       <span style={{opacity:0.85,marginRight:3}}>{format(new Date(i.scheduled_date+'T00:00:00'),'d일',{locale:ko})}</span>
