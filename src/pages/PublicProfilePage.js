@@ -524,7 +524,7 @@ export default function PublicProfilePage() {
     { key:'scenarios', label:'보유 시나리오', icon:'description', count: data.scenarios !== undefined ? scenarioParents.length : counts.scenarios },
     { key:'wish_scenarios', label:'위시 시나리오', icon:'favorite', count: data.wish_scenarios !== undefined ? wishScenarioParents.length : counts.wish_scenarios },
     { key:'dotori', label:'도토리', icon:'forest', count: data.dotori?.length ?? counts.dotori },
-    { key:'pairs', label:'페어', icon:'people', count: data.pairs?.length ?? counts.pairs },
+    { key:'pairs', label:'페어/팀', icon:'people', count: data.pairs?.length ?? counts.pairs },
     { key:'bookmarks', label:'북마크', icon:'bookmark', count: data.bookmarks?.length ?? counts.bookmarks },
     { key:'guestbook', label:'방명록', icon:'mail', count: counts.guestbook },
     ...(profile?.is_admin ? [{ key:'feedback', label:'문의/피드백', icon:'support_agent' }] : []),
@@ -657,7 +657,7 @@ export default function PublicProfilePage() {
               {key:'scenarios', label:'보유 시나리오', v: data.scenarios?.length || (counts.scenarios||0)},
               {key:'wish_scenarios', label:'위시 시나리오', v: data.wish_scenarios?.length || (counts.wish_scenarios||0)},
               {key:'dotori', label:'도토리', v: data.dotori?.length || (counts.dotori||0)},
-              {key:'pairs', label:'페어', v: data.pairs?.length || (counts.pairs||0)},
+              {key:'pairs', label:'페어/팀', v: data.pairs?.length || (counts.pairs||0)},
               {key:'schedule', label:'일정', v: data.schedules?.length || (counts.schedule||0)},
               {key:'availability', label:'공수표', v: data.availability?.length || (counts.availability||0)},
               {key:'guestbook', label:'방명록', v: counts.guestbook||0},
@@ -1068,7 +1068,7 @@ export default function PublicProfilePage() {
         <>
           <div className="grid-auto">
             {!sortedFilteredPairs.length
-              ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>페어 목록이 없어요</div>
+              ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>페어/팀 목록이 없어요</div>
               : pagedPairs.map(p => {
                 const dday = calcDday(p.first_met_date)
                 return (

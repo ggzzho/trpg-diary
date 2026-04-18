@@ -28,7 +28,7 @@ const NAV_GROUPS = [
   { type:'group', key:'sessions', label:'Sessions', items:[
     { to:'/availability', icon:'event_available', label:'공수표 목록' },
     { to:'/logs', icon:'auto_stories', label:'다녀온 기록' },
-    { to:'/pairs', icon:'people', label:'페어 목록' },
+    { to:'/pairs', icon:'people', label:'페어/팀 목록' },
   ]},
   { type:'group', key:'etc', label:'ETC.', items:[
     { to:'/bookmarks', icon:'bookmark', label:'북마크' },
