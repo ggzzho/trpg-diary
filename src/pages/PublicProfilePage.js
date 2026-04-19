@@ -2,12 +2,15 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
+import { getProfile, updateProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { GuestbookPublicView, FeedbackPublicView } from './GuestbookPage'
 import { LogDetailContent } from './PlayLogPage'
 import { FOOTER_TEXT, Modal, Pagination } from '../components/Layout'
+import AlignmentChartSection from '../components/supporter/AlignmentChartSection'
+import BgmPlayer from '../components/supporter/BgmPlayer'
+import StickerLayer from '../components/supporter/StickerLayer'
 import { Mi } from '../components/Mi'
 import { usePagination } from '../hooks/usePagination'
 import {
@@ -531,6 +534,17 @@ export default function PublicProfilePage() {
     return () => { document.title = 'TRPG Diary ✦' }
   }, [])
 
+  // ── 후원자 전용 기능 저장 ──
+  const isOwnPage   = !!(user && profile && user.id === profile.id)
+  const isSupporter = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
+
+  const handleSupporterSave = async (updates) => {
+    if (!profile) return
+    const { data, error } = await updateProfile(profile.id, updates)
+    if (!error && data) setProfile(data)
+    return { error }
+  }
+
   const loadPairHistories = async (pairId) => {
     const { data } = await supabase.from('pair_histories')
       .select('id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url,together_with,character_name)')
@@ -593,7 +607,26 @@ export default function PublicProfilePage() {
   const ogUrl   = `https://trpg-diary.co.kr/u/${username}`
 
   return (
-    <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
+    <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0', position:'relative' }}>
+
+      {/* ── 후원자 전용: 스티커 레이어 ── */}
+      {isSupporter && (
+        <StickerLayer
+          profile={profile}
+          isOwner={isOwnPage}
+          onSave={handleSupporterSave}
+        />
+      )}
+
+      {/* ── 후원자 전용: BGM 플레이어 ── */}
+      {isSupporter && (
+        <BgmPlayer
+          profile={profile}
+          isOwner={isOwnPage}
+          onSave={handleSupporterSave}
+        />
+      )}
+
       <Helmet>
         <title>{ogTitle}</title>
         <meta property="og:type"        content="profile" />
@@ -755,6 +788,15 @@ export default function PublicProfilePage() {
                 </a>
               ))}
             </div>
+          )}
+
+          {/* ── 후원자 전용: 성향표 ── */}
+          {isSupporter && (
+            <AlignmentChartSection
+              profile={profile}
+              isOwner={isOwnPage}
+              onSave={handleSupporterSave}
+            />
           )}
         </div>
       </div>
