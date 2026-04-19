@@ -433,11 +433,12 @@ export default function PublicProfilePage() {
       updates.pairs = pairs
       // 히스토리 카운트 즉시 표시를 위해 전체 pre-load
       const { data: hData } = await supabase.from('pair_histories')
-        .select('id, pair_id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url,together_with,character_name)')
+        .select('id, pair_id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url,together_with,character_name,is_private)')
         .eq('user_id', profileId).order('created_at', {ascending:false})
       const hMap = {}
       pairs.forEach(p => { hMap[p.id] = [] })
       ;(hData||[]).forEach(r => {
+        if (!r.play_logs || r.play_logs.is_private) return // 비공개 기록 제외
         if (!hMap[r.pair_id]) hMap[r.pair_id] = []
         hMap[r.pair_id].push({history_id:r.id, ...r.play_logs})
       })
@@ -447,11 +448,12 @@ export default function PublicProfilePage() {
       updates.characters = chars
       // 히스토리 pre-load
       const { data: hData } = await supabase.from('character_histories')
-        .select('id, character_id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url)')
+        .select('id, character_id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url,is_private)')
         .eq('user_id', profileId).order('created_at', {ascending:false})
       const hMap = {}
       chars.forEach(c => { hMap[c.id] = [] })
       ;(hData||[]).forEach(r => {
+        if (!r.play_logs || r.play_logs.is_private) return // 비공개 기록 제외
         if (!hMap[r.character_id]) hMap[r.character_id] = []
         hMap[r.character_id].push({history_id:r.id, ...r.play_logs})
       })
@@ -467,6 +469,14 @@ export default function PublicProfilePage() {
 
   useEffect(() => {
     const load = async () => {
+      // 프로필 전환 시 이전 데이터 초기화
+      setLoading(true)
+      setNotFound(false)
+      setData({})
+      setCounts({})
+      setTabLoading({})
+      loadedRef.current.clear()
+
       const { data:p, error } = await getProfile(username)
       if (error || !p) { setNotFound(true); setLoading(false); return }
       setProfile(p)
@@ -533,10 +543,10 @@ export default function PublicProfilePage() {
 
   const loadPairHistories = async (pairId) => {
     const { data } = await supabase.from('pair_histories')
-      .select('id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url,together_with,character_name)')
+      .select('id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url,together_with,character_name,is_private)')
       .eq('pair_id', pairId)
       .order('created_at', { ascending: false })
-    setPairHistoriesMap(m => ({ ...m, [pairId]: (data||[]).map(r => ({ history_id: r.id, ...r.play_logs })) }))
+    setPairHistoriesMap(m => ({ ...m, [pairId]: (data||[]).filter(r => r.play_logs && !r.play_logs.is_private).map(r => ({ history_id: r.id, ...r.play_logs })) }))
   }
   const openPubHistoryView = async (pair) => {
     setPubHistoryViewPair(pair)
