@@ -1,7 +1,6 @@
 // src/components/supporter/StickerLayer.js
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { Mi } from '../Mi'
-import { uploadFile } from '../../lib/supabase'
 
 const MAX_STICKERS = 10
 const genId = () => `s${Date.now()}${Math.random().toString(36).slice(2, 7)}`
@@ -129,14 +128,13 @@ function SliderRow({ label, value, min, max, step, onChange, unit='' }) {
 // ── 메인 컴포넌트 ──────────────────────────────────────
 export default function StickerLayer({ profile, isOwner, onSave }) {
   const containerRef = useRef(null)
-  const fileInputRef = useRef(null)
 
   const savedStickers = profile?.stickers || []
-  const [stickers,    setStickers]    = useState(savedStickers)
-  const [editMode,    setEditMode]    = useState(false)
-  const [selectedId,  setSelectedId]  = useState(null)
-  const [uploading,   setUploading]   = useState(false)
-  const [saving,      setSaving]      = useState(false)
+  const [stickers,   setStickers]   = useState(savedStickers)
+  const [editMode,   setEditMode]   = useState(false)
+  const [selectedId, setSelectedId] = useState(null)
+  const [saving,     setSaving]     = useState(false)
+  const [urlInput,   setUrlInput]   = useState('')
 
   // profile 변경 시 stickers 동기화 (저장 후 등)
   useEffect(() => {
@@ -154,23 +152,17 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
     if (selectedId === id) setSelectedId(null)
   }
 
-  const handleUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleAddUrl = () => {
+    const url = urlInput.trim()
+    if (!url) return
     if (stickers.length >= MAX_STICKERS) {
       alert(`스티커는 최대 ${MAX_STICKERS}개까지 추가할 수 있어요.`)
       return
     }
-    setUploading(true)
-    const ext = file.name.split('.').pop() || 'png'
-    const path = `stickers/${profile.id}/${genId()}.${ext}`
-    const { url, error } = await uploadFile('play-images', path, file)
-    if (error) { alert('업로드 실패: ' + error.message); setUploading(false); return }
     const newSticker = { id: genId(), url, x: 5, y: 5, size: 80, rotation: 0 }
     setStickers(prev => [...prev, newSticker])
     setSelectedId(newSticker.id)
-    setUploading(false)
-    e.target.value = ''
+    setUrlInput('')
   }
 
   const saveStickers = async () => {
@@ -185,6 +177,7 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
     setStickers(profile?.stickers || [])
     setSelectedId(null)
     setEditMode(false)
+    setUrlInput('')
   }
 
   // 스티커 없고 오너도 아님 → 렌더링 안 함
@@ -266,30 +259,37 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
               <div style={{ fontSize:'0.73rem', fontWeight:600, color:'var(--color-accent)', marginBottom:2 }}>
                 선택된 스티커 조절
               </div>
-              <SliderRow label="위치 X" value={selectedSticker.x}    min={0}    max={95}   step={0.5} unit="%" onChange={v => updateSticker(selectedId, { x: v })}/>
-              <SliderRow label="위치 Y" value={selectedSticker.y}    min={0}    max={95}   step={0.5} unit="%" onChange={v => updateSticker(selectedId, { y: v })}/>
-              <SliderRow label="크기"   value={selectedSticker.size} min={20}   max={300}  step={5}   unit="px" onChange={v => updateSticker(selectedId, { size: v })}/>
-              <SliderRow label="회전"   value={selectedSticker.rotation} min={-180} max={180} step={1} unit="°" onChange={v => updateSticker(selectedId, { rotation: v })}/>
+              <SliderRow label="위치 X" value={selectedSticker.x}        min={0}    max={95}   step={0.5} unit="%" onChange={v => updateSticker(selectedId, { x: v })}/>
+              <SliderRow label="위치 Y" value={selectedSticker.y}        min={0}    max={95}   step={0.5} unit="%" onChange={v => updateSticker(selectedId, { y: v })}/>
+              <SliderRow label="크기"   value={selectedSticker.size}     min={20}   max={300}  step={5}   unit="px" onChange={v => updateSticker(selectedId, { size: v })}/>
+              <SliderRow label="회전"   value={selectedSticker.rotation} min={-180} max={180}  step={1}   unit="°"  onChange={v => updateSticker(selectedId, { rotation: v })}/>
             </div>
           ) : (
             <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', textAlign:'center', margin:0 }}>
-              {stickers.length > 0 ? '스티커를 클릭하면 조절할 수 있어요' : '스티커를 추가해보세요'}
+              {stickers.length > 0 ? '스티커를 클릭하면 조절할 수 있어요' : '이미지 URL을 입력해 스티커를 추가하세요'}
             </p>
           )}
 
-          {/* 이미지 업로드 */}
-          <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleUpload}/>
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading || stickers.length >= MAX_STICKERS}
-            style={{ fontSize:'0.78rem' }}
-          >
-            {uploading
-              ? '업로드 중...'
-              : <><Mi size="sm">add_photo_alternate</Mi>{' '}스티커 추가</>
-            }
-          </button>
+          {/* URL 입력으로 스티커 추가 */}
+          <div style={{ display:'flex', gap:6 }}>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="이미지 URL 입력 후 추가"
+              value={urlInput}
+              onChange={e => setUrlInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleAddUrl() }}
+              style={{ flex:1, fontSize:'0.78rem', padding:'5px 8px' }}
+            />
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={handleAddUrl}
+              disabled={!urlInput.trim() || stickers.length >= MAX_STICKERS}
+              style={{ fontSize:'0.78rem', flexShrink:0, display:'flex', alignItems:'center', gap:2 }}
+            >
+              <Mi size="sm">add</Mi>
+            </button>
+          </div>
 
           {/* 저장/취소 */}
           <div style={{ display:'flex', gap:8 }}>

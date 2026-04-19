@@ -238,11 +238,13 @@ const compressImage = (file, maxPx, quality) => {
       canvas.width = width
       canvas.height = height
       const ctx = canvas.getContext('2d')
-      const themeBg = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf6f0'
-      ctx.fillStyle = themeBg
-      ctx.fillRect(0, 0, width, height)
-      ctx.drawImage(img, 0, 0, width, height)
       const isPng = file.type === 'image/png' || file.type === 'image/gif'
+      // JPEG/WebP만 배경 채우기 (PNG·GIF는 투명도 보존)
+      if (!isPng) {
+        const themeBg = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() || '#faf6f0'
+        ctx.fillStyle = themeBg
+        ctx.fillRect(0, 0, width, height)
+      }
       const mimeType = isPng ? 'image/png' : 'image/jpeg'
       canvas.toBlob(blob => resolve(blob || file), mimeType, isPng ? 1 : quality)
     }
