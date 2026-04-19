@@ -104,10 +104,11 @@ export default function AdminMembershipPage() {
 // Tab 1: 유저 검색 + 등급 변경
 // ══════════════════════════════════════════════════════════════
 function SearchTab() {
-  const [searchEmail, setSearchEmail]   = useState('')
-  const [searchResult, setSearchResult] = useState(null)
-  const [searching, setSearching]       = useState(false)
-  const [searchError, setSearchError]   = useState('')
+  const [searchEmail, setSearchEmail]       = useState('')
+  const [searchCandidates, setSearchCandidates] = useState([])  // 검색 결과 목록
+  const [searchResult, setSearchResult]     = useState(null)    // 선택된 유저
+  const [searching, setSearching]           = useState(false)
+  const [searchError, setSearchError]       = useState('')
 
   const [selectedTier, setSelectedTier] = useState('free')
   const [note, setNote]                 = useState('')
@@ -134,15 +135,31 @@ function SearchTab() {
     if (!searchEmail.trim()) return
     setSearching(true)
     setSearchError('')
+    setSearchCandidates([])
     setSearchResult(null)
     setSaveMsg('')
     const { data, error } = await membershipApi.searchUser(searchEmail.trim())
     setSearching(false)
     if (error) { setSearchError(error.message || '검색 중 오류'); return }
-    if (!data)  { setSearchError('해당 이메일의 유저를 찾을 수 없어요'); return }
-    setSearchResult(data)
-    setSelectedTier(data.membership_tier || 'free')
+    const list = Array.isArray(data) ? data : (data ? [data] : [])
+    if (list.length === 0) { setSearchError('해당 이메일의 유저를 찾을 수 없어요'); return }
+    if (list.length === 1) {
+      // 결과가 1명이면 바로 선택
+      setSearchResult(list[0])
+      setSelectedTier(list[0].membership_tier || 'free')
+      setNote('')
+    } else {
+      // 여러 명이면 목록 표시
+      setSearchCandidates(list)
+    }
+  }
+
+  const handleSelectCandidate = (user) => {
+    setSearchCandidates([])
+    setSearchResult(user)
+    setSelectedTier(user.membership_tier || 'free')
     setNote('')
+    setSaveMsg('')
   }
 
   const handleSave = async () => {
@@ -187,8 +204,8 @@ function SearchTab() {
         <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
           <input
             className="form-input"
-            type="email"
-            placeholder="이메일 주소 (정확하게 입력)"
+            type="text"
+            placeholder="이메일 일부 또는 전체 입력 (최대 10명 표시)"
             value={searchEmail}
             onChange={e => setSearchEmail(e.target.value)}
             style={{ flex: 1 }}
@@ -199,6 +216,31 @@ function SearchTab() {
           </button>
         </form>
         {searchError && <p style={{ marginTop: 10, fontSize: '0.83rem', color: '#e57373' }}>{searchError}</p>}
+
+        {/* 다중 결과 목록 */}
+        {searchCandidates.length > 1 && (
+          <div style={{ marginTop: 12, border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ padding: '8px 12px', background: 'var(--color-nav-active-bg)', fontSize: '0.78rem', color: 'var(--color-text-light)', fontWeight: 600 }}>
+              {searchCandidates.length}명 검색됨 — 클릭해서 선택하세요
+            </div>
+            {searchCandidates.map((u, i) => (
+              <button key={u.id} onClick={() => handleSelectCandidate(u)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 14px', textAlign: 'left', border: 'none', cursor: 'pointer',
+                  borderTop: i === 0 ? 'none' : '1px solid var(--color-border)',
+                  background: 'transparent', transition: 'background 0.1s',
+                }}>
+                <TierBadge tier={u.membership_tier || 'free'} />
+                <span style={{ fontWeight: 600, fontSize: '0.88rem', flex: 1 }}>{u.email}</span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--color-text-light)' }}>
+                  {u.display_name || u.username || '-'}
+                </span>
+                <Mi size="sm" style={{ color: 'var(--color-text-light)' }}>chevron_right</Mi>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 검색 결과 */}

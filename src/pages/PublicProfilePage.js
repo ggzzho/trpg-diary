@@ -488,7 +488,7 @@ export default function PublicProfilePage() {
         safeC(supabase.from('characters').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('schedules').select('id',{count:'exact',head:true}).eq('user_id',p.id).neq('entry_type','blocked').neq('status','cancelled').neq('status','completed').gte('scheduled_date',today)),
         safeC(supabase.from('availability').select('id',{count:'exact',head:true}).eq('user_id',p.id).eq('is_active',true)),
-        safeC(supabase.from('guestbook').select('id',{count:'exact',head:true}).eq('owner_id',p.id)),
+        safeC(supabase.from('guestbook').select('id',{count:'exact',head:true}).eq('owner_id',p.id).eq('type','message').is('parent_id',null)),
         safeC(supabase.from('bookmarks').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
       ])
       setCounts({ logs:logsCount, rulebooks:rulebooksCount, scenarios:scenariosCount, wish_scenarios:wishCount, dotori:dotoriCount, pairs:pairsCount, characters:charsCount, schedule:schedsCount, availability:availCount, guestbook:guestbookCount, bookmarks:bookmarksCount })
