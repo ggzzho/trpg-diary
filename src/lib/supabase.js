@@ -94,6 +94,38 @@ export const charactersApi = makeTableApi('characters')
 export const bookmarksApi = makeTableApi('bookmarks')
 export const dotoriApi = makeTableApi('dotori')
 
+// ── 멤버십 관리 API (관리자 전용) ─────────────────────────────
+export const membershipApi = {
+  // 이메일로 유저 검색 (SECURITY DEFINER 함수 호출)
+  searchUser: async (email) => {
+    const { data, error } = await supabase.rpc('admin_search_user', { p_email: email })
+    return { data, error }
+  },
+  // 등급 설정 (SECURITY DEFINER 함수 호출)
+  setMembership: async (email, tier, note = null) => {
+    const { data, error } = await supabase.rpc('admin_set_membership', {
+      p_target_email: email,
+      p_new_tier: tier,
+      p_note: note,
+    })
+    return { data, error }
+  },
+  // 로그 되돌리기 (SECURITY DEFINER 함수 호출)
+  revertLog: async (logId) => {
+    const { data, error } = await supabase.rpc('admin_revert_membership', { p_log_id: logId })
+    return { data, error }
+  },
+  // 최근 수정 내역 조회 (RLS로 관리자만 읽기 가능)
+  getLogs: async (limit = 30) => {
+    const { data, error } = await supabase
+      .from('membership_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    return { data, error }
+  },
+}
+
 // ── 북마크 태그 API ───────────────────────────────────────────
 export const bookmarkTagsApi = {
   getAll: async (userId) => {
