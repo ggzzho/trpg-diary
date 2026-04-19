@@ -43,7 +43,7 @@ function DetailSection({ label, value }) {
 
 const BLANK = {
   name:'', age:'', gender:'', height_weight:'', job:'',
-  personality:'', background:'', extra_settings:'', memo:'',
+  personality:'', background:'', extra_settings:'',
   image_url:'', rules:[], extra_urls:[]
 }
 const cleanPayload = f => {
@@ -194,7 +194,6 @@ export function CharactersPage() {
         (i.personality||'').toLowerCase().includes(s) ||
         (i.background||'').toLowerCase().includes(s) ||
         (i.extra_settings||'').toLowerCase().includes(s) ||
-        (i.memo||'').toLowerCase().includes(s) ||
         (i.rules||[]).some(r=>r.toLowerCase().includes(s))
       )
     })
@@ -287,11 +286,7 @@ export function CharactersPage() {
                         {displayRules.map(r=><RuleChip key={r} label={r}/>)}
                       </div>
                     )}
-                    {item.memo&&(
-                      <p className="text-xs text-light" style={{marginTop:6,borderTop:'1px solid var(--color-border)',paddingTop:6,overflow:'hidden',textOverflow:'ellipsis',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>
-                        {item.memo}
-                      </p>
-                    )}
+
                   </div>
                   <div style={{padding:'8px 14px',borderTop:'1px solid var(--color-border)',display:'flex',gap:8,justifyContent:'flex-end'}}>
                     <button className="btn btn-ghost btn-sm" style={{marginRight:'auto'}} onClick={e=>{e.stopPropagation();openHistoryView(item)}}>
@@ -364,11 +359,6 @@ export function CharactersPage() {
         <div className="form-group">
           <label className="form-label">기타설정</label>
           <textarea className="form-textarea" value={form.extra_settings||''} onChange={set('extra_settings')} style={{minHeight:70}} placeholder="외형, 특기, 소지품 등 기타 설정"/>
-        </div>
-        {/* 메모 */}
-        <div className="form-group">
-          <label className="form-label">메모</label>
-          <textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{minHeight:70}}/>
         </div>
         {/* 룰 태그 */}
         <div className="form-group">
@@ -458,7 +448,6 @@ export function CharactersPage() {
           {detailChar.personality&&<DetailSection label="성격" value={detailChar.personality}/>}
           {detailChar.background&&<DetailSection label="배경" value={detailChar.background}/>}
           {detailChar.extra_settings&&<DetailSection label="기타설정" value={detailChar.extra_settings}/>}
-          {detailChar.memo&&<DetailSection label="메모" value={detailChar.memo}/>}
           {/* 기타 URL */}
           {(detailChar.extra_urls||[]).filter(u=>u.url).length>0&&(
             <div style={{marginTop:4}}>
