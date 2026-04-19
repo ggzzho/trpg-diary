@@ -178,8 +178,19 @@ export function RulebookPage() {
     if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 보유 룰북을 정리해주세요.'); return }
     const { id, user_id, created_at, ...formFields } = form
     const payload = { ...formFields, parent_id: isSuppl ? (form.parent_id || null) : null }
-    if (editing) await supabase.from('rulebooks').update(payload).eq('id', editing.id)
-    else await supabase.from('rulebooks').insert({ ...payload, user_id:user.id })
+    if (editing) {
+      await supabase.from('rulebooks').update(payload).eq('id', editing.id)
+      // 룰북 이름 변경 시 관련 세션·일정·공수표의 system_name 일괄 업데이트
+      if (form.title !== editing.title) {
+        await Promise.all([
+          supabase.from('play_logs').update({ system_name: form.title }).eq('user_id', user.id).eq('system_name', editing.title),
+          supabase.from('schedules').update({ system_name: form.title }).eq('user_id', user.id).eq('system_name', editing.title),
+          supabase.from('availability').update({ system_name: form.title }).eq('user_id', user.id).eq('system_name', editing.title),
+        ])
+      }
+    } else {
+      await supabase.from('rulebooks').insert({ ...payload, user_id:user.id })
+    }
     setModal(false)
     load()
     reloadRules() // 다른 페이지의 룰 선택 즉시 갱신
