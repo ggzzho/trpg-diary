@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Mi } from '../Mi'
 
+const MAX_TRACKS = 12
+
 // YouTube Video ID 추출
 const extractVideoId = (url) => {
   if (!url) return null
@@ -19,7 +21,7 @@ const extractVideoId = (url) => {
 }
 
 // YouTube IFrame API 로드 (싱글톤)
-let _apiStatus = 'idle' // idle | loading | ready
+let _apiStatus = 'idle'
 const _apiCallbacks = []
 function loadYTApi(cb) {
   if (_apiStatus === 'ready' && window.YT?.Player) { cb(); return }
@@ -36,97 +38,133 @@ function loadYTApi(cb) {
 }
 
 export default function BgmPlayer({ profile, isOwner, onSave }) {
-  const videoId = extractVideoId(profile?.bgm_url)
-  const hasVideo = !!videoId
+  // ── 플레이리스트 데이터 (bgm_url 단일트랙 하위호환 포함) ──
+  const rawPlaylist  = profile?.bgm_playlist || []
+  const resolvedList = rawPlaylist.length === 0 && profile?.bgm_url
+    ? [{ url: profile.bgm_url, title: profile.bgm_title || '' }]
+    : rawPlaylist
+  const videoIds = resolvedList.map(t => extractVideoId(t.url)).filter(Boolean)
+  const hasVideo = videoIds.length > 0
 
-  const playerRef     = useRef(null)
-  const containerRef  = useRef(null)
-  const [ready,   setReady]   = useState(false)
-  const [playing, setPlaying] = useState(false)
-  const [volume,  setVolume]  = useState(50)
+  // ── 플레이어 refs ──
+  const playerRef    = useRef(null)
+  const containerRef = useRef(null)
+
+  // ── 플레이어 상태 ──
+  const [ready,        setReady]        = useState(false)
+  const [playing,      setPlaying]      = useState(false)
+  const [volume,       setVolume]       = useState(50)
+  const [currentIndex, setCurrentIndex] = useState(0)
+
+  // ── UI 상태 ──
   const [expanded, setExpanded] = useState(false)
   const [editing,  setEditing]  = useState(false)
   const [saving,   setSaving]   = useState(false)
-  const [form, setForm] = useState({
-    url:      profile?.bgm_url      || '',
-    title:    profile?.bgm_title    || '',
-    autoplay: profile?.bgm_autoplay || false,
-  })
 
-  // form 동기화
-  useEffect(() => {
-    setForm({
-      url:      profile?.bgm_url      || '',
-      title:    profile?.bgm_title    || '',
-      autoplay: profile?.bgm_autoplay || false,
-    })
-  }, [profile?.bgm_url, profile?.bgm_title, profile?.bgm_autoplay])
+  // ── 편집 폼 상태 ──
+  const [editList, setEditList] = useState([])
+  const [newUrl,   setNewUrl]   = useState('')
+  const [newTitle, setNewTitle] = useState('')
 
-  // YouTube 플레이어 초기화
+  // ── YouTube 플레이어 초기화 ──
+  const videoIdsStr = videoIds.join(',')
   useEffect(() => {
-    if (!videoId || !containerRef.current) return
+    if (!hasVideo || !containerRef.current) return
     setReady(false)
     setPlaying(false)
+    setCurrentIndex(0)
 
     loadYTApi(() => {
       if (!containerRef.current) return
-      if (playerRef.current) {
-        try { playerRef.current.destroy() } catch {}
-      }
+      try { playerRef.current?.destroy() } catch {}
+
       playerRef.current = new window.YT.Player(containerRef.current, {
-        videoId,
+        videoId: videoIds[0],
         height: '1',
         width:  '1',
-        playerVars: {
-          autoplay: 0, controls: 0, disablekb: 1,
-          fs: 0, rel: 0, loop: 1, playlist: videoId,
-        },
+        playerVars: { autoplay:0, controls:0, disablekb:1, fs:0, rel:0 },
         events: {
           onReady: (e) => {
             e.target.setVolume(volume)
+            // 전체 플레이리스트를 큐에 올리고 루프 설정
+            e.target.cuePlaylist(videoIds)
+            e.target.setLoop(true)
             setReady(true)
           },
           onStateChange: (e) => {
             if (!window.YT) return
             setPlaying(e.data === window.YT.PlayerState.PLAYING)
+            try {
+              const idx = playerRef.current?.getPlaylistIndex()
+              if (idx != null && idx >= 0) setCurrentIndex(idx)
+            } catch {}
+          },
+          onError: () => {
+            // 재생 불가 영상 자동 스킵
+            try { playerRef.current?.nextVideo() } catch {}
           },
         },
       })
     })
 
     return () => {
-      if (playerRef.current) {
-        try { playerRef.current.destroy() } catch {}
-        playerRef.current = null
-      }
+      try { playerRef.current?.destroy() } catch {}
+      playerRef.current = null
       setReady(false)
       setPlaying(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoId])
+  }, [videoIdsStr])
 
+  // ── 플레이어 컨트롤 ──
   const togglePlay = () => {
     if (!playerRef.current) return
-    if (playing) playerRef.current.pauseVideo()
-    else playerRef.current.playVideo()
+    playing ? playerRef.current.pauseVideo() : playerRef.current.playVideo()
   }
-
+  const handlePrev   = () => { try { playerRef.current?.previousVideo() } catch {} }
+  const handleNext   = () => { try { playerRef.current?.nextVideo()     } catch {} }
   const handleVolume = (v) => {
     setVolume(v)
-    if (playerRef.current?.setVolume) playerRef.current.setVolume(v)
+    try { playerRef.current?.setVolume(v) } catch {}
   }
 
+  // ── 편집 열기 ──
+  const openEdit = () => {
+    setEditList(resolvedList.map(t => ({ ...t })))
+    setNewUrl('')
+    setNewTitle('')
+    setEditing(true)
+  }
+
+  // ── 트랙 추가 ──
+  const addTrack = () => {
+    const url = newUrl.trim()
+    if (!url || editList.length >= MAX_TRACKS) return
+    setEditList(prev => [...prev, { url, title: newTitle.trim() }])
+    setNewUrl('')
+    setNewTitle('')
+  }
+
+  // ── 트랙 삭제 ──
+  const removeTrack = (i) =>
+    setEditList(prev => prev.filter((_, idx) => idx !== i))
+
+  // ── 설정 저장 ──
   const saveSettings = async () => {
     setSaving(true)
-    await onSave({ bgm_url: form.url.trim(), bgm_title: form.title.trim(), bgm_autoplay: form.autoplay })
+    await onSave({
+      bgm_playlist: editList,
+      bgm_autoplay: profile?.bgm_autoplay || false,
+    })
     setSaving(false)
     setEditing(false)
   }
 
-  // 데이터도 없고 오너도 아니면 렌더링 안 함
+  // 데이터 없고 오너도 아님 → 렌더링 안 함
   if (!hasVideo && !isOwner) return null
 
-  const displayTitle = (profile?.bgm_title || 'BGM').slice(0, 22)
+  const currentTrack = resolvedList[currentIndex] || resolvedList[0]
+  const displayTitle = (currentTrack?.title || 'BGM').slice(0, 24)
 
   return (
     <>
@@ -135,7 +173,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
         <div ref={containerRef}/>
       </div>
 
-      {/* 플레이어 위젯 (fixed, 다크 토글 위) */}
+      {/* ── 플레이어 위젯 ── */}
       <div style={{
         position:'fixed', bottom:116, right:20, zIndex:9999,
         background:'var(--color-surface)',
@@ -145,7 +183,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
         backdropFilter:'blur(12px)',
         overflow:'hidden',
         transition:'border-radius 0.2s',
-        minWidth: expanded ? 220 : 36,
+        minWidth: expanded ? 250 : 36,
       }}>
         {!expanded ? (
           /* 접힌 상태: 아이콘만 */
@@ -171,30 +209,58 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
           </div>
         ) : (
           /* 펼친 상태 */
-          <div style={{ padding:'10px 14px', minWidth:220 }}>
+          <div style={{ padding:'10px 14px', minWidth:250 }}>
             {/* 헤더 */}
             <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
               <Mi size="sm" color="accent">music_note</Mi>
-              <span style={{ fontSize:'0.8rem', fontWeight:700, flex:1, color:'var(--color-accent)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+              <span style={{
+                fontSize:'0.8rem', fontWeight:700, flex:1, color:'var(--color-accent)',
+                overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+              }}>
                 {displayTitle}
               </span>
-              <button onClick={() => setExpanded(false)}
-                style={{ background:'none', border:'none', cursor:'pointer', color:'var(--color-text-light)', fontSize:'1rem', lineHeight:1, padding:'0 2px' }}>
-                ×
-              </button>
+              {resolvedList.length > 1 && (
+                <span style={{ fontSize:'0.7rem', color:'var(--color-text-light)', flexShrink:0 }}>
+                  {currentIndex + 1} / {resolvedList.length}
+                </span>
+              )}
+              <button
+                onClick={() => setExpanded(false)}
+                style={{ background:'none', border:'none', cursor:'pointer', color:'var(--color-text-light)', fontSize:'1rem', lineHeight:1, padding:'0 2px' }}
+              >×</button>
             </div>
 
             {hasVideo ? (
               <>
-                {/* 재생 버튼 */}
-                <button
-                  className={`btn btn-sm ${playing ? 'btn-outline' : 'btn-primary'}`}
-                  onClick={togglePlay}
-                  disabled={!ready}
-                  style={{ width:'100%', fontSize:'0.78rem', marginBottom:8 }}
-                >
-                  {!ready ? '로딩 중...' : playing ? '⏸ 일시정지' : '▶ 재생'}
-                </button>
+                {/* 재생 컨트롤 */}
+                <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:8 }}>
+                  {resolvedList.length > 1 && (
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={handlePrev}
+                      disabled={!ready}
+                      style={{ padding:'4px 10px', fontSize:'0.85rem' }}
+                      title="이전 곡"
+                    >⏮</button>
+                  )}
+                  <button
+                    className={`btn btn-sm ${playing ? 'btn-outline' : 'btn-primary'}`}
+                    onClick={togglePlay}
+                    disabled={!ready}
+                    style={{ flex:1, fontSize:'0.78rem' }}
+                  >
+                    {!ready ? '로딩 중...' : playing ? '⏸ 일시정지' : '▶ 재생'}
+                  </button>
+                  {resolvedList.length > 1 && (
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={handleNext}
+                      disabled={!ready}
+                      style={{ padding:'4px 10px', fontSize:'0.85rem' }}
+                      title="다음 곡"
+                    >⏭</button>
+                  )}
+                </div>
 
                 {/* 볼륨 슬라이더 */}
                 <div style={{ display:'flex', alignItems:'center', gap:6 }}>
@@ -217,7 +283,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
             {isOwner && (
               <button
                 className="btn btn-ghost btn-sm"
-                onClick={() => setEditing(true)}
+                onClick={openEdit}
                 style={{ marginTop:8, width:'100%', fontSize:'0.73rem' }}
               >
                 <Mi size="sm">settings</Mi> BGM 설정
@@ -227,7 +293,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
         )}
       </div>
 
-      {/* BGM 설정 모달 */}
+      {/* ── BGM 설정 모달 ── */}
       {editing && (
         <div style={{
           position:'fixed', inset:0, background:'rgba(0,0,0,0.45)',
@@ -235,39 +301,93 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
         }}>
           <div style={{
             background:'var(--color-surface)', borderRadius:16, padding:'24px 24px 20px',
-            maxWidth:420, width:'100%',
+            maxWidth:460, width:'100%', maxHeight:'80vh',
+            display:'flex', flexDirection:'column',
             boxShadow:'0 8px 40px rgba(0,0,0,0.25)',
           }}>
-            <h3 style={{ fontWeight:700, color:'var(--color-accent)', marginBottom:18, fontSize:'1rem' }}>
-              🎵 BGM 설정
-            </h3>
+            {/* 모달 헤더 */}
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+              <h3 style={{ fontWeight:700, color:'var(--color-accent)', fontSize:'1rem', margin:0 }}>
+                🎵 BGM 플레이리스트
+              </h3>
+              <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)', marginLeft:'auto' }}>
+                {editList.length} / {MAX_TRACKS}곡
+              </span>
+            </div>
+            <p style={{ fontSize:'0.72rem', color:'var(--color-text-light)', marginBottom:14, marginTop:2 }}>
+              유튜브 링크 또는 영상 ID 입력 · 순서대로 반복 재생
+            </p>
 
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:'0.82rem', fontWeight:600, display:'block', marginBottom:5 }}>YouTube URL</label>
-              <input
-                className="form-input"
-                placeholder="https://www.youtube.com/watch?v=..."
-                value={form.url}
-                onChange={e => setForm(f => ({...f, url: e.target.value}))}
-                style={{ fontSize:'0.85rem' }}
-              />
-              <p style={{ fontSize:'0.72rem', color:'var(--color-text-light)', marginTop:4 }}>
-                유튜브 링크 또는 영상 ID를 입력하세요 (공식 임베드 API 사용)
-              </p>
+            {/* 트랙 목록 */}
+            <div style={{ overflowY:'auto', flex:1, marginBottom:14, display:'flex', flexDirection:'column', gap:6 }}>
+              {editList.length === 0 ? (
+                <p style={{ fontSize:'0.8rem', color:'var(--color-text-light)', textAlign:'center', padding:'16px 0', margin:0 }}>
+                  아직 곡이 없어요
+                </p>
+              ) : editList.map((track, i) => (
+                <div key={i} style={{
+                  display:'flex', alignItems:'center', gap:8,
+                  background:'var(--color-nav-active-bg)', borderRadius:8, padding:'8px 10px',
+                }}>
+                  <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)', minWidth:16, flexShrink:0 }}>
+                    {i + 1}
+                  </span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:'0.82rem', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {track.title || <span style={{ color:'var(--color-text-light)', fontWeight:400 }}>(제목 없음)</span>}
+                    </div>
+                    <div style={{ fontSize:'0.68rem', color:'var(--color-text-light)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {track.url}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeTrack(i)}
+                    style={{
+                      background:'none', border:'none', cursor:'pointer',
+                      color:'#e57373', fontSize:'1.1rem', lineHeight:1,
+                      padding:'0 2px', flexShrink:0,
+                    }}
+                  >×</button>
+                </div>
+              ))}
             </div>
 
-            <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:'0.82rem', fontWeight:600, display:'block', marginBottom:5 }}>곡 제목</label>
-              <input
-                className="form-input"
-                placeholder="방문자에게 표시될 곡 이름"
-                value={form.title}
-                onChange={e => setForm(f => ({...f, title: e.target.value}))}
-                style={{ fontSize:'0.85rem' }}
-              />
-            </div>
+            {/* 곡 추가 폼 */}
+            {editList.length < MAX_TRACKS && (
+              <div style={{ borderTop:'1px solid var(--color-border)', paddingTop:12, marginBottom:14 }}>
+                <div style={{ fontSize:'0.77rem', fontWeight:600, color:'var(--color-text-light)', marginBottom:7 }}>
+                  곡 추가
+                </div>
+                <input
+                  className="form-input"
+                  placeholder="YouTube URL 또는 영상 ID"
+                  value={newUrl}
+                  onChange={e => setNewUrl(e.target.value)}
+                  style={{ fontSize:'0.83rem', marginBottom:6 }}
+                />
+                <div style={{ display:'flex', gap:6 }}>
+                  <input
+                    className="form-input"
+                    placeholder="곡 제목 (선택)"
+                    value={newTitle}
+                    onChange={e => setNewTitle(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addTrack() }}
+                    style={{ flex:1, fontSize:'0.83rem' }}
+                  />
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={addTrack}
+                    disabled={!newUrl.trim()}
+                    style={{ flexShrink:0 }}
+                  >
+                    추가
+                  </button>
+                </div>
+              </div>
+            )}
 
-            <div style={{ display:'flex', gap:8, marginTop:20 }}>
+            {/* 저장 / 취소 */}
+            <div style={{ display:'flex', gap:8 }}>
               <button className="btn btn-primary" onClick={saveSettings} disabled={saving} style={{ flex:1 }}>
                 {saving ? '저장 중...' : '저장'}
               </button>
