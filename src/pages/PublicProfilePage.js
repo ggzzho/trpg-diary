@@ -211,6 +211,7 @@ export default function PublicProfilePage() {
   const [pubHistoryViewPage, setPubHistoryViewPage] = useState(1)
   // 공개 페이지 PC 히스토리 뷰
   const [charHistoriesMap, setCharHistoriesMap] = useState({})
+  const [pubDetailChar, setPubDetailChar] = useState(null)
   const [pubCharHistoryViewChar, setPubCharHistoryViewChar] = useState(null)
   const [pubCharHistoryViewSearch, setPubCharHistoryViewSearch] = useState('')
   const [pubCharHistoryViewPage, setPubCharHistoryViewPage] = useState(1)
@@ -1171,13 +1172,16 @@ export default function PublicProfilePage() {
                 const displayRules = c.rules||[]
                 return (
                   <div key={c.id} className="card" style={{ padding:0, overflow:'hidden' }}>
-                    <div style={{ position:'relative', width:'100%', paddingTop:'100%', background:'var(--color-nav-active-bg)', overflow:'hidden' }}>
+                    {/* 이미지 — 클릭 시 상세 팝업 */}
+                    <div style={{ position:'relative', width:'100%', paddingTop:'100%', background:'var(--color-nav-active-bg)', overflow:'hidden', cursor:'pointer' }}
+                      onClick={()=>setPubDetailChar(c)}>
                       {c.image_url
                         ? <img src={c.image_url} alt={c.name} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}/>
                         : <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:'4rem', opacity:0.25 }}>🧑</span></div>
                       }
                     </div>
-                    <div style={{ padding:'12px 14px' }}>
+                    {/* 카드 정보 — 클릭 시 상세 팝업 */}
+                    <div style={{ padding:'12px 14px', cursor:'pointer' }} onClick={()=>setPubDetailChar(c)}>
                       <div style={{ fontWeight:700, fontSize:'1rem', marginBottom:3 }}>{c.name}</div>
                       {(c.age||c.gender||c.job)&&(
                         <div className="text-xs text-light" style={{ marginBottom:5 }}>
@@ -1189,7 +1193,6 @@ export default function PublicProfilePage() {
                           {displayRules.map(r=><Chip key={r} type="role" label={r}/>)}
                         </div>
                       )}
-                      {c.memo&&<p className="text-xs text-light" style={{ marginTop:6, borderTop:'1px solid var(--color-border)', paddingTop:6, overflow:'hidden', textOverflow:'ellipsis', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{c.memo}</p>}
                     </div>
                     <div style={{ padding:'8px 14px', borderTop:'1px solid var(--color-border)' }}>
                       <button className="btn btn-ghost btn-sm" onClick={()=>{ setPubCharHistoryViewChar(c); setPubCharHistoryViewSearch(''); setPubCharHistoryViewPage(1) }}>
@@ -1339,6 +1342,68 @@ export default function PublicProfilePage() {
               )}
             </div>
         }
+      </Modal>
+
+      {/* PC 상세 팝업 (읽기 전용) */}
+      <Modal isOpen={!!pubDetailChar} onClose={()=>setPubDetailChar(null)} title={pubDetailChar?.name||'PC 상세'}
+        footer={
+          <div style={{display:'flex',gap:8,width:'100%',justifyContent:'space-between'}}>
+            <button className="btn btn-outline btn-sm" onClick={()=>{
+              const c = pubDetailChar
+              setPubDetailChar(null)
+              setPubCharHistoryViewChar(c)
+              setPubCharHistoryViewSearch('')
+              setPubCharHistoryViewPage(1)
+            }}>
+              <Mi size='sm'>history</Mi> 히스토리{pubDetailChar&&charHistoriesMap[pubDetailChar.id]?.length>0&&` (${charHistoriesMap[pubDetailChar.id].length})`}
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={()=>setPubDetailChar(null)}>닫기</button>
+          </div>
+        }
+      >
+        {pubDetailChar&&<>
+          {/* 이미지 */}
+          {pubDetailChar.image_url&&(
+            <div style={{width:'100%',aspectRatio:'1/1',maxHeight:260,overflow:'hidden',borderRadius:12,marginBottom:16,background:'var(--color-nav-active-bg)'}}>
+              <img src={pubDetailChar.image_url} alt={pubDetailChar.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+            </div>
+          )}
+          {/* 기본 정보 그리드 */}
+          {(pubDetailChar.age||pubDetailChar.gender||pubDetailChar.height_weight||pubDetailChar.job)&&(
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
+              {pubDetailChar.age&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>나이</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.age}세</div></div>}
+              {pubDetailChar.gender&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>성별</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.gender}</div></div>}
+              {pubDetailChar.height_weight&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>키/몸무게</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.height_weight}</div></div>}
+              {pubDetailChar.job&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>직업</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.job}</div></div>}
+            </div>
+          )}
+          {/* 룰 태그 */}
+          {pubDetailChar.rules?.length>0&&(
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:6}}>룰</div>
+              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                {pubDetailChar.rules.map(r=><Chip key={r} type="role" label={r}/>)}
+              </div>
+            </div>
+          )}
+          {/* 텍스트 섹션 */}
+          {pubDetailChar.personality&&<div style={{marginBottom:14}}><div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>성격</div><div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{pubDetailChar.personality}</div></div>}
+          {pubDetailChar.background&&<div style={{marginBottom:14}}><div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>배경</div><div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{pubDetailChar.background}</div></div>}
+          {pubDetailChar.extra_settings&&<div style={{marginBottom:14}}><div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>기타설정</div><div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{pubDetailChar.extra_settings}</div></div>}
+          {/* 기타 URL */}
+          {(pubDetailChar.extra_urls||[]).filter(u=>u.url).length>0&&(
+            <div style={{marginTop:4}}>
+              <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:6}}>링크</div>
+              {(pubDetailChar.extra_urls||[]).filter(u=>u.url).map((u,i)=>(
+                <div key={i} style={{marginBottom:6}}>
+                  <a href={u.url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem',display:'inline-flex',alignItems:'center',gap:4}}>
+                    <Mi size='sm'>link</Mi>{u.label||'링크'}
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </>}
       </Modal>
 
       {/* PC 히스토리 뷰 모달 (읽기 전용) */}
