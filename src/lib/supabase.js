@@ -124,6 +124,16 @@ export const membershipApi = {
       .limit(limit)
     return { data, error }
   },
+  // 전체 회원 목록 (페이지네이션 + 필터, SECURITY DEFINER)
+  listUsers: async ({ tier = null, page = 1, perPage = 30, search = null } = {}) => {
+    const { data, error } = await supabase.rpc('admin_list_users', {
+      p_tier:     tier,
+      p_page:     page,
+      p_per_page: perPage,
+      p_search:   search || null,
+    })
+    return { data, error }
+  },
 }
 
 // ── 북마크 태그 API ───────────────────────────────────────────
