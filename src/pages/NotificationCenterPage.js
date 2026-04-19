@@ -1,4 +1,5 @@
 // src/pages/NotificationCenterPage.js
+// 알림 센터 — 반응형 레이아웃 적용 (notif-item / notif-content / notif-time)
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { notificationsApi } from '../lib/supabase'
