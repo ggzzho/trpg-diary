@@ -32,7 +32,7 @@ export default function Dashboard() {
         // 카운트만 필요한 테이블: head:true로 행 전송 없이 카운트만
         supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',user.id),
         supabase.from('play_logs')
-          .select('id,title,is_gm,system_name,npc,start_date,played_date')
+          .select('id,title,role,system_name,npc,start_date,played_date')
           .eq('user_id',user.id).order('played_date',{ascending:false,nullsFirst:false}).limit(4),
         supabase.from('rulebooks').select('id',{count:'exact',head:true}).eq('user_id',user.id),
         supabase.from('scenarios').select('id',{count:'exact',head:true}).eq('user_id',user.id),
@@ -214,7 +214,7 @@ export default function Dashboard() {
               <div key={l.id} style={{padding:'10px 0',borderBottom:'1px solid var(--color-border)'}}>
                 <div style={{fontWeight:600,fontSize:'0.88rem',marginBottom:4}}>{l.title}</div>
                 <div className="text-xs text-light" style={{display:'flex',flexWrap:'wrap',gap:6}}>
-                  <span>{l.is_gm?'GM':'PL'}</span>
+                  <span>{l.role||'PL'}</span>
                   {l.system_name&&<><span style={{opacity:0.4}}>·</span><span>{l.system_name}</span></>}
                   {l.npc&&<><span style={{opacity:0.4}}>·</span><span>{l.npc}</span></>}
                   {(l.start_date||l.played_date)&&<><span style={{opacity:0.4}}>·</span>
