@@ -70,10 +70,12 @@ body::before {
 .main-content {
   margin-left: var(--sidebar-width);
   flex: 1;
+  min-width: 0;
   padding: 36px 44px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 .main-content > .fade-in {
   flex: 1;
