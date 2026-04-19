@@ -26,6 +26,7 @@ const WIDGET_OPTIONS = [
   {key:'availability', label:'공수표', icon:'event_available'},
   {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
   {key:'pairs', label:'페어/팀 목록', icon:'people'},
+  {key:'characters', label:'PC 목록', icon:'person'},
   {key:'bookmarks', label:'북마크', icon:'bookmark'},
   {key:'guestbook', label:'방명록', icon:'mail'},
 ]
@@ -303,8 +304,10 @@ export default function SettingsPage() {
             <p className="text-sm text-light" style={{marginBottom:20}}>홈화면 상단에 표시할 위젯 4개를 선택하세요.</p>
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
               {WIDGET_OPTIONS.map(w=>{
-                const isSelected=(form.dashboard_cards||[]).includes(w.key)
-                const canAdd=(form.dashboard_cards||[]).length<4
+                const validKeys = WIDGET_OPTIONS.map(o=>o.key)
+                const validCards = (form.dashboard_cards||[]).filter(k=>validKeys.includes(k))
+                const isSelected=validCards.includes(w.key)
+                const canAdd=validCards.length<4
                 return (
                   <div key={w.key} className="card" style={{padding:'10px 14px',background:'var(--color-nav-active-bg)',opacity:(!isSelected&&!canAdd)?0.45:1,transition:'opacity 0.15s'}}>
                     <div className="flex justify-between items-center">
@@ -325,7 +328,7 @@ export default function SettingsPage() {
                 )
               })}
             </div>
-            <p className="text-sm text-light" style={{marginTop:12,textAlign:'right'}}>{(form.dashboard_cards||[]).length}/4 선택됨</p>
+            <p className="text-sm text-light" style={{marginTop:12,textAlign:'right'}}>{(form.dashboard_cards||[]).filter(k=>WIDGET_OPTIONS.some(w=>w.key===k)).length}/4 선택됨</p>
           </>
         )}
 
@@ -436,6 +439,7 @@ export default function SettingsPage() {
                 {key:'availability', label:'공수표', icon:'event_available'},
                 {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
                 {key:'pairs', label:'페어/팀', icon:'people'},
+                {key:'characters', label:'PC 목록', icon:'person'},
                 {key:'bookmarks', label:'북마크', icon:'bookmark'},
                 {key:'guestbook', label:'방명록', icon:'mail'},
               ].map(t => {

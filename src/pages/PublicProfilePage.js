@@ -209,6 +209,12 @@ export default function PublicProfilePage() {
   const [pubHistoryViewPair, setPubHistoryViewPair] = useState(null)
   const [pubHistoryViewSearch, setPubHistoryViewSearch] = useState('')
   const [pubHistoryViewPage, setPubHistoryViewPage] = useState(1)
+  // 공개 페이지 PC 히스토리 뷰
+  const [charHistoriesMap, setCharHistoriesMap] = useState({})
+  const [pubDetailChar, setPubDetailChar] = useState(null)
+  const [pubCharHistoryViewChar, setPubCharHistoryViewChar] = useState(null)
+  const [pubCharHistoryViewSearch, setPubCharHistoryViewSearch] = useState('')
+  const [pubCharHistoryViewPage, setPubCharHistoryViewPage] = useState(1)
   // 탭별 lazy load
   const [counts, setCounts] = useState({})
   const [tabLoading, setTabLoading] = useState({})
@@ -300,6 +306,39 @@ export default function PublicProfilePage() {
     )
   }, [data.pairs, pairSort, tabSearch])
   const pairsPagination = usePagination(sortedFilteredPairs, 20)
+
+  // PC 탭 필터링
+  const filteredCharacters = useMemo(() => {
+    if (!tabSearch) return data.characters||[]
+    const s = tabSearch.toLowerCase()
+    return (data.characters||[]).filter(c =>
+      (c.name||'').toLowerCase().includes(s) ||
+      (c.age||'').toLowerCase().includes(s) ||
+      (c.gender||'').toLowerCase().includes(s) ||
+      (c.job||'').toLowerCase().includes(s) ||
+      (c.personality||'').toLowerCase().includes(s) ||
+      (c.background||'').toLowerCase().includes(s) ||
+      (c.extra_settings||'').toLowerCase().includes(s) ||
+      (c.memo||'').toLowerCase().includes(s) ||
+      (c.rules||[]).some(r=>r.toLowerCase().includes(s))
+    )
+  }, [data.characters, tabSearch])
+  const charactersPagination = usePagination(filteredCharacters, 20)
+
+  const pubCharHistoryViewLogs = useMemo(() => {
+    if (!pubCharHistoryViewChar) return []
+    const s = pubCharHistoryViewSearch.toLowerCase()
+    const list = charHistoriesMap[pubCharHistoryViewChar.id] || []
+    if (!s) return list
+    return list.filter(h =>
+      (h.title||'').toLowerCase().includes(s) ||
+      (h.system_name||'').toLowerCase().includes(s) ||
+      (h.played_date||'').includes(s)
+    )
+  }, [pubCharHistoryViewChar, pubCharHistoryViewSearch, charHistoriesMap])
+  const PCHV_PER_PAGE = 10
+  const pchvTotalPages = Math.ceil(pubCharHistoryViewLogs.length / PCHV_PER_PAGE) || 1
+  const pchvPaged = pubCharHistoryViewLogs.slice((pubCharHistoryViewPage-1)*PCHV_PER_PAGE, pubCharHistoryViewPage*PCHV_PER_PAGE)
 
   const pubHistoryViewLogs = useMemo(() => {
     if (!pubHistoryViewPair) return []
@@ -403,6 +442,20 @@ export default function PublicProfilePage() {
         hMap[r.pair_id].push({history_id:r.id, ...r.play_logs})
       })
       setPairHistoriesMap(hMap)
+    } else if (tab === 'characters') {
+      const chars = await safeQ(supabase.from('characters').select('*').eq('user_id',profileId).order('created_at',{ascending:false}).limit(2500))
+      updates.characters = chars
+      // 히스토리 pre-load
+      const { data: hData } = await supabase.from('character_histories')
+        .select('id, character_id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url)')
+        .eq('user_id', profileId).order('created_at', {ascending:false})
+      const hMap = {}
+      chars.forEach(c => { hMap[c.id] = [] })
+      ;(hData||[]).forEach(r => {
+        if (!hMap[r.character_id]) hMap[r.character_id] = []
+        hMap[r.character_id].push({history_id:r.id, ...r.play_logs})
+      })
+      setCharHistoriesMap(hMap)
     } else if (tab === 'availability') {
       updates.availability = await safeQ(supabase.from('availability').select('*').eq('user_id',profileId).eq('is_active',true).limit(2500))
     } else if (tab === 'bookmarks') {
@@ -425,22 +478,23 @@ export default function PublicProfilePage() {
       // 탭 카운트 + 통계용 경량 head 쿼리
       const today = new Date().toISOString().split('T')[0]
       const safeC = async pr => { try { const r = await pr; return r.count || 0 } catch { return 0 } }
-      const [logsCount, rulebooksCount, scenariosCount, wishCount, dotoriCount, pairsCount, schedsCount, availCount, guestbookCount, bookmarksCount] = await Promise.all([
+      const [logsCount, rulebooksCount, scenariosCount, wishCount, dotoriCount, pairsCount, charsCount, schedsCount, availCount, guestbookCount, bookmarksCount] = await Promise.all([
         safeC(supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',p.id).eq('is_private',false)),
         safeC(supabase.from('rulebooks').select('id',{count:'exact',head:true}).eq('user_id',p.id).is('parent_id',null)),
         safeC(supabase.from('scenarios').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('wish_scenarios').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('dotori').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('pairs').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
+        safeC(supabase.from('characters').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('schedules').select('id',{count:'exact',head:true}).eq('user_id',p.id).neq('entry_type','blocked').neq('status','cancelled').neq('status','completed').gte('scheduled_date',today)),
         safeC(supabase.from('availability').select('id',{count:'exact',head:true}).eq('user_id',p.id).eq('is_active',true)),
         safeC(supabase.from('guestbook').select('id',{count:'exact',head:true}).eq('owner_id',p.id)),
         safeC(supabase.from('bookmarks').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
       ])
-      setCounts({ logs:logsCount, rulebooks:rulebooksCount, scenarios:scenariosCount, wish_scenarios:wishCount, dotori:dotoriCount, pairs:pairsCount, schedule:schedsCount, availability:availCount, guestbook:guestbookCount, bookmarks:bookmarksCount })
+      setCounts({ logs:logsCount, rulebooks:rulebooksCount, scenarios:scenariosCount, wish_scenarios:wishCount, dotori:dotoriCount, pairs:pairsCount, characters:charsCount, schedule:schedsCount, availability:availCount, guestbook:guestbookCount, bookmarks:bookmarksCount })
 
       const hidden = p.hidden_tabs || []
-      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','wish_scenarios','dotori','pairs','bookmarks','guestbook']
+      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','wish_scenarios','dotori','pairs','characters','bookmarks','guestbook']
       const requestedTab = searchParams.get('tab') || 'schedules'
       let initialTab = requestedTab
       if (hidden.includes(requestedTab)) {
@@ -525,6 +579,7 @@ export default function PublicProfilePage() {
     { key:'wish_scenarios', label:'위시 시나리오', icon:'favorite', count: data.wish_scenarios !== undefined ? wishScenarioParents.length : counts.wish_scenarios },
     { key:'dotori', label:'도토리', icon:'forest', count: data.dotori?.length ?? counts.dotori },
     { key:'pairs', label:'페어/팀', icon:'people', count: data.pairs?.length ?? counts.pairs },
+    { key:'characters', label:'PC 목록', icon:'person', count: data.characters?.length ?? counts.characters },
     { key:'bookmarks', label:'북마크', icon:'bookmark', count: data.bookmarks?.length ?? counts.bookmarks },
     { key:'guestbook', label:'방명록', icon:'mail', count: counts.guestbook },
     ...(profile?.is_admin ? [{ key:'feedback', label:'문의/피드백', icon:'support_agent' }] : []),
@@ -658,6 +713,7 @@ export default function PublicProfilePage() {
               {key:'wish_scenarios', label:'위시 시나리오', v: data.wish_scenarios?.length || (counts.wish_scenarios||0)},
               {key:'dotori', label:'도토리', v: data.dotori?.length || (counts.dotori||0)},
               {key:'pairs', label:'페어/팀', v: data.pairs?.length || (counts.pairs||0)},
+              {key:'characters', label:'PC 목록', v: data.characters?.length || (counts.characters||0)},
               {key:'schedule', label:'일정', v: data.schedules?.length || (counts.schedule||0)},
               {key:'availability', label:'공수표', v: data.availability?.length || (counts.availability||0)},
               {key:'guestbook', label:'방명록', v: counts.guestbook||0},
@@ -1106,6 +1162,52 @@ export default function PublicProfilePage() {
         </>
       )}
 
+      {/* ── PC 목록 ── */}
+      {!tabLoading[activeTab] && activeTab==='characters' && (
+        <>
+          <div className="grid-auto">
+            {!filteredCharacters.length
+              ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>PC 목록이 없어요</div>
+              : charactersPagination.paged.map(c => {
+                const displayRules = c.rules||[]
+                return (
+                  <div key={c.id} className="card" style={{ padding:0, overflow:'hidden' }}>
+                    {/* 이미지 — 클릭 시 상세 팝업 */}
+                    <div style={{ position:'relative', width:'100%', paddingTop:'100%', background:'var(--color-nav-active-bg)', overflow:'hidden', cursor:'pointer' }}
+                      onClick={()=>setPubDetailChar(c)}>
+                      {c.image_url
+                        ? <img src={c.image_url} alt={c.name} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}/>
+                        : <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:'4rem', opacity:0.25 }}>🧑</span></div>
+                      }
+                    </div>
+                    {/* 카드 정보 — 클릭 시 상세 팝업 */}
+                    <div style={{ padding:'12px 14px', cursor:'pointer' }} onClick={()=>setPubDetailChar(c)}>
+                      <div style={{ fontWeight:700, fontSize:'1rem', marginBottom:3 }}>{c.name}</div>
+                      {(c.age||c.gender||c.job)&&(
+                        <div className="text-xs text-light" style={{ marginBottom:5 }}>
+                          {[c.age&&`${c.age}세`, c.gender, c.job].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
+                      {displayRules.length>0&&(
+                        <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:5 }}>
+                          {displayRules.map(r=><Chip key={r} type="role" label={r}/>)}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ padding:'8px 14px', borderTop:'1px solid var(--color-border)' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>{ setPubCharHistoryViewChar(c); setPubCharHistoryViewSearch(''); setPubCharHistoryViewPage(1) }}>
+                        <Mi size='sm'>history</Mi> 히스토리{charHistoriesMap[c.id]?.length>0&&` (${charHistoriesMap[c.id].length})`}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            }
+          </div>
+          <Pagination total={filteredCharacters.length} perPage={charactersPagination.perPage} page={charactersPagination.page} onPage={charactersPagination.setPage} onPerPage={charactersPagination.setPerPage}/>
+        </>
+      )}
+
       {/* ── 공수표 ── */}
       {!tabLoading[activeTab] && activeTab==='availability' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
@@ -1236,6 +1338,111 @@ export default function PublicProfilePage() {
                   <button className="btn btn-ghost btn-sm" disabled={pubHistoryViewPage===1} onClick={()=>setPubHistoryViewPage(p=>p-1)}>‹</button>
                   <span className="text-xs text-light">{pubHistoryViewPage} / {phvTotalPages}</span>
                   <button className="btn btn-ghost btn-sm" disabled={pubHistoryViewPage===phvTotalPages} onClick={()=>setPubHistoryViewPage(p=>p+1)}>›</button>
+                </div>
+              )}
+            </div>
+        }
+      </Modal>
+
+      {/* PC 상세 팝업 (읽기 전용) */}
+      <Modal isOpen={!!pubDetailChar} onClose={()=>setPubDetailChar(null)} title={pubDetailChar?.name||'PC 상세'}
+        footer={
+          <div style={{display:'flex',gap:8,width:'100%',justifyContent:'space-between'}}>
+            <button className="btn btn-outline btn-sm" onClick={()=>{
+              const c = pubDetailChar
+              setPubDetailChar(null)
+              setPubCharHistoryViewChar(c)
+              setPubCharHistoryViewSearch('')
+              setPubCharHistoryViewPage(1)
+            }}>
+              <Mi size='sm'>history</Mi> 히스토리{pubDetailChar&&charHistoriesMap[pubDetailChar.id]?.length>0&&` (${charHistoriesMap[pubDetailChar.id].length})`}
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={()=>setPubDetailChar(null)}>닫기</button>
+          </div>
+        }
+      >
+        {pubDetailChar&&<>
+          {/* 이미지 */}
+          {pubDetailChar.image_url&&(
+            <div style={{width:'100%',aspectRatio:'1/1',maxHeight:260,overflow:'hidden',borderRadius:12,marginBottom:16,background:'var(--color-nav-active-bg)'}}>
+              <img src={pubDetailChar.image_url} alt={pubDetailChar.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+            </div>
+          )}
+          {/* 기본 정보 그리드 */}
+          {(pubDetailChar.age||pubDetailChar.gender||pubDetailChar.height_weight||pubDetailChar.job)&&(
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
+              {pubDetailChar.age&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>나이</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.age}세</div></div>}
+              {pubDetailChar.gender&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>성별</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.gender}</div></div>}
+              {pubDetailChar.height_weight&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>키/몸무게</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.height_weight}</div></div>}
+              {pubDetailChar.job&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>직업</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.job}</div></div>}
+            </div>
+          )}
+          {/* 룰 태그 */}
+          {pubDetailChar.rules?.length>0&&(
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:6}}>룰</div>
+              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                {pubDetailChar.rules.map(r=><Chip key={r} type="role" label={r}/>)}
+              </div>
+            </div>
+          )}
+          {/* 텍스트 섹션 */}
+          {pubDetailChar.personality&&<div style={{marginBottom:14}}><div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>성격</div><div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{pubDetailChar.personality}</div></div>}
+          {pubDetailChar.background&&<div style={{marginBottom:14}}><div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>배경</div><div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{pubDetailChar.background}</div></div>}
+          {pubDetailChar.extra_settings&&<div style={{marginBottom:14}}><div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>기타설정</div><div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{pubDetailChar.extra_settings}</div></div>}
+          {/* 기타 URL */}
+          {(pubDetailChar.extra_urls||[]).filter(u=>u.url).length>0&&(
+            <div style={{marginTop:4}}>
+              <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:6}}>링크</div>
+              {(pubDetailChar.extra_urls||[]).filter(u=>u.url).map((u,i)=>(
+                <div key={i} style={{marginBottom:6}}>
+                  <a href={u.url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',fontSize:'0.85rem',display:'inline-flex',alignItems:'center',gap:4}}>
+                    <Mi size='sm'>link</Mi>{u.label||'링크'}
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </>}
+      </Modal>
+
+      {/* PC 히스토리 뷰 모달 (읽기 전용) */}
+      <Modal isOpen={!!pubCharHistoryViewChar} onClose={()=>setPubCharHistoryViewChar(null)} title={`${pubCharHistoryViewChar?.name||''} 히스토리`}
+        footer={<button className="btn btn-outline btn-sm" onClick={()=>setPubCharHistoryViewChar(null)}>닫기</button>}
+      >
+        <input className="form-input" placeholder="제목, 시스템, 날짜 검색..." value={pubCharHistoryViewSearch} onChange={e=>{setPubCharHistoryViewSearch(e.target.value);setPubCharHistoryViewPage(1)}} style={{marginBottom:10}}/>
+        {pubCharHistoryViewChar && charHistoriesMap[pubCharHistoryViewChar.id]===undefined
+          ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>로딩 중...</div>
+          :pubCharHistoryViewLogs.length===0
+            ?<div className="text-xs text-light" style={{textAlign:'center',padding:'16px 0'}}>연결된 기록이 없어요.</div>
+            :<div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {pchvPaged.map(h=>(
+                <div key={h.history_id} style={{display:'flex',gap:10,alignItems:'center',padding:'10px',borderRadius:10,border:'1px solid var(--color-border)',background:'var(--color-surface)'}}>
+                  <div style={{width:56,height:56,borderRadius:7,overflow:'hidden',flexShrink:0,background:'var(--color-bg)',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid var(--color-border)'}}>
+                    {h.session_image_url
+                      ?<img src={h.session_image_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                      :<Mi size="lg" color="light">auto_stories</Mi>
+                    }
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{h.title||'(제목 없음)'}</div>
+                    <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:3}}>
+                      {h.series_tag && <Chip type="series" label={h.series_tag}/>}
+                      {h.role && <Chip type="role" label={h.role}/>}
+                      {h.system_name && <Chip type="rule" label={h.system_name}/>}
+                    </div>
+                    <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',display:'flex',gap:8,flexWrap:'wrap'}}>
+                      {h.start_date && <span>Start. {format(new Date(h.start_date),'yyyy.MM.dd')}</span>}
+                      {h.played_date && <span>End. {format(new Date(h.played_date),'yyyy.MM.dd')}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {pchvTotalPages>1&&(
+                <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:8,marginTop:8}}>
+                  <button className="btn btn-ghost btn-sm" disabled={pubCharHistoryViewPage===1} onClick={()=>setPubCharHistoryViewPage(p=>p-1)}>‹</button>
+                  <span className="text-xs text-light">{pubCharHistoryViewPage} / {pchvTotalPages}</span>
+                  <button className="btn btn-ghost btn-sm" disabled={pubCharHistoryViewPage===pchvTotalPages} onClick={()=>setPubCharHistoryViewPage(p=>p+1)}>›</button>
                 </div>
               )}
             </div>

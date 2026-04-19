@@ -90,6 +90,7 @@ export const rulebooksApi = makeTableApi('rulebooks')
 export const scenariosApi = makeTableApi('scenarios')
 export const wishScenariosApi = makeTableApi('wish_scenarios')
 export const pairsApi = makeTableApi('pairs')
+export const charactersApi = makeTableApi('characters')
 export const bookmarksApi = makeTableApi('bookmarks')
 export const dotoriApi = makeTableApi('dotori')
 
