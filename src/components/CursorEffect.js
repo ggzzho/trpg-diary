@@ -32,26 +32,40 @@ const KEYFRAMES = `
 
 // Web Audio API 클릭 사운드 — 딸깍
 const playClickSound = () => {
-  console.log('[CursorEffect] playClickSound 진입')
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    console.log('[CursorEffect] AudioContext state:', ctx.state, '| sampleRate:', ctx.sampleRate)
-
     const now = ctx.currentTime
-    const osc = ctx.createOscillator()
-    osc.frequency.value = 880
-    const gain = ctx.createGain()
-    gain.gain.value = 1.0
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.start(now)
-    osc.stop(now + 0.15)
-    osc.onended = () => { console.log('[CursorEffect] 재생 완료, ctx 닫힘'); ctx.close() }
 
-    console.log('[CursorEffect] osc.start() 호출 완료')
-  } catch(e) {
-    console.error('[CursorEffect] 오디오 에러:', e)
-  }
+    // ① 노이즈 버스트 8ms — 어택 질감 (딸깍의 "딸" 부분)
+    const sr  = ctx.sampleRate
+    const len = Math.floor(sr * 0.008)
+    const buf = ctx.createBuffer(1, len, sr)
+    const d   = buf.getChannelData(0)
+    for (let i = 0; i < len; i++) {
+      d[i] = (Math.random() * 2 - 1) * Math.exp(-i / len * 15)
+    }
+    const noise     = ctx.createBufferSource()
+    noise.buffer    = buf
+    const noiseGain = ctx.createGain()
+    noiseGain.gain.value = 0.8
+    noise.connect(noiseGain)
+    noiseGain.connect(ctx.destination)
+    noise.start(now)
+
+    // ② square wave 1500Hz→80Hz 급강하 12ms — 기계 스위치 바디 (딸깍의 "깍" 부분)
+    const osc = ctx.createOscillator()
+    osc.type  = 'square'
+    osc.frequency.setValueAtTime(1500, now)
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.012)
+    const oscGain = ctx.createGain()
+    oscGain.gain.setValueAtTime(0.15, now)
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.012)
+    osc.connect(oscGain)
+    oscGain.connect(ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.015)
+    osc.onended = () => ctx.close()
+  } catch {}
 }
 
 export default function CursorEffect({ settings }) {
@@ -195,7 +209,6 @@ export default function CursorEffect({ settings }) {
     // ── click ──
     const handleClick = (e) => {
       spawnClick(e.clientX, e.clientY)
-      console.log('[CursorEffect] click | sound.enabled:', sound.enabled, '| settings.sound:', settings?.sound, '| full settings:', settings)
       if (sound.enabled) playClickSound()
     }
 
