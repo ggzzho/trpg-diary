@@ -34,32 +34,26 @@ const KEYFRAMES = `
 const playClickSound = () => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    // suspended 상태 해제 (브라우저 자동 정책)
     ctx.resume().then(() => {
       const sr      = ctx.sampleRate
-      const bufSize = Math.floor(sr * 0.028) // 28ms
+      const bufSize = Math.floor(sr * 0.02) // 20ms
       const buffer  = ctx.createBuffer(1, bufSize, sr)
       const data    = buffer.getChannelData(0)
 
-      // 지수 감쇠 화이트 노이즈
+      // 빠른 지수 감쇠 화이트 노이즈 — 선명한 어택, 딸깍 질감
       for (let i = 0; i < bufSize; i++) {
-        const decay = Math.pow(1 - i / bufSize, 3)
-        data[i] = (Math.random() * 2 - 1) * decay
+        const t = i / bufSize
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 30)
       }
 
       const source = ctx.createBufferSource()
       source.buffer = buffer
 
-      // 하이패스 1kHz: 저주파 웅웅거림 제거, 딸깍 질감 보존
-      const hp = ctx.createBiquadFilter()
-      hp.type = 'highpass'
-      hp.frequency.value = 1000
-
+      // 필터 없이 전 주파수 대역 유지 → 최대 음량
       const gain = ctx.createGain()
-      gain.gain.value = 3.5
+      gain.gain.value = 12
 
-      source.connect(hp)
-      hp.connect(gain)
+      source.connect(gain)
       gain.connect(ctx.destination)
       source.start()
       source.onended = () => ctx.close()
