@@ -30,39 +30,40 @@ const KEYFRAMES = `
   }
 `
 
-// Web Audio API 클릭 사운드 — 화이트노이즈 + 밴드패스 = 딸깍
+// Web Audio API 클릭 사운드 — 딸깍
 const playClickSound = () => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const sampleRate = ctx.sampleRate
-    const duration   = 0.018 // 18ms — 짧을수록 딸깍에 가까움
-    const bufSize    = Math.floor(sampleRate * duration)
-    const buffer     = ctx.createBuffer(1, bufSize, sampleRate)
-    const data       = buffer.getChannelData(0)
+    // suspended 상태 해제 (브라우저 자동 정책)
+    ctx.resume().then(() => {
+      const sr      = ctx.sampleRate
+      const bufSize = Math.floor(sr * 0.028) // 28ms
+      const buffer  = ctx.createBuffer(1, bufSize, sr)
+      const data    = buffer.getChannelData(0)
 
-    // 지수 감쇠하는 화이트 노이즈
-    for (let i = 0; i < bufSize; i++) {
-      const decay = Math.pow(1 - i / bufSize, 4)
-      data[i] = (Math.random() * 2 - 1) * decay
-    }
+      // 지수 감쇠 화이트 노이즈
+      for (let i = 0; i < bufSize; i++) {
+        const decay = Math.pow(1 - i / bufSize, 3)
+        data[i] = (Math.random() * 2 - 1) * decay
+      }
 
-    const source = ctx.createBufferSource()
-    source.buffer = buffer
+      const source = ctx.createBufferSource()
+      source.buffer = buffer
 
-    // 밴드패스 3.5kHz — 고주파 잡음만 남겨 딸깍 질감 부여
-    const bp = ctx.createBiquadFilter()
-    bp.type = 'bandpass'
-    bp.frequency.value = 3500
-    bp.Q.value = 0.7
+      // 하이패스 1kHz: 저주파 웅웅거림 제거, 딸깍 질감 보존
+      const hp = ctx.createBiquadFilter()
+      hp.type = 'highpass'
+      hp.frequency.value = 1000
 
-    const gain = ctx.createGain()
-    gain.gain.value = 1.8
+      const gain = ctx.createGain()
+      gain.gain.value = 3.5
 
-    source.connect(bp)
-    bp.connect(gain)
-    gain.connect(ctx.destination)
-    source.start()
-    source.onended = () => ctx.close()
+      source.connect(hp)
+      hp.connect(gain)
+      gain.connect(ctx.destination)
+      source.start()
+      source.onended = () => ctx.close()
+    })
   } catch {}
 }
 
