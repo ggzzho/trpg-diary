@@ -30,22 +30,39 @@ const KEYFRAMES = `
   }
 `
 
-// Web Audio API 클릭 사운드 (파일 없이 코드로 생성)
+// Web Audio API 클릭 사운드 — 화이트노이즈 + 밴드패스 = 딸깍
 const playClickSound = () => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const osc = ctx.createOscillator()
+    const sampleRate = ctx.sampleRate
+    const duration   = 0.018 // 18ms — 짧을수록 딸깍에 가까움
+    const bufSize    = Math.floor(sampleRate * duration)
+    const buffer     = ctx.createBuffer(1, bufSize, sampleRate)
+    const data       = buffer.getChannelData(0)
+
+    // 지수 감쇠하는 화이트 노이즈
+    for (let i = 0; i < bufSize; i++) {
+      const decay = Math.pow(1 - i / bufSize, 4)
+      data[i] = (Math.random() * 2 - 1) * decay
+    }
+
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+
+    // 밴드패스 3.5kHz — 고주파 잡음만 남겨 딸깍 질감 부여
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 3500
+    bp.Q.value = 0.7
+
     const gain = ctx.createGain()
-    osc.connect(gain)
+    gain.gain.value = 1.8
+
+    source.connect(bp)
+    bp.connect(gain)
     gain.connect(ctx.destination)
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(900, ctx.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(350, ctx.currentTime + 0.09)
-    gain.gain.setValueAtTime(0.22, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.13)
-    osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + 0.13)
-    osc.onended = () => ctx.close()
+    source.start()
+    source.onended = () => ctx.close()
   } catch {}
 }
 
