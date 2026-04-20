@@ -11,6 +11,7 @@ import { FOOTER_TEXT, Modal, Pagination } from '../components/Layout'
 import AlignmentChartSection from '../components/supporter/AlignmentChartSection'
 import BgmPlayer from '../components/supporter/BgmPlayer'
 import StickerLayer from '../components/supporter/StickerLayer'
+import CursorEffect from '../components/CursorEffect'
 import { Mi } from '../components/Mi'
 import { usePagination } from '../hooks/usePagination'
 import {
@@ -640,6 +641,12 @@ export default function PublicProfilePage() {
 
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0', position:'relative' }}>
+
+      {/* ── 후원자 전용: 커서 효과 (lv2+, 공개 설정된 경우) ── */}
+      {['lv2','lv3','master'].includes(profile?.membership_tier) &&
+        profile?.cursor_effect?.enabled_public && (
+        <CursorEffect settings={profile.cursor_effect} />
+      )}
 
       {/* ── 후원자 전용: 스티커 레이어 ── */}
       {isSupporter && (

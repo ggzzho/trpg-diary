@@ -4,6 +4,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signOut, notificationsApi, supabase } from '../lib/supabase'
 import { fmtAgo } from '../lib/dateFormatters'
+import CursorEffect from './CursorEffect'
 
 const NOTICE_VIEWED_KEY = 'noticeLastViewed'
 
@@ -191,8 +192,14 @@ export function Layout({ children }) {
     }
   }, [location.pathname])
 
+  const isLv2Plus = ['lv2','lv3','master'].includes(profile?.membership_tier)
+
   return (
     <div className="app-layout">
+      {/* 후원자 lv2+ 커서 효과 (내 페이지) */}
+      {isLv2Plus && profile?.cursor_effect && (
+        <CursorEffect settings={profile.cursor_effect} />
+      )}
       <div className={`sidebar-overlay ${mobileOpen?'open':''}`} onClick={()=>setMobileOpen(false)} />
       <button className="mobile-menu-btn" onClick={()=>setMobileOpen(!mobileOpen)}>
         {mobileOpen ? '✕' : '☰'}
