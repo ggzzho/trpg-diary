@@ -368,7 +368,26 @@ export function Layout({ children }) {
               {profile?.avatar_url?<img src={profile.avatar_url} alt="avatar"/>:initial}
             </div>
             <div style={{overflow:'hidden'}}>
-              <div className="user-name">{profile?.display_name||profile?.username}</div>
+              <div style={{display:'flex', alignItems:'center', gap:5}}>
+                <div className="user-name" style={{flexShrink:0}}>{profile?.display_name||profile?.username}</div>
+                {profile?.membership_tier && profile.membership_tier !== 'free' && (() => {
+                  const TIER_BADGE = {
+                    master: { label: '마스터',    bg: '#7c5cbf', color: '#fff' },
+                    lv3:    { label: '후원 Lv.3', bg: '#d4a017', color: '#fff' },
+                    lv2:    { label: '후원 Lv.2', bg: '#9e9e9e', color: '#fff' },
+                    lv1:    { label: '후원 Lv.1', bg: '#b87333', color: '#fff' },
+                  }
+                  const badge = TIER_BADGE[profile.membership_tier]
+                  return badge ? (
+                    <span style={{
+                      display:'inline-flex', alignItems:'center', flexShrink:0,
+                      padding:'1px 7px', borderRadius:100,
+                      fontSize:'0.6rem', fontWeight:700, letterSpacing:'0.03em',
+                      background:badge.bg, color:badge.color,
+                    }}>{badge.label}</span>
+                  ) : null
+                })()}
+              </div>
               <div className="text-xs text-light" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{user?.email}</div>
             </div>
           </div>

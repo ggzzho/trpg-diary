@@ -2,12 +2,15 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { getProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
+import { getProfile, updateProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { GuestbookPublicView, FeedbackPublicView } from './GuestbookPage'
 import { LogDetailContent } from './PlayLogPage'
 import { FOOTER_TEXT, Modal, Pagination } from '../components/Layout'
+import AlignmentChartSection from '../components/supporter/AlignmentChartSection'
+import BgmPlayer from '../components/supporter/BgmPlayer'
+import StickerLayer from '../components/supporter/StickerLayer'
 import { Mi } from '../components/Mi'
 import { usePagination } from '../hooks/usePagination'
 import {
@@ -18,6 +21,28 @@ import { ko } from 'date-fns/locale'
 
 const SCENARIO_STATUS = { unplayed:'미플', played:'PL완료', gm_done:'GM완료', want:'위시' }
 const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', digital_purchase:'전자', digital_free:'전자', physical_digital:'실물+전자', other:'기타' }
+
+// ── 회원 등급 뱃지 ──
+const TIER_BADGE = {
+  master: { label: '마스터',    bg: '#7c5cbf', color: '#fff' },
+  lv3:    { label: '후원 Lv.3', bg: '#d4a017', color: '#fff' },
+  lv2:    { label: '후원 Lv.2', bg: '#9e9e9e', color: '#fff' },
+  lv1:    { label: '후원 Lv.1', bg: '#b87333', color: '#fff' },
+}
+function MembershipBadge({ tier }) {
+  const badge = TIER_BADGE[tier]
+  if (!badge) return null
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '2px 10px', borderRadius: 100,
+      fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.03em',
+      background: badge.bg, color: badge.color,
+    }}>
+      {badge.label}
+    </span>
+  )
+}
 
 function calcDday(d) {
   if (!d) return null
@@ -541,6 +566,17 @@ export default function PublicProfilePage() {
     return () => { document.title = 'TRPG Diary ✦' }
   }, [])
 
+  // ── 후원자 전용 기능 저장 ──
+  const isOwnPage   = !!(user && profile && user.id === profile.id)
+  const isSupporter = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
+
+  const handleSupporterSave = async (updates) => {
+    if (!profile) return
+    const { data, error } = await updateProfile(profile.id, updates)
+    if (!error && data) setProfile(data)
+    return { error }
+  }
+
   const loadPairHistories = async (pairId) => {
     const { data } = await supabase.from('pair_histories')
       .select('id, play_log_id, play_logs(id,title,played_date,start_date,system_name,role,series_tag,session_image_url,together_with,character_name,is_private)')
@@ -603,7 +639,26 @@ export default function PublicProfilePage() {
   const ogUrl   = `https://trpg-diary.co.kr/u/${username}`
 
   return (
-    <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0' }}>
+    <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0', position:'relative' }}>
+
+      {/* ── 후원자 전용: 스티커 레이어 ── */}
+      {isSupporter && (
+        <StickerLayer
+          profile={profile}
+          isOwner={isOwnPage}
+          onSave={handleSupporterSave}
+        />
+      )}
+
+      {/* ── 후원자 전용: BGM 플레이어 ── */}
+      {isSupporter && (
+        <BgmPlayer
+          profile={profile}
+          isOwner={isOwnPage}
+          onSave={handleSupporterSave}
+        />
+      )}
+
       <Helmet>
         <title>{ogTitle}</title>
         <meta property="og:type"        content="profile" />
@@ -712,6 +767,11 @@ export default function PublicProfilePage() {
           <h1 style={{ fontSize:'1.5rem', fontWeight:700, color:'var(--color-accent)', letterSpacing:'-0.03em', marginBottom:2 }}>
             {profile.display_name || profile.username}
           </h1>
+          {profile.membership_tier && profile.membership_tier !== 'free' && (
+            <div style={{ marginBottom:4 }}>
+              <MembershipBadge tier={profile.membership_tier} />
+            </div>
+          )}
           <p className="text-sm text-light">@{profile.username}</p>
 
           {/* 통계 */}
@@ -765,6 +825,15 @@ export default function PublicProfilePage() {
                 </a>
               ))}
             </div>
+          )}
+
+          {/* ── 후원자 전용: 성향표 ── */}
+          {isSupporter && (
+            <AlignmentChartSection
+              profile={profile}
+              isOwner={isOwnPage}
+              onSave={handleSupporterSave}
+            />
           )}
         </div>
       </div>
