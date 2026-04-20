@@ -31,41 +31,27 @@ const KEYFRAMES = `
 `
 
 // Web Audio API 클릭 사운드 — 딸깍
-// ※ 반드시 동기 방식으로 실행 (클릭 이벤트 핸들러 동기 컨텍스트 유지)
 const playClickSound = () => {
+  console.log('[CursorEffect] playClickSound 진입')
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    console.log('[CursorEffect] AudioContext state:', ctx.state, '| sampleRate:', ctx.sampleRate)
+
     const now = ctx.currentTime
-
-    // ① 오실레이터: 3kHz → 100Hz 급강하 square wave → 딸깍 질감
     const osc = ctx.createOscillator()
-    osc.type = 'square'
-    osc.frequency.setValueAtTime(3000, now)
-    osc.frequency.exponentialRampToValueAtTime(100, now + 0.012)
-    const oscGain = ctx.createGain()
-    oscGain.gain.setValueAtTime(0.7, now)
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.012)
-    osc.connect(oscGain)
-    oscGain.connect(ctx.destination)
+    osc.frequency.value = 880
+    const gain = ctx.createGain()
+    gain.gain.value = 1.0
+    osc.connect(gain)
+    gain.connect(ctx.destination)
     osc.start(now)
-    osc.stop(now + 0.015)
+    osc.stop(now + 0.15)
+    osc.onended = () => { console.log('[CursorEffect] 재생 완료, ctx 닫힘'); ctx.close() }
 
-    // ② 노이즈 버스트: 10ms 화이트 노이즈로 질감 강화
-    const sr  = ctx.sampleRate
-    const len = Math.floor(sr * 0.01)
-    const buf = ctx.createBuffer(1, len, sr)
-    const d   = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len)
-    const noise     = ctx.createBufferSource()
-    noise.buffer    = buf
-    const noiseGain = ctx.createGain()
-    noiseGain.gain.value = 1.5
-    noise.connect(noiseGain)
-    noiseGain.connect(ctx.destination)
-    noise.start(now)
-
-    osc.onended = () => ctx.close()
-  } catch {}
+    console.log('[CursorEffect] osc.start() 호출 완료')
+  } catch(e) {
+    console.error('[CursorEffect] 오디오 에러:', e)
+  }
 }
 
 export default function CursorEffect({ settings }) {
