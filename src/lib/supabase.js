@@ -245,6 +245,7 @@ const compressImage = (file, maxPx, quality) => {
         ctx.fillStyle = themeBg
         ctx.fillRect(0, 0, width, height)
       }
+      ctx.drawImage(img, 0, 0, width, height)
       const mimeType = isPng ? 'image/png' : 'image/jpeg'
       canvas.toBlob(blob => resolve(blob || file), mimeType, isPng ? 1 : quality)
     }
