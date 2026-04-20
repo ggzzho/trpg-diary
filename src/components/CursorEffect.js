@@ -209,6 +209,7 @@ export default function CursorEffect({ settings }) {
     // ── click ──
     const handleClick = (e) => {
       spawnClick(e.clientX, e.clientY)
+      console.log('[CursorEffect] click | sound.enabled:', sound.enabled, '| settings.sound:', settings?.sound, '| full settings:', settings)
       if (sound.enabled) playClickSound()
     }
 
