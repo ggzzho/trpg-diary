@@ -50,6 +50,10 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
   const playerRef    = useRef(null)
   const containerRef = useRef(null)
 
+  // ── 드래그앤드롭 refs ──
+  const dragIdx     = useRef(null)
+  const dragOverIdx = useRef(null)
+
   // ── 플레이어 상태 ──
   const [ready,        setReady]        = useState(false)
   const [playing,      setPlaying]      = useState(false)
@@ -65,6 +69,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
   const [editList, setEditList] = useState([])
   const [newUrl,   setNewUrl]   = useState('')
   const [newTitle, setNewTitle] = useState('')
+  const [dragOverAt, setDragOverAt] = useState(null) // 드롭 위치 시각 표시
 
   // ── YouTube 플레이어 초기화 ──
   const videoIdsStr = videoIds.join(',')
@@ -148,6 +153,30 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
   // ── 트랙 삭제 ──
   const removeTrack = (i) =>
     setEditList(prev => prev.filter((_, idx) => idx !== i))
+
+  // ── 드래그앤드롭 ──
+  const handleDragStart = (i) => { dragIdx.current = i }
+  const handleDragOver  = (e, i) => {
+    e.preventDefault()
+    if (dragOverIdx.current !== i) {
+      dragOverIdx.current = i
+      setDragOverAt(i)
+    }
+  }
+  const handleDrop = (i) => {
+    const from = dragIdx.current
+    if (from === null || from === i) { handleDragEnd(); return }
+    const list = [...editList]
+    const [moved] = list.splice(from, 1)
+    list.splice(i, 0, moved)
+    setEditList(list)
+    handleDragEnd()
+  }
+  const handleDragEnd = () => {
+    dragIdx.current    = null
+    dragOverIdx.current = null
+    setDragOverAt(null)
+  }
 
   // ── 설정 저장 ──
   const saveSettings = async () => {
@@ -325,10 +354,28 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
                   아직 곡이 없어요
                 </p>
               ) : editList.map((track, i) => (
-                <div key={i} style={{
-                  display:'flex', alignItems:'center', gap:8,
-                  background:'var(--color-nav-active-bg)', borderRadius:8, padding:'8px 10px',
-                }}>
+                <div
+                  key={i}
+                  draggable
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={(e) => handleDragOver(e, i)}
+                  onDrop={() => handleDrop(i)}
+                  onDragEnd={handleDragEnd}
+                  style={{
+                    display:'flex', alignItems:'center', gap:8,
+                    background:'var(--color-nav-active-bg)', borderRadius:8, padding:'8px 10px',
+                    cursor:'grab',
+                    opacity: dragIdx.current === i ? 0.4 : 1,
+                    borderTop: dragOverAt === i && dragIdx.current !== i
+                      ? '2px solid var(--color-primary)'
+                      : '2px solid transparent',
+                    transition:'opacity 0.15s, border-top 0.1s',
+                  }}
+                >
+                  {/* 드래그 핸들 */}
+                  <span style={{ fontSize:'1rem', color:'var(--color-text-light)', flexShrink:0, lineHeight:1, userSelect:'none' }}>
+                    ⠿
+                  </span>
                   <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)', minWidth:16, flexShrink:0 }}>
                     {i + 1}
                   </span>
@@ -341,6 +388,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
                     </div>
                   </div>
                   <button
+                    onMouseDown={e => e.stopPropagation()}
                     onClick={() => removeTrack(i)}
                     style={{
                       background:'none', border:'none', cursor:'pointer',
