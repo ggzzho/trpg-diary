@@ -65,6 +65,21 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
   const [editing,  setEditing]  = useState(false)
   const [saving,   setSaving]   = useState(false)
 
+  // ── BGM 말풍선 (방문자 첫 접속 시 1회) ──
+  const BUBBLE_KEY = 'bgm_bubble_shown'
+  const [showBubble, setShowBubble] = useState(false)
+  useEffect(() => {
+    if (isOwner || !hasVideo) return
+    if (sessionStorage.getItem(BUBBLE_KEY)) return
+    setShowBubble(true)
+    const t = setTimeout(() => {
+      setShowBubble(false)
+      sessionStorage.setItem(BUBBLE_KEY, '1')
+    }, 2500)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwner, hasVideo])
+
   // ── 편집 폼 상태 ──
   const [editList, setEditList] = useState([])
   const [newUrl,   setNewUrl]   = useState('')
@@ -442,6 +457,46 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
               <button className="btn btn-outline" onClick={() => setEditing(false)}>취소</button>
             </div>
           </div>
+        </div>
+      )}
+      {/* ── BGM 말풍선 ── */}
+      <style>{`
+        @keyframes bgmBubbleBounce {
+          from { transform: translateY(0px); }
+          to   { transform: translateY(-6px); }
+        }
+      `}</style>
+      {showBubble && !expanded && (
+        <div style={{
+          position: 'fixed',
+          bottom: 124,
+          right: 62,
+          zIndex: 10000,
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 10,
+          padding: '6px 12px',
+          fontSize: '0.78rem',
+          fontWeight: 600,
+          color: 'var(--color-text)',
+          boxShadow: '0 3px 14px rgba(0,0,0,0.13)',
+          whiteSpace: 'nowrap',
+          animation: 'bgmBubbleBounce 0.55s ease-in-out infinite alternate',
+          pointerEvents: 'none',
+        }}>
+          🎵 재생 버튼을 눌러주세요
+          {/* 오른쪽 방향 꼬리 (플레이어 버튼 쪽) */}
+          <div style={{
+            position: 'absolute',
+            right: -7,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: 0,
+            height: 0,
+            borderTop: '6px solid transparent',
+            borderBottom: '6px solid transparent',
+            borderLeft: '7px solid var(--color-surface)',
+          }}/>
         </div>
       )}
     </>

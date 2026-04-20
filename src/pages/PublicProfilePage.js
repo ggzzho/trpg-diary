@@ -22,6 +22,28 @@ import { ko } from 'date-fns/locale'
 const SCENARIO_STATUS = { unplayed:'미플', played:'PL완료', gm_done:'GM완료', want:'위시' }
 const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', digital_purchase:'전자', digital_free:'전자', physical_digital:'실물+전자', other:'기타' }
 
+// ── 회원 등급 뱃지 ──
+const TIER_BADGE = {
+  master: { label: '마스터',    bg: '#7c5cbf', color: '#fff' },
+  lv3:    { label: '후원 Lv.3', bg: '#d4a017', color: '#fff' },
+  lv2:    { label: '후원 Lv.2', bg: '#9e9e9e', color: '#fff' },
+  lv1:    { label: '후원 Lv.1', bg: '#b87333', color: '#fff' },
+}
+function MembershipBadge({ tier }) {
+  const badge = TIER_BADGE[tier]
+  if (!badge) return null
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '2px 10px', borderRadius: 100,
+      fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.03em',
+      background: badge.bg, color: badge.color,
+    }}>
+      {badge.label}
+    </span>
+  )
+}
+
 function calcDday(d) {
   if (!d) return null
   return Math.floor((new Date() - new Date(d)) / 86400000) + 1
@@ -745,6 +767,11 @@ export default function PublicProfilePage() {
           <h1 style={{ fontSize:'1.5rem', fontWeight:700, color:'var(--color-accent)', letterSpacing:'-0.03em', marginBottom:2 }}>
             {profile.display_name || profile.username}
           </h1>
+          {profile.membership_tier && profile.membership_tier !== 'free' && (
+            <div style={{ marginBottom:4 }}>
+              <MembershipBadge tier={profile.membership_tier} />
+            </div>
+          )}
           <p className="text-sm text-light">@{profile.username}</p>
 
           {/* 통계 */}
