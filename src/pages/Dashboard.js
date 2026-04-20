@@ -113,26 +113,7 @@ export default function Dashboard() {
     <div className="fade-in">
       <div style={{marginBottom:36}}>
         <p style={{color:'var(--color-text-light)',fontSize:'0.85rem',marginBottom:6}}>{greet()}</p>
-        <div style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
-          <h1 className="text-serif" style={{fontSize:'2rem',color:'var(--color-accent)',margin:0}}>{profile?.display_name||profile?.username}님의 다이어리</h1>
-          {profile?.membership_tier && profile.membership_tier !== 'free' && (() => {
-            const TIER_BADGE = {
-              master: { label: '마스터',    bg: '#7c5cbf', color: '#fff' },
-              lv3:    { label: '후원 Lv.3', bg: '#d4a017', color: '#fff' },
-              lv2:    { label: '후원 Lv.2', bg: '#9e9e9e', color: '#fff' },
-              lv1:    { label: '후원 Lv.1', bg: '#b87333', color: '#fff' },
-            }
-            const badge = TIER_BADGE[profile.membership_tier]
-            return badge ? (
-              <span style={{
-                display:'inline-flex', alignItems:'center',
-                padding:'3px 11px', borderRadius:100,
-                fontSize:'0.72rem', fontWeight:700, letterSpacing:'0.03em',
-                background:badge.bg, color:badge.color,
-              }}>{badge.label}</span>
-            ) : null
-          })()}
-        </div>
+        <h1 className="text-serif" style={{fontSize:'2rem',color:'var(--color-accent)'}}>{profile?.display_name||profile?.username}님의 다이어리</h1>
       </div>
 
       {/* 오늘 세션 알림 배너 */}
