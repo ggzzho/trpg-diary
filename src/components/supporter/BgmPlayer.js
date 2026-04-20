@@ -69,7 +69,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
   const BUBBLE_KEY = 'bgm_bubble_shown'
   const [showBubble, setShowBubble] = useState(false)
   useEffect(() => {
-    if (isOwner || !hasVideo) return
+    if (!hasVideo) return
     if (sessionStorage.getItem(BUBBLE_KEY)) return
     setShowBubble(true)
     const t = setTimeout(() => {
@@ -78,7 +78,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
     }, 2500)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOwner, hasVideo])
+  }, [hasVideo])
 
   // ── 편집 폼 상태 ──
   const [editList, setEditList] = useState([])
