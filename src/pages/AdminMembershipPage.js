@@ -116,6 +116,8 @@ function SearchTab() {
   const [saveMsg, setSaveMsg]           = useState('')
   const [confirmOpen, setConfirmOpen]   = useState(false)
 
+  const [extendConfirmOpen, setExtendConfirmOpen] = useState(false)
+
   const [logs, setLogs]               = useState([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [revertingId, setRevertingId] = useState(null)
@@ -174,6 +176,20 @@ function SearchTab() {
     setSelectedTier(data.membership_tier || 'free')
     setNote('')
     setSaveMsg('✅ 등급이 변경되었어요')
+    loadLogs()
+  }
+
+  const handleExtend = async () => {
+    if (!searchResult) return
+    setSaving(true); setSaveMsg('')
+    const { data, error } = await membershipApi.setMembership(
+      searchResult.email, currentTier, '[연장] +31일'
+    )
+    setSaving(false); setExtendConfirmOpen(false)
+    if (error) { setSaveMsg('❌ ' + (error.message || '연장 실패')); return }
+    setSearchResult(data)
+    setSelectedTier(data.membership_tier || 'free')
+    setSaveMsg('✅ 31일 연장 완료')
     loadLogs()
   }
 
@@ -279,6 +295,17 @@ function SearchTab() {
               <div style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', marginBottom: 2 }}>만료일 (KST)</div>
               <ExpiryCell tier={currentTier} expiresAt={searchResult.membership_expires_at} />
             </div>
+            {/* 만료일 연장 버튼 */}
+            {!isMaster && currentTier !== 'free' && (
+              <div style={{ gridColumn: '1 / -1', marginTop: 2 }}>
+                <button className="btn btn-sm btn-outline"
+                  onClick={() => setExtendConfirmOpen(true)}
+                  style={{ fontSize: '0.78rem', color: '#1976d2', borderColor: '#1976d2aa' }}>
+                  <Mi size="sm">add_circle</Mi>만료일 +31일 연장
+                </button>
+              </div>
+            )}
+
             <div style={{ gridColumn: '1 / -1' }}>
               <div style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', marginBottom: 2 }}>혜택 최초 사용일</div>
               <div style={{ fontSize: '0.83rem', color: searchResult.membership_first_used_at ? '#e57373' : 'var(--color-text-light)', fontWeight: searchResult.membership_first_used_at ? 600 : 400 }}>
@@ -377,6 +404,33 @@ function SearchTab() {
               <button className="btn btn-outline btn-sm" onClick={() => setConfirmOpen(false)}>취소</button>
               <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
                 {saving ? '처리 중...' : '확인'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 연장 확인 다이얼로그 */}
+      {extendConfirmOpen && searchResult && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setExtendConfirmOpen(false)}>
+          <div style={{ background: 'var(--color-surface)', borderRadius: 14, padding: '28px 24px', maxWidth: 380, width: '100%', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
+            onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontWeight: 700, marginBottom: 12 }}>만료일 +31일 연장</h3>
+            <div style={{ fontSize: '0.88rem', color: 'var(--color-text-light)', lineHeight: 1.8, marginBottom: 20 }}>
+              <strong style={{ color: 'var(--color-text)' }}>{searchResult.email}</strong><br />
+              <span>현재 만료일: {fmtKST(searchResult.membership_expires_at) || '없음'}</span><br />
+              <span style={{ color: '#1976d2', fontWeight: 600 }}>연장 후: {(() => {
+                const exp = searchResult.membership_expires_at
+                const base = exp && daysLeft(exp) > 0 ? new Date(exp) : new Date()
+                base.setDate(base.getDate() + 31)
+                return fmtKST(base.toISOString())
+              })()}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setExtendConfirmOpen(false)}>취소</button>
+              <button className="btn btn-primary btn-sm" onClick={handleExtend} disabled={saving}>
+                {saving ? '처리 중...' : '+31일 연장'}
               </button>
             </div>
           </div>
