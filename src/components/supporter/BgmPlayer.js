@@ -4,6 +4,13 @@ import { Mi } from '../Mi'
 
 const MAX_TRACKS = 12
 
+const formatTime = (sec) => {
+  if (!sec || isNaN(sec)) return '0:00'
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 // YouTube Video ID 추출
 const extractVideoId = (url) => {
   if (!url) return null
@@ -59,6 +66,11 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
   const [playing,      setPlaying]      = useState(false)
   const [volume,       setVolume]       = useState(50)
   const [currentIndex, setCurrentIndex] = useState(0)
+
+  // ── Seek 상태 ──
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration,    setDuration]    = useState(0)
+  const seekIntervalRef = useRef(null)
 
   // ── UI 상태 ──
   const [expanded, setExpanded] = useState(false)
@@ -136,6 +148,22 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoIdsStr])
 
+  // ── Seek 폴링 (재생 중 0.5초마다 시간 갱신) ──
+  useEffect(() => {
+    clearInterval(seekIntervalRef.current)
+    if (playing && ready) {
+      seekIntervalRef.current = setInterval(() => {
+        try {
+          const ct  = playerRef.current?.getCurrentTime() || 0
+          const dur = playerRef.current?.getDuration()    || 0
+          setCurrentTime(ct)
+          setDuration(dur)
+        } catch {}
+      }, 500)
+    }
+    return () => clearInterval(seekIntervalRef.current)
+  }, [playing, ready])
+
   // ── 플레이어 컨트롤 ──
   const togglePlay = () => {
     if (!playerRef.current) return
@@ -146,6 +174,17 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
   const handleVolume = (v) => {
     setVolume(v)
     try { playerRef.current?.setVolume(v) } catch {}
+  }
+  const handleSeek = (v) => {
+    setCurrentTime(v)
+    try { playerRef.current?.seekTo(v, true) } catch {}
+  }
+  const playTrackAt = (i) => {
+    try {
+      playerRef.current?.playVideoAt(i)
+      setCurrentIndex(i)
+      setCurrentTime(0)
+    } catch {}
   }
 
   // ── 편집 열기 ──
@@ -227,7 +266,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
         backdropFilter:'blur(12px)',
         overflow:'hidden',
         transition:'border-radius 0.2s',
-        minWidth: expanded ? 250 : 36,
+        minWidth: expanded ? 270 : 36,
       }}>
         {!expanded ? (
           /* 접힌 상태: 아이콘만 */
@@ -316,6 +355,47 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
                   />
                   <Mi size="sm" color="light">volume_up</Mi>
                 </div>
+
+                {/* Seek Bar */}
+                <div style={{ marginTop:6 }}>
+                  <input
+                    type="range" min={0} max={duration || 100} step={0.5}
+                    value={currentTime}
+                    onChange={e => handleSeek(Number(e.target.value))}
+                    disabled={!ready || duration === 0}
+                    style={{ width:'100%', accentColor:'var(--color-primary)', cursor: ready && duration > 0 ? 'pointer' : 'default' }}
+                  />
+                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.65rem', color:'var(--color-text-light)', marginTop:1 }}>
+                    <span>{formatTime(currentTime)}</span>
+                    <span>{formatTime(duration)}</span>
+                  </div>
+                </div>
+
+                {/* 플레이리스트 (2곡 이상일 때) */}
+                {resolvedList.length > 1 && (
+                  <div style={{ marginTop:8, maxHeight:130, overflowY:'auto', display:'flex', flexDirection:'column', gap:2 }}>
+                    {resolvedList.map((track, i) => {
+                      const isActive = i === currentIndex
+                      return (
+                        <button key={i} onClick={() => playTrackAt(i)} style={{
+                          width:'100%', display:'flex', alignItems:'center', gap:6,
+                          padding:'4px 8px', border:'none', borderRadius:6,
+                          background: isActive ? 'var(--color-primary)' : 'transparent',
+                          color: isActive ? '#fff' : 'var(--color-text)',
+                          cursor:'pointer', fontSize:'0.73rem', textAlign:'left',
+                          transition:'background 0.15s',
+                        }}>
+                          <span style={{ minWidth:14, fontSize:'0.62rem', color: isActive ? 'rgba(255,255,255,0.75)' : 'var(--color-text-light)', flexShrink:0 }}>
+                            {isActive && playing ? '▶' : i + 1}
+                          </span>
+                          <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1 }}>
+                            {track.title || <span style={{ opacity:0.6 }}>(제목 없음)</span>}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </>
             ) : (
               <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', margin:'4px 0 8px' }}>
