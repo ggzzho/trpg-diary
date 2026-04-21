@@ -324,7 +324,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
                 padding:'0 2px', flexShrink:0, opacity:0.6,
               }}
               title="접기"
-            >─</button>
+            >×</button>
           </div>
 
           {/* 행②: Seek 바 */}

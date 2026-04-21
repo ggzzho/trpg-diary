@@ -162,8 +162,13 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
   }, [])
   const scale = containerWidth / REFERENCE_WIDTH
 
-  // ── 모바일 감지 ──
-  const isMobile = containerWidth > 0 && containerWidth < 768
+  // ── 모바일 감지 (window.innerWidth 직접 사용 — containerWidth와 분리) ──
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
 
   const savedStickers    = profile?.stickers || []
   const savedHideMobile  = profile?.stickers_hide_mobile ?? false
