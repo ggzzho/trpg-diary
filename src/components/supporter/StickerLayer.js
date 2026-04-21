@@ -139,6 +139,13 @@ function SliderRow({ label, value, min, max, step, onChange, unit='' }) {
   )
 }
 
+// layer 없는 스티커에 인덱스 기반으로 자동 부여 (레이어 버그 방지)
+const normalizeLayers = (list) => {
+  const allHaveLayers = list.every(s => s.layer !== undefined)
+  if (allHaveLayers) return list
+  return list.map((s, i) => ({ ...s, layer: s.layer ?? i }))
+}
+
 // ── 메인 컴포넌트 ──────────────────────────────────────
 export default function StickerLayer({ profile, isOwner, onSave }) {
   const containerRef = useRef(null)
@@ -155,18 +162,27 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
   }, [])
   const scale = containerWidth / REFERENCE_WIDTH
 
-  const savedStickers = profile?.stickers || []
-  const [stickers,   setStickers]   = useState(savedStickers)
-  const [editMode,   setEditMode]   = useState(false)
-  const [selectedId, setSelectedId] = useState(null)
-  const [saving,     setSaving]     = useState(false)
-  const [urlInput,   setUrlInput]   = useState('')
+  // ── 모바일 감지 ──
+  const isMobile = containerWidth > 0 && containerWidth < 768
 
-  // profile 변경 시 stickers 동기화
+  const savedStickers    = profile?.stickers || []
+  const savedHideMobile  = profile?.stickers_hide_mobile ?? false
+
+  const [stickers,    setStickers]    = useState(savedStickers)
+  const [hideMobile,  setHideMobile]  = useState(savedHideMobile)
+  const [editMode,    setEditMode]    = useState(false)
+  const [selectedId,  setSelectedId]  = useState(null)
+  const [saving,      setSaving]      = useState(false)
+  const [urlInput,    setUrlInput]    = useState('')
+
+  // profile 변경 시 동기화
   useEffect(() => {
-    if (!editMode) setStickers(profile?.stickers || [])
+    if (!editMode) {
+      setStickers(profile?.stickers || [])
+      setHideMobile(profile?.stickers_hide_mobile ?? false)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.stickers])
+  }, [profile?.stickers, profile?.stickers_hide_mobile])
 
   const selectedSticker = stickers.find(s => s.id === selectedId)
 
@@ -235,7 +251,7 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
 
   const saveStickers = async () => {
     setSaving(true)
-    await onSave({ stickers })
+    await onSave({ stickers, stickers_hide_mobile: hideMobile })
     setSaving(false)
     setEditMode(false)
     setSelectedId(null)
@@ -250,6 +266,9 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
 
   // 스티커 없고 오너도 아님 → 렌더링 안 함
   if (savedStickers.length === 0 && !isOwner) return null
+
+  // 방문자 + 모바일 + 숨기기 설정 ON → 렌더링 안 함
+  if (!isOwner && isMobile && savedHideMobile) return null
 
   // 선택된 스티커의 레이어 범위
   const allLayers  = stickers.map(x => x.layer ?? 0)
@@ -289,7 +308,10 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
       {/* ── 편집 버튼 (fixed, 오너 전용) ── */}
       {isOwner && !editMode && (
         <button
-          onClick={() => setEditMode(true)}
+          onClick={() => {
+            setStickers(prev => normalizeLayers(prev))
+            setEditMode(true)
+          }}
           style={{
             position:'fixed', bottom:116, right:20, zIndex:9999,
             width:36, height:36, borderRadius:'50%',
@@ -422,6 +444,39 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
               style={{ fontSize:'0.78rem', flexShrink:0, display:'flex', alignItems:'center', gap:2 }}
             >
               <Mi size="sm">add</Mi>
+            </button>
+          </div>
+
+          {/* 모바일 숨기기 토글 */}
+          <div style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding:'8px 10px', borderRadius:8,
+            background:'var(--color-nav-active-bg)',
+          }}>
+            <div>
+              <div style={{ fontSize:'0.78rem', fontWeight:600, color:'var(--color-text)' }}>
+                모바일에서 스티커 숨기기
+              </div>
+              <div style={{ fontSize:'0.68rem', color:'var(--color-text-light)', marginTop:1 }}>
+                ON 시 모바일 방문자에게 스티커가 표시되지 않아요
+              </div>
+            </div>
+            <button
+              onClick={() => setHideMobile(v => !v)}
+              style={{
+                width:40, height:22, borderRadius:11, border:'none', cursor:'pointer',
+                background: hideMobile ? 'var(--color-primary)' : 'var(--color-border)',
+                position:'relative', flexShrink:0, marginLeft:10,
+                transition:'background 0.2s',
+              }}
+            >
+              <span style={{
+                position:'absolute', top:2,
+                left: hideMobile ? 20 : 2,
+                width:18, height:18, borderRadius:'50%',
+                background:'white', transition:'left 0.2s',
+                boxShadow:'0 1px 3px rgba(0,0,0,0.2)',
+              }}/>
             </button>
           </div>
 
