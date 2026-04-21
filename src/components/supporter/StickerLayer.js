@@ -2,14 +2,28 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { Mi } from '../Mi'
 
-const MAX_STICKERS = 10
+const MAX_STICKERS    = 10
+const REFERENCE_WIDTH = 860   // 기준 컨테이너 너비 (maxWidth:860)
 const genId = () => `s${Date.now()}${Math.random().toString(36).slice(2, 7)}`
 
+// 스티커 x 최대값: size 기준으로 우측 overflow 방지
+const calcMaxX = (size) => Math.max(0, (1 - size / REFERENCE_WIDTH) * 100)
+
 // ── 단일 스티커 ──────────────────────────────────────
-function StickerItem({ sticker, isEditMode, isSelected, onSelect, onUpdate, onRemove, containerRef }) {
-  const dragging = useRef(false)
+function StickerItem({
+  sticker, isEditMode, isSelected,
+  onSelect, onUpdate, onRemove,
+  containerRef, scale,
+}) {
+  const dragging   = useRef(false)
   const dragOrigin = useRef({ mx:0, my:0, sx:0, sy:0 })
 
+  // 반응형 실제 렌더 크기
+  const actualSize = sticker.size * scale
+  const maxX       = calcMaxX(sticker.size)
+  const layer      = sticker.layer ?? 0
+
+  // ── 마우스 드래그 ──
   const handleMouseDown = useCallback((e) => {
     if (!isEditMode) return
     e.preventDefault()
@@ -24,20 +38,20 @@ function StickerItem({ sticker, isEditMode, isSelected, onSelect, onUpdate, onRe
       const dx = ((me.clientX - dragOrigin.current.mx) / rect.width) * 100
       const dy = ((me.clientY - dragOrigin.current.my) / rect.height) * 100
       onUpdate({
-        x: Math.max(0, Math.min(95, dragOrigin.current.sx + dx)),
-        y: Math.max(0, Math.min(95, dragOrigin.current.sy + dy)),
+        x: Math.max(0, Math.min(maxX, dragOrigin.current.sx + dx)),
+        y: Math.max(0, Math.min(95,   dragOrigin.current.sy + dy)),
       })
     }
     const onUp = () => {
       dragging.current = false
       document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+      document.removeEventListener('mouseup',   onUp)
     }
     document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-  }, [isEditMode, sticker.x, sticker.y, onSelect, onUpdate, containerRef])
+    document.addEventListener('mouseup',   onUp)
+  }, [isEditMode, sticker.x, sticker.y, onSelect, onUpdate, containerRef, maxX])
 
-  // 터치 지원
+  // ── 터치 드래그 ──
   const handleTouchStart = useCallback((e) => {
     if (!isEditMode) return
     e.preventDefault()
@@ -49,38 +63,38 @@ function StickerItem({ sticker, isEditMode, isSelected, onSelect, onUpdate, onRe
 
     const onMove = (te) => {
       if (!dragging.current || !containerRef.current) return
-      const t = te.touches[0]
+      const t    = te.touches[0]
       const rect = containerRef.current.getBoundingClientRect()
       const dx = ((t.clientX - dragOrigin.current.mx) / rect.width) * 100
       const dy = ((t.clientY - dragOrigin.current.my) / rect.height) * 100
       onUpdate({
-        x: Math.max(0, Math.min(95, dragOrigin.current.sx + dx)),
-        y: Math.max(0, Math.min(95, dragOrigin.current.sy + dy)),
+        x: Math.max(0, Math.min(maxX, dragOrigin.current.sx + dx)),
+        y: Math.max(0, Math.min(95,   dragOrigin.current.sy + dy)),
       })
     }
     const onEnd = () => {
       dragging.current = false
       document.removeEventListener('touchmove', onMove)
-      document.removeEventListener('touchend', onEnd)
+      document.removeEventListener('touchend',  onEnd)
     }
     document.addEventListener('touchmove', onMove, { passive: false })
-    document.addEventListener('touchend', onEnd)
-  }, [isEditMode, sticker.x, sticker.y, onSelect, onUpdate, containerRef])
+    document.addEventListener('touchend',  onEnd)
+  }, [isEditMode, sticker.x, sticker.y, onSelect, onUpdate, containerRef, maxX])
 
   return (
     <div
       style={{
-        position:'absolute',
-        left:`${sticker.x}%`,
-        top:`${sticker.y}%`,
-        width:sticker.size,
-        height:sticker.size,
-        transform:`rotate(${sticker.rotation}deg)`,
-        cursor: isEditMode ? 'grab' : 'default',
-        zIndex: isEditMode ? 200 : 100,
+        position:  'absolute',
+        left:      `${Math.min(sticker.x, maxX)}%`,
+        top:       `${sticker.y}%`,
+        width:     actualSize,
+        height:    actualSize,
+        transform: `rotate(${sticker.rotation}deg)`,
+        cursor:    isEditMode ? 'grab' : 'default',
+        zIndex:    isEditMode ? 200 + layer : 90 + layer,
         userSelect:'none',
-        outline: isEditMode && isSelected ? '2px dashed var(--color-primary)' : 'none',
-        outlineOffset:3,
+        outline:      isEditMode && isSelected ? '2px dashed var(--color-primary)' : 'none',
+        outlineOffset: 3,
       }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
@@ -129,6 +143,18 @@ function SliderRow({ label, value, min, max, step, onChange, unit='' }) {
 export default function StickerLayer({ profile, isOwner, onSave }) {
   const containerRef = useRef(null)
 
+  // ── 반응형: 컨테이너 너비 추적 ──
+  const [containerWidth, setContainerWidth] = useState(REFERENCE_WIDTH)
+  useEffect(() => {
+    if (!containerRef.current) return
+    const obs = new ResizeObserver(([entry]) => {
+      setContainerWidth(entry.contentRect.width || REFERENCE_WIDTH)
+    })
+    obs.observe(containerRef.current)
+    return () => obs.disconnect()
+  }, [])
+  const scale = containerWidth / REFERENCE_WIDTH
+
   const savedStickers = profile?.stickers || []
   const [stickers,   setStickers]   = useState(savedStickers)
   const [editMode,   setEditMode]   = useState(false)
@@ -136,7 +162,7 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
   const [saving,     setSaving]     = useState(false)
   const [urlInput,   setUrlInput]   = useState('')
 
-  // profile 변경 시 stickers 동기화 (저장 후 등)
+  // profile 변경 시 stickers 동기화
   useEffect(() => {
     if (!editMode) setStickers(profile?.stickers || [])
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -152,6 +178,40 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
     if (selectedId === id) setSelectedId(null)
   }
 
+  // ── 레이어 앞으로 ──
+  const bringForward = (id) => {
+    setStickers(prev => {
+      const s = prev.find(x => x.id === id)
+      if (!s) return prev
+      const cur = s.layer ?? 0
+      const max = Math.max(...prev.map(x => x.layer ?? 0))
+      if (cur >= max) return prev
+      return prev.map(x => {
+        const xl = x.layer ?? 0
+        if (x.id === id)    return { ...x, layer: cur + 1 }
+        if (xl === cur + 1) return { ...x, layer: cur }
+        return x
+      })
+    })
+  }
+
+  // ── 레이어 뒤로 ──
+  const sendBackward = (id) => {
+    setStickers(prev => {
+      const s = prev.find(x => x.id === id)
+      if (!s) return prev
+      const cur = s.layer ?? 0
+      const min = Math.min(...prev.map(x => x.layer ?? 0))
+      if (cur <= min) return prev
+      return prev.map(x => {
+        const xl = x.layer ?? 0
+        if (x.id === id)    return { ...x, layer: cur - 1 }
+        if (xl === cur - 1) return { ...x, layer: cur }
+        return x
+      })
+    })
+  }
+
   const handleAddUrl = () => {
     const url = urlInput.trim()
     if (!url) return
@@ -159,7 +219,15 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
       alert(`스티커는 최대 ${MAX_STICKERS}개까지 추가할 수 있어요.`)
       return
     }
-    const newSticker = { id: genId(), url, x: 5, y: 5, size: 80, rotation: 0 }
+    // layer: 현재 최대값 + 1 (항상 맨 앞에 추가)
+    const maxLayer = stickers.length > 0
+      ? Math.max(...stickers.map(x => x.layer ?? 0))
+      : -1
+    const newSticker = {
+      id: genId(), url,
+      x: 5, y: 5, size: 80, rotation: 0,
+      layer: maxLayer + 1,
+    }
     setStickers(prev => [...prev, newSticker])
     setSelectedId(newSticker.id)
     setUrlInput('')
@@ -183,9 +251,17 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
   // 스티커 없고 오너도 아님 → 렌더링 안 함
   if (savedStickers.length === 0 && !isOwner) return null
 
+  // 선택된 스티커의 레이어 범위
+  const allLayers  = stickers.map(x => x.layer ?? 0)
+  const maxLayer   = stickers.length > 0 ? Math.max(...allLayers) : 0
+  const minLayer   = stickers.length > 0 ? Math.min(...allLayers) : 0
+  const selLayer   = selectedSticker?.layer ?? 0
+  const canForward = selectedSticker && selLayer < maxLayer
+  const canBack    = selectedSticker && selLayer > minLayer
+
   return (
     <>
-      {/* ── 스티커 레이어 (페이지 전체에 absolute) ── */}
+      {/* ── 스티커 레이어 ── */}
       <div
         ref={containerRef}
         style={{
@@ -202,6 +278,7 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
             isEditMode={editMode}
             isSelected={selectedId === s.id}
             containerRef={containerRef}
+            scale={scale}
             onSelect={() => setSelectedId(s.id)}
             onUpdate={upd => updateSticker(s.id, upd)}
             onRemove={() => removeSticker(s.id)}
@@ -239,7 +316,7 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
           boxShadow:'0 4px 24px rgba(0,0,0,0.18)',
           padding:'14px 16px',
           display:'flex', flexDirection:'column', gap:10,
-          minWidth:290, maxWidth:360,
+          minWidth:300, maxWidth:370,
         }}>
           {/* 헤더 */}
           <div style={{ display:'flex', alignItems:'center', gap:6 }}>
@@ -248,6 +325,12 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
             <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)', marginLeft:4 }}>
               ({stickers.length}/{MAX_STICKERS})
             </span>
+            {/* 반응형 스케일 표시 */}
+            {Math.abs(scale - 1) > 0.05 && (
+              <span style={{ fontSize:'0.68rem', color:'var(--color-primary)', marginLeft:'auto', opacity:0.8 }}>
+                ×{scale.toFixed(2)}
+              </span>
+            )}
           </div>
 
           {/* 선택된 스티커 컨트롤 */}
@@ -259,14 +342,65 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
               <div style={{ fontSize:'0.73rem', fontWeight:600, color:'var(--color-accent)', marginBottom:2 }}>
                 선택된 스티커 조절
               </div>
-              <SliderRow label="위치 X" value={selectedSticker.x}        min={0}    max={95}   step={0.5} unit="%" onChange={v => updateSticker(selectedId, { x: v })}/>
-              <SliderRow label="위치 Y" value={selectedSticker.y}        min={0}    max={95}   step={0.5} unit="%" onChange={v => updateSticker(selectedId, { y: v })}/>
-              <SliderRow label="크기"   value={selectedSticker.size}     min={20}   max={300}  step={5}   unit="px" onChange={v => updateSticker(selectedId, { size: v })}/>
-              <SliderRow label="회전"   value={selectedSticker.rotation} min={-180} max={180}  step={1}   unit="°"  onChange={v => updateSticker(selectedId, { rotation: v })}/>
+
+              <SliderRow
+                label="위치 X" value={selectedSticker.x}
+                min={0} max={calcMaxX(selectedSticker.size)} step={0.5} unit="%"
+                onChange={v => updateSticker(selectedId, { x: v })}
+              />
+              <SliderRow
+                label="위치 Y" value={selectedSticker.y}
+                min={0} max={95} step={0.5} unit="%"
+                onChange={v => updateSticker(selectedId, { y: v })}
+              />
+              <SliderRow
+                label="크기" value={selectedSticker.size}
+                min={20} max={300} step={5} unit="px"
+                onChange={v => updateSticker(selectedId, { size: v })}
+              />
+              <SliderRow
+                label="회전" value={selectedSticker.rotation}
+                min={-180} max={180} step={1} unit="°"
+                onChange={v => updateSticker(selectedId, { rotation: v })}
+              />
+
+              {/* 레이어 컨트롤 */}
+              {stickers.length > 1 && (
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
+                  <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)', minWidth:40, flexShrink:0 }}>
+                    레이어
+                  </span>
+                  <div style={{ display:'flex', gap:5, flex:1 }}>
+                    <button
+                      onClick={() => sendBackward(selectedId)}
+                      disabled={!canBack}
+                      className="btn btn-outline btn-sm"
+                      style={{ flex:1, fontSize:'0.72rem', opacity: canBack ? 1 : 0.35 }}
+                      title="한 단계 뒤로"
+                    >
+                      ↓ 뒤로
+                    </button>
+                    <button
+                      onClick={() => bringForward(selectedId)}
+                      disabled={!canForward}
+                      className="btn btn-outline btn-sm"
+                      style={{ flex:1, fontSize:'0.72rem', opacity: canForward ? 1 : 0.35 }}
+                      title="한 단계 앞으로"
+                    >
+                      ↑ 앞으로
+                    </button>
+                  </div>
+                  <span style={{ fontSize:'0.68rem', color:'var(--color-text-light)', minWidth:40, textAlign:'right' }}>
+                    {selLayer - minLayer + 1}/{stickers.length}
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', textAlign:'center', margin:0 }}>
-              {stickers.length > 0 ? '스티커를 클릭하면 조절할 수 있어요' : '이미지 URL을 입력해 스티커를 추가하세요'}
+              {stickers.length > 0
+                ? '스티커를 클릭하면 조절할 수 있어요'
+                : '이미지 URL을 입력해 스티커를 추가하세요'}
             </p>
           )}
 
