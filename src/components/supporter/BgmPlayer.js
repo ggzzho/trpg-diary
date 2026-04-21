@@ -82,6 +82,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
   const seekIntervalRef = useRef(null)
 
   // ── UI 상태 ──
+  const [collapsed,    setCollapsed]    = useState(() => window.innerWidth < 600)
   const [showPlaylist, setShowPlaylist] = useState(false)
   const [saving,       setSaving]       = useState(false)
 
@@ -256,6 +257,35 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
       </div>
 
       {/* ── 플로팅 위젯 ── */}
+      {collapsed ? (
+        /* ── 접힌 상태: 미니 원형 버튼 ── */
+        <div style={{ position:'fixed', bottom:164, right:20, zIndex:9998 }}>
+          <button
+            onClick={() => setCollapsed(false)}
+            style={{
+              width:36, height:36, borderRadius:'50%',
+              background:'var(--color-surface)',
+              border:'1px solid var(--color-border)',
+              boxShadow:'0 4px 20px rgba(0,0,0,0.15)',
+              backdropFilter:'blur(12px)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              cursor:'pointer',
+              color: playing ? 'var(--color-primary)' : 'var(--color-text-light)',
+            }}
+            title="BGM 플레이어 열기"
+          >
+            <Mi size="sm">music_note</Mi>
+          </button>
+          {playing && (
+            <span style={{
+              position:'absolute', top:4, right:4,
+              width:8, height:8, borderRadius:'50%',
+              background:'var(--color-primary)',
+              pointerEvents:'none',
+            }}/>
+          )}
+        </div>
+      ) : (
       <div style={{
         position:'fixed', bottom:164, right:20, zIndex:9998,
         width:284,
@@ -270,7 +300,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
         {/* ── 3행 컨트롤 영역 ── */}
         <div style={{ padding:'10px 14px 8px' }}>
 
-          {/* 행①: 음표 + 곡명 + 시간 */}
+          {/* 행①: 음표 + 곡명 + 시간 + 접기 버튼 */}
           <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5 }}>
             <Mi size="sm" style={{
               color: playing ? 'var(--color-primary)' : 'var(--color-text-light)',
@@ -286,6 +316,15 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
             <span style={{ fontSize:'0.65rem', color:'var(--color-text-light)', flexShrink:0, whiteSpace:'nowrap' }}>
               {hasVideo ? `${formatTime(currentTime)} / ${formatTime(duration)}` : ''}
             </span>
+            <button
+              onClick={() => { setCollapsed(true); setShowPlaylist(false) }}
+              style={{
+                background:'none', border:'none', cursor:'pointer',
+                color:'var(--color-text-light)', fontSize:'1rem', lineHeight:1,
+                padding:'0 2px', flexShrink:0, opacity:0.6,
+              }}
+              title="접기"
+            >─</button>
           </div>
 
           {/* 행②: Seek 바 */}
@@ -505,6 +544,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
           </div>
         )}
       </div>
+      )} {/* collapsed 삼항 끝 */}
 
       {/* ── BGM 말풍선 (첫 방문 1회) ── */}
       <style>{`
@@ -513,9 +553,9 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
           to   { transform: translateY(-6px); }
         }
       `}</style>
-      {showBubble && (
+      {showBubble && collapsed && (
         <div style={{
-          position:'fixed', bottom:182, right:312, zIndex:10000,
+          position:'fixed', bottom:182, right:62, zIndex:10000,
           background:'var(--color-surface)',
           border:'1px solid var(--color-border)',
           borderRadius:10,
