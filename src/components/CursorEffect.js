@@ -30,32 +30,6 @@ const KEYFRAMES = `
   }
 `
 
-// Web Audio API 클릭 사운드 — 딸깍
-// BufferSource는 환경에 따라 에러 발생 → 오실레이터 전용으로 구현
-const playClickSound = () => {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const now = ctx.currentTime
-
-    // square wave 1500Hz→80Hz 급강하 10ms: 기계 스위치 딸깍 질감
-    const osc  = ctx.createOscillator()
-    osc.type   = 'square'
-    osc.frequency.setValueAtTime(1500, now)
-    osc.frequency.exponentialRampToValueAtTime(80, now + 0.01)
-
-    const gain = ctx.createGain()
-    gain.gain.setValueAtTime(0.5, now)
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.01)
-
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.start(now)
-    osc.stop(now + 0.012)
-    osc.onended = () => ctx.close()
-  } catch(e) {
-    console.error('[CursorEffect] audio error:', e)
-  }
-}
 
 export default function CursorEffect({ settings }) {
   const cursorElRef  = useRef(null)
@@ -73,7 +47,6 @@ export default function CursorEffect({ settings }) {
       cursor = { type: 'default' },
       trail  = { enabled: false, type: 'sparkle' },
       click  = { enabled: false, type: 'ripple' },
-      sound  = { enabled: false },
     } = settings
 
     const hasCursor = cursor.type !== 'default'
@@ -198,7 +171,6 @@ export default function CursorEffect({ settings }) {
     // ── click ──
     const handleClick = (e) => {
       spawnClick(e.clientX, e.clientY)
-      if (sound.enabled) playClickSound()
     }
 
     // ── mouseleave (커서 숨기기) ──

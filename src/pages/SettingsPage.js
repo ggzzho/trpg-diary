@@ -78,7 +78,6 @@ export default function SettingsPage() {
       cursor: { type: 'default' },
       trail:  { enabled: false, type: 'sparkle' },
       click:  { enabled: false, type: 'ripple'  },
-      sound:  { enabled: false },
     },
   })
 
@@ -189,7 +188,6 @@ export default function SettingsPage() {
   const setCECursor = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, cursor: { ...f.cursor_effect.cursor, [key]: val } } }))
   const setCETrail  = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, trail:  { ...f.cursor_effect.trail,  [key]: val } } }))
   const setCEClick  = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, click:  { ...f.cursor_effect.click,  [key]: val } } }))
-  const setCESound  = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, sound:  { ...f.cursor_effect.sound,  [key]: val } } }))
 
   const TABS = [
     {key:'profile',  label:'프로필',    icon:'person'},
@@ -590,17 +588,6 @@ export default function SettingsPage() {
               )}
             </div>
 
-            {/* 클릭 소리 */}
-            <div className="card" style={{padding:'14px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
-              <div>
-                <div style={{fontWeight:600,fontSize:'0.85rem'}}>클릭 소리 🔔</div>
-                <div style={{fontSize:'0.75rem',color:'var(--color-text-light)',marginTop:2}}>클릭할 때마다 짧은 효과음이 재생돼요</div>
-              </div>
-              <div onClick={()=>setCESound('enabled',!form.cursor_effect.sound.enabled)}
-                style={{width:40,height:22,borderRadius:11,background:form.cursor_effect.sound.enabled?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
-                <div style={{position:'absolute',top:3,left:form.cursor_effect.sound.enabled?20:3,width:16,height:16,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
-              </div>
-            </div>
           </div>
         )}
 
