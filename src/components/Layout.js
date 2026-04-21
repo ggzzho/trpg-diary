@@ -392,20 +392,7 @@ export function Layout({ children }) {
               {profile?.avatar_url?<img src={profile.avatar_url} alt="avatar"/>:initial}
             </div>
             <div style={{overflow:'hidden'}}>
-              <div style={{display:'flex', alignItems:'center', gap:5}}>
-                <div className="user-name" style={{flexShrink:0}}>{profile?.display_name||profile?.username}</div>
-                {profile?.membership_tier && TIER_BADGE[profile.membership_tier] && (() => {
-                  const badge = TIER_BADGE[profile.membership_tier]
-                  return (
-                    <span style={{
-                      display:'inline-flex', alignItems:'center', flexShrink:0,
-                      padding:'1px 7px', borderRadius:100,
-                      fontSize:'0.6rem', fontWeight:700, letterSpacing:'0.03em',
-                      background:badge.bg, color:badge.color,
-                    }}>{badge.label}</span>
-                  )
-                })()}
-              </div>
+              <div className="user-name">{profile?.display_name||profile?.username}</div>
               <div className="text-xs text-light" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{user?.email}</div>
             </div>
           </div>
