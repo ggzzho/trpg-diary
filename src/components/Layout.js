@@ -8,6 +8,23 @@ import CursorEffect from './CursorEffect'
 
 const NOTICE_VIEWED_KEY = 'noticeLastViewed'
 
+const TIER_BADGE = {
+  master: { label: '마스터', bg: '#7c5cbf', color: '#fff' },
+  lv3:    { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
+  lv2:    { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
+  lv1:    { label: '♥',     bg: '#b87333', color: '#fff' },
+}
+
+const daysUntil = (iso) => {
+  if (!iso) return null
+  return Math.ceil((new Date(iso) - new Date()) / 86400000)
+}
+
+const fmtDateShort = (iso) => {
+  if (!iso) return '-'
+  return new Date(iso).toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' })
+}
+
 const NOTIF_ICON = {
   guestbook_comment: 'mail',
   guestbook_reply:   'subdirectory_arrow_right',
@@ -377,27 +394,64 @@ export function Layout({ children }) {
             <div style={{overflow:'hidden'}}>
               <div style={{display:'flex', alignItems:'center', gap:5}}>
                 <div className="user-name" style={{flexShrink:0}}>{profile?.display_name||profile?.username}</div>
-                {profile?.membership_tier && profile.membership_tier !== 'free' && (() => {
-                  const TIER_BADGE = {
-                    master: { label: '마스터', bg: '#7c5cbf', color: '#fff' },
-                    lv3:    { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
-                    lv2:    { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
-                    lv1:    { label: '♥',     bg: '#b87333', color: '#fff' },
-                  }
+                {profile?.membership_tier && TIER_BADGE[profile.membership_tier] && (() => {
                   const badge = TIER_BADGE[profile.membership_tier]
-                  return badge ? (
+                  return (
                     <span style={{
                       display:'inline-flex', alignItems:'center', flexShrink:0,
                       padding:'1px 7px', borderRadius:100,
                       fontSize:'0.6rem', fontWeight:700, letterSpacing:'0.03em',
                       background:badge.bg, color:badge.color,
                     }}>{badge.label}</span>
-                  ) : null
+                  )
                 })()}
               </div>
               <div className="text-xs text-light" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{user?.email}</div>
             </div>
           </div>
+          {/* 멤버십 정보 박스 (lv1~lv3) */}
+          {['lv1','lv2','lv3'].includes(profile?.membership_tier) && (() => {
+            const badge   = TIER_BADGE[profile.membership_tier]
+            const days    = daysUntil(profile.membership_expires_at)
+            const expired = days !== null && days < 0
+            const urgent  = days !== null && days >= 0 && days <= 3
+            return (
+              <div style={{
+                margin:'8px 0 6px',
+                padding:'10px 12px',
+                borderRadius:8,
+                background:'var(--color-nav-active-bg)',
+                border:`1px solid ${urgent||expired ? 'rgba(229,115,115,0.4)' : 'var(--color-border)'}`,
+                fontSize:'0.75rem',
+              }}>
+                <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:5}}>
+                  <span style={{padding:'1px 7px', borderRadius:100, fontSize:'0.65rem', fontWeight:700, background:badge.bg, color:badge.color}}>
+                    {badge.label}
+                  </span>
+                  <span style={{fontWeight:600, color:'var(--color-text)', fontSize:'0.75rem'}}>후원 멤버십</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:6, color:'var(--color-text-light)', marginBottom:8}}>
+                  <span>만료일 {fmtDateShort(profile.membership_expires_at)}</span>
+                  {urgent && (
+                    <span style={{padding:'1px 6px', borderRadius:100, fontSize:'0.65rem', fontWeight:700, background:'rgba(229,115,115,0.15)', color:'#e57373'}}>
+                      만료 {days}일 전
+                    </span>
+                  )}
+                  {expired && (
+                    <span style={{padding:'1px 6px', borderRadius:100, fontSize:'0.65rem', fontWeight:700, background:'rgba(229,115,115,0.15)', color:'#e57373'}}>
+                      만료됨
+                    </span>
+                  )}
+                </div>
+                <button
+                  className="btn btn-outline btn-sm w-full"
+                  style={{justifyContent:'center', fontSize:'0.72rem'}}
+                  onClick={() => navigate('/settings', { state:{ tab:'donation' } })}>
+                  후원 정보 확인
+                </button>
+              </div>
+            )
+          })()}
           <button className="btn btn-ghost btn-sm w-full" style={{justifyContent:'center'}} onClick={handleSignOut}>로그아웃</button>
         </div>
       </aside>
