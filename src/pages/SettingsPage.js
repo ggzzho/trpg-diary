@@ -73,6 +73,12 @@ export default function SettingsPage() {
     dashboard_cards: p?.dashboard_cards || ['logs','rulebooks','scenarios','pairs'],
     theme_text_color: p?.theme_text_color || '',
     dark_mode: p?.dark_mode || false,
+    cursor_effect: p?.cursor_effect || {
+      enabled_public: true,
+      cursor: { type: 'default' },
+      trail:  { enabled: false, type: 'sparkle' },
+      click:  { enabled: false, type: 'ripple'  },
+    },
   })
 
   const [form, setForm] = useState(() => buildForm(profile))
@@ -176,7 +182,22 @@ export default function SettingsPage() {
     }
   }
 
-  const TABS = [{key:'profile',label:'프로필',icon:'person'},{key:'theme',label:'테마',icon:'palette'},{key:'dashboard',label:'홈화면',icon:'dashboard'},{key:'privacy',label:'공개 설정',icon:'lock'},{key:'password',label:'비밀번호',icon:'key'},{key:'withdraw',label:'회원 탈퇴',icon:'person_remove'}]
+  const isLv2Plus = ['lv2','lv3','master'].includes(profile?.membership_tier)
+  // cursor_effect 중첩 업데이트 헬퍼
+  const setCE = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, [key]: val } }))
+  const setCECursor = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, cursor: { ...f.cursor_effect.cursor, [key]: val } } }))
+  const setCETrail  = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, trail:  { ...f.cursor_effect.trail,  [key]: val } } }))
+  const setCEClick  = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, click:  { ...f.cursor_effect.click,  [key]: val } } }))
+
+  const TABS = [
+    {key:'profile',  label:'프로필',    icon:'person'},
+    {key:'theme',    label:'테마',      icon:'palette'},
+    {key:'dashboard',label:'홈화면',    icon:'dashboard'},
+    {key:'privacy',  label:'공개 설정', icon:'lock'},
+    ...(isLv2Plus ? [{key:'supporter', label:'커서 효과', icon:'auto_awesome'}] : []),
+    {key:'password', label:'비밀번호',  icon:'key'},
+    {key:'withdraw', label:'회원 탈퇴', icon:'person_remove'},
+  ]
 
   const handleWithdraw = async () => {
     if (withdrawInput !== '탈퇴합니다') return
@@ -476,6 +497,98 @@ export default function SettingsPage() {
               <button className="btn btn-primary btn-sm" type="submit" disabled={pwLoading}><Mi size='sm' color='white'>lock_reset</Mi> {pwLoading ? '변경 중...' : '비밀번호 변경'}</button>
             </form>
           </>
+        )}
+
+        {/* ── 후원자 전용: 커서 효과 ── */}
+        {tab==='supporter'&&isLv2Plus&&(
+          <div>
+            <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:4,fontSize:'1rem',display:'flex',alignItems:'center',gap:6}}>
+              <Mi size='sm' color='accent'>auto_awesome</Mi> 커서 효과
+            </h2>
+            <p style={{fontSize:'0.78rem',color:'var(--color-text-light)',marginBottom:20}}>
+              마우스 커서와 움직임에 특별한 효과를 추가해요. 데스크톱 전용이에요.
+            </p>
+
+            {/* 공개 페이지 표시 여부 */}
+            <div className="card" style={{padding:'14px 16px',marginBottom:12,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+              <div>
+                <div style={{fontWeight:600,fontSize:'0.85rem'}}>공개 페이지에 효과 표시</div>
+                <div style={{fontSize:'0.75rem',color:'var(--color-text-light)',marginTop:2}}>OFF 시 나에게만 보여요</div>
+              </div>
+              <div onClick={()=>setCE('enabled_public',!form.cursor_effect.enabled_public)}
+                style={{width:40,height:22,borderRadius:11,background:form.cursor_effect.enabled_public?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
+                <div style={{position:'absolute',top:3,left:form.cursor_effect.enabled_public?20:3,width:16,height:16,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+              </div>
+            </div>
+
+            {/* 커서 모양 */}
+            <div className="card" style={{padding:'14px 16px',marginBottom:12}}>
+              <div style={{fontWeight:600,fontSize:'0.85rem',marginBottom:12}}>커서 모양</div>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
+                {[
+                  {type:'default', label:'기본', emoji:'🖱️'},
+                  {type:'dice',    label:'🎲 주사위'},
+                  {type:'wand',    label:'🪄 마법봉'},
+                  {type:'pen',     label:'✒️ 펜'},
+                  {type:'custom',  label:'✨ 직접 입력'},
+                ].map(({type, label}) => (
+                  <button key={type}
+                    onClick={()=>setCECursor('type', type)}
+                    className={`btn btn-sm ${form.cursor_effect.cursor.type===type?'btn-primary':'btn-outline'}`}
+                    style={{fontSize:'0.78rem'}}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {form.cursor_effect.cursor.type==='custom'&&(
+                <input className="form-input" placeholder="GIF 또는 PNG 이미지 URL"
+                  value={form.cursor_effect.cursor.url||''}
+                  onChange={e=>setCECursor('url', e.target.value)}
+                  style={{fontSize:'0.8rem'}}/>
+              )}
+            </div>
+
+            {/* 트레일 효과 */}
+            <div className="card" style={{padding:'14px 16px',marginBottom:12}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:form.cursor_effect.trail.enabled?12:0}}>
+                <div style={{fontWeight:600,fontSize:'0.85rem'}}>움직임 트레일</div>
+                <div onClick={()=>setCETrail('enabled',!form.cursor_effect.trail.enabled)}
+                  style={{width:40,height:22,borderRadius:11,background:form.cursor_effect.trail.enabled?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
+                  <div style={{position:'absolute',top:3,left:form.cursor_effect.trail.enabled?20:3,width:16,height:16,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                </div>
+              </div>
+              {form.cursor_effect.trail.enabled&&(
+                <div style={{display:'flex',gap:8}}>
+                  {[{type:'sparkle',label:'✨ 반짝이'},{type:'star',label:'⭐ 별'},{type:'heart',label:'💜 하트'}].map(({type,label})=>(
+                    <button key={type} onClick={()=>setCETrail('type',type)}
+                      className={`btn btn-sm ${form.cursor_effect.trail.type===type?'btn-primary':'btn-outline'}`}
+                      style={{fontSize:'0.78rem'}}>{label}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 클릭 효과 */}
+            <div className="card" style={{padding:'14px 16px',marginBottom:12}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:form.cursor_effect.click.enabled?12:0}}>
+                <div style={{fontWeight:600,fontSize:'0.85rem'}}>클릭 효과</div>
+                <div onClick={()=>setCEClick('enabled',!form.cursor_effect.click.enabled)}
+                  style={{width:40,height:22,borderRadius:11,background:form.cursor_effect.click.enabled?'var(--color-primary)':'#ccc',position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0}}>
+                  <div style={{position:'absolute',top:3,left:form.cursor_effect.click.enabled?20:3,width:16,height:16,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                </div>
+              </div>
+              {form.cursor_effect.click.enabled&&(
+                <div style={{display:'flex',gap:8}}>
+                  {[{type:'ripple',label:'🔵 리플'},{type:'particle',label:'💥 파티클'}].map(({type,label})=>(
+                    <button key={type} onClick={()=>setCEClick('type',type)}
+                      className={`btn btn-sm ${form.cursor_effect.click.type===type?'btn-primary':'btn-outline'}`}
+                      style={{fontSize:'0.78rem'}}>{label}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
         )}
 
         {/* ── 회원 탈퇴 ── */}

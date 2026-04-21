@@ -4,6 +4,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signOut, notificationsApi, supabase } from '../lib/supabase'
 import { fmtAgo } from '../lib/dateFormatters'
+import CursorEffect from './CursorEffect'
 
 const NOTICE_VIEWED_KEY = 'noticeLastViewed'
 
@@ -191,8 +192,14 @@ export function Layout({ children }) {
     }
   }, [location.pathname])
 
+  const isLv2Plus = ['lv2','lv3','master'].includes(profile?.membership_tier)
+
   return (
     <div className="app-layout">
+      {/* 후원자 lv2+ 커서 효과 (내 페이지) */}
+      {isLv2Plus && profile?.cursor_effect && (
+        <CursorEffect settings={profile.cursor_effect} />
+      )}
       <div className={`sidebar-overlay ${mobileOpen?'open':''}`} onClick={()=>setMobileOpen(false)} />
       <button className="mobile-menu-btn" onClick={()=>setMobileOpen(!mobileOpen)}>
         {mobileOpen ? '✕' : '☰'}
@@ -372,10 +379,10 @@ export function Layout({ children }) {
                 <div className="user-name" style={{flexShrink:0}}>{profile?.display_name||profile?.username}</div>
                 {profile?.membership_tier && profile.membership_tier !== 'free' && (() => {
                   const TIER_BADGE = {
-                    master: { label: '마스터',    bg: '#7c5cbf', color: '#fff' },
-                    lv3:    { label: '후원 Lv.3', bg: '#d4a017', color: '#fff' },
-                    lv2:    { label: '후원 Lv.2', bg: '#9e9e9e', color: '#fff' },
-                    lv1:    { label: '후원 Lv.1', bg: '#b87333', color: '#fff' },
+                    master: { label: '마스터', bg: '#7c5cbf', color: '#fff' },
+                    lv3:    { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
+                    lv2:    { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
+                    lv1:    { label: '♥',     bg: '#b87333', color: '#fff' },
                   }
                   const badge = TIER_BADGE[profile.membership_tier]
                   return badge ? (
