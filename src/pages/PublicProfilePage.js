@@ -244,8 +244,7 @@ export default function PublicProfilePage() {
   // 탭별 lazy load
   const [counts, setCounts] = useState({})
   const [tabLoading, setTabLoading] = useState({})
-  const loadedRef  = useRef(new Set())
-  const bgmBarRef  = useRef(null)
+  const loadedRef = useRef(new Set())
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
   const publicLogs = (data.logs||[]).filter(l => !l.is_private)
@@ -664,7 +663,6 @@ export default function PublicProfilePage() {
           profile={profile}
           isOwner={isOwnPage}
           onSave={handleSupporterSave}
-          barSlotRef={bgmBarRef}
         />
       )}
 
@@ -756,9 +754,6 @@ export default function PublicProfilePage() {
             : <div style={{ width:'100%', height:'100%', background:`linear-gradient(135deg,var(--color-primary),var(--color-accent))`, opacity:0.3 }}/>
           }
         </div>
-
-        {/* ── BGM 인라인 바 슬롯 (BgmPlayer가 portal로 렌더) ── */}
-        {isSupporter && <div ref={bgmBarRef} />}
 
         <div style={{ padding:'0 24px 24px', textAlign:'center' }}>
           {/* 아바타 */}

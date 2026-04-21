@@ -1,9 +1,8 @@
 // src/components/supporter/BgmPlayer.js
 import React, { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { Mi } from '../Mi'
 
-const MAX_TRACKS = 12
+const MAX_TRACKS = 8
 
 const formatTime = (sec) => {
   if (!sec || isNaN(sec)) return '0:00'
@@ -28,6 +27,20 @@ const extractVideoId = (url) => {
   return null
 }
 
+// YouTube oEmbed로 영상 제목 자동 fetch
+const fetchYouTubeTitle = async (url) => {
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.title || null
+  } catch {
+    return null
+  }
+}
+
 // YouTube IFrame API 로드 (싱글톤)
 let _apiStatus = 'idle'
 const _apiCallbacks = []
@@ -45,27 +58,22 @@ function loadYTApi(cb) {
   document.head.appendChild(tag)
 }
 
-export default function BgmPlayer({ profile, isOwner, onSave, barSlotRef }) {
+export default function BgmPlayer({ profile, isOwner, onSave }) {
   // ── 플레이리스트 데이터 (bgm_url 단일트랙 하위호환 포함) ──
   const rawPlaylist  = profile?.bgm_playlist || []
   const resolvedList = rawPlaylist.length === 0 && profile?.bgm_url
     ? [{ url: profile.bgm_url, title: profile.bgm_title || '' }]
     : rawPlaylist
-  const videoIds = resolvedList.map(t => extractVideoId(t.url)).filter(Boolean)
-  const hasVideo = videoIds.length > 0
+  const videoIds  = resolvedList.map(t => extractVideoId(t.url)).filter(Boolean)
+  const hasVideo  = videoIds.length > 0
 
   // ── 플레이어 refs ──
   const playerRef    = useRef(null)
   const containerRef = useRef(null)
 
-  // ── 드래그앤드롭 refs ──
-  const dragIdx     = useRef(null)
-  const dragOverIdx = useRef(null)
-
   // ── 플레이어 상태 ──
   const [ready,        setReady]        = useState(false)
   const [playing,      setPlaying]      = useState(false)
-  const [volume,       setVolume]       = useState(50)
   const [currentIndex, setCurrentIndex] = useState(0)
 
   // ── Seek 상태 ──
@@ -74,13 +82,8 @@ export default function BgmPlayer({ profile, isOwner, onSave, barSlotRef }) {
   const seekIntervalRef = useRef(null)
 
   // ── UI 상태 ──
-  const [expanded,  setExpanded]  = useState(false)
-  const [editing,   setEditing]   = useState(false)
-  const [saving,    setSaving]    = useState(false)
-
-  // ── 바 슬롯 준비 & 가시성 ──
-  const [barSlotReady, setBarSlotReady] = useState(false)
-  const [barVisible,   setBarVisible]   = useState(true)
+  const [showPlaylist, setShowPlaylist] = useState(false)
+  const [saving,       setSaving]       = useState(false)
 
   // ── BGM 말풍선 (방문자 첫 접속 시 1회) ──
   const BUBBLE_KEY = 'bgm_bubble_shown'
@@ -97,11 +100,23 @@ export default function BgmPlayer({ profile, isOwner, onSave, barSlotRef }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasVideo])
 
-  // ── 편집 폼 상태 ──
-  const [editList,   setEditList]   = useState([])
-  const [newUrl,     setNewUrl]     = useState('')
-  const [newTitle,   setNewTitle]   = useState('')
-  const [dragOverAt, setDragOverAt] = useState(null)
+  // ── 오너 편집 상태 ──
+  const [editList,      setEditList]      = useState([])
+  const [hasChanges,    setHasChanges]    = useState(false)
+  const [newUrl,        setNewUrl]        = useState('')
+  const [newTitle,      setNewTitle]      = useState('')
+  const [fetchingTitle, setFetchingTitle] = useState(false)
+
+  // 햄버거 패널 열릴 때 editList 초기화 (오너)
+  useEffect(() => {
+    if (showPlaylist && isOwner) {
+      setEditList(resolvedList.map(t => ({ ...t })))
+      setHasChanges(false)
+      setNewUrl('')
+      setNewTitle('')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showPlaylist])
 
   // ── YouTube 플레이어 초기화 ──
   const videoIdsStr = videoIds.join(',')
@@ -122,7 +137,7 @@ export default function BgmPlayer({ profile, isOwner, onSave, barSlotRef }) {
         playerVars: { autoplay:0, controls:0, disablekb:1, fs:0, rel:0 },
         events: {
           onReady: (e) => {
-            e.target.setVolume(volume)
+            e.target.setVolume(50)
             e.target.cuePlaylist(videoIds)
             e.target.setLoop(true)
             setReady(true)
@@ -151,7 +166,7 @@ export default function BgmPlayer({ profile, isOwner, onSave, barSlotRef }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoIdsStr])
 
-  // ── Seek 폴링 (재생 중 0.5초마다 시간 갱신) ──
+  // ── Seek 폴링 ──
   useEffect(() => {
     clearInterval(seekIntervalRef.current)
     if (playing && ready) {
@@ -167,32 +182,14 @@ export default function BgmPlayer({ profile, isOwner, onSave, barSlotRef }) {
     return () => clearInterval(seekIntervalRef.current)
   }, [playing, ready])
 
-  // ── barSlot 준비 감지 + IntersectionObserver ──
-  useEffect(() => {
-    if (!barSlotRef?.current) return
-    setBarSlotReady(true)
-
-    const obs = new IntersectionObserver(
-      ([entry]) => setBarVisible(entry.isIntersecting),
-      { threshold: 0 }
-    )
-    obs.observe(barSlotRef.current)
-    return () => obs.disconnect()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   // ── 플레이어 컨트롤 ──
-  const togglePlay = () => {
+  const togglePlay  = () => {
     if (!playerRef.current) return
     playing ? playerRef.current.pauseVideo() : playerRef.current.playVideo()
   }
-  const handlePrev   = () => { try { playerRef.current?.previousVideo() } catch {} }
-  const handleNext   = () => { try { playerRef.current?.nextVideo()     } catch {} }
-  const handleVolume = (v) => {
-    setVolume(v)
-    try { playerRef.current?.setVolume(v) } catch {}
-  }
-  const handleSeek = (v) => {
+  const handlePrev  = () => { try { playerRef.current?.previousVideo() } catch {} }
+  const handleNext  = () => { try { playerRef.current?.nextVideo()     } catch {} }
+  const handleSeek  = (v) => {
     setCurrentTime(v)
     try { playerRef.current?.seekTo(v, true) } catch {}
   }
@@ -204,484 +201,339 @@ export default function BgmPlayer({ profile, isOwner, onSave, barSlotRef }) {
     } catch {}
   }
 
-  // ── 편집 열기 ──
-  const openEdit = () => {
-    setEditList(resolvedList.map(t => ({ ...t })))
-    setNewUrl('')
-    setNewTitle('')
-    setEditing(true)
+  // ── 오너 편집 ──
+  const moveTrack = (i, dir) => {
+    const list = [...editList]
+    const j = i + dir
+    if (j < 0 || j >= list.length) return
+    ;[list[i], list[j]] = [list[j], list[i]]
+    setEditList(list)
+    setHasChanges(true)
   }
-
-  // ── 트랙 추가 ──
-  const addTrack = () => {
+  const removeTrack = (i) => {
+    setEditList(prev => prev.filter((_, idx) => idx !== i))
+    setHasChanges(true)
+  }
+  const addTrack = async () => {
     const url = newUrl.trim()
     if (!url || editList.length >= MAX_TRACKS) return
-    setEditList(prev => [...prev, { url, title: newTitle.trim() }])
+    let title = newTitle.trim()
+    if (!title) {
+      setFetchingTitle(true)
+      title = await fetchYouTubeTitle(url) || ''
+      setFetchingTitle(false)
+    }
+    setEditList(prev => [...prev, { url, title }])
+    setHasChanges(true)
     setNewUrl('')
     setNewTitle('')
   }
-
-  // ── 트랙 삭제 ──
-  const removeTrack = (i) =>
-    setEditList(prev => prev.filter((_, idx) => idx !== i))
-
-  // ── 드래그앤드롭 ──
-  const handleDragStart = (i) => { dragIdx.current = i }
-  const handleDragOver  = (e, i) => {
-    e.preventDefault()
-    if (dragOverIdx.current !== i) {
-      dragOverIdx.current = i
-      setDragOverAt(i)
-    }
-  }
-  const handleDrop = (i) => {
-    const from = dragIdx.current
-    if (from === null || from === i) { handleDragEnd(); return }
-    const list = [...editList]
-    const [moved] = list.splice(from, 1)
-    list.splice(i, 0, moved)
-    setEditList(list)
-    handleDragEnd()
-  }
-  const handleDragEnd = () => {
-    dragIdx.current     = null
-    dragOverIdx.current = null
-    setDragOverAt(null)
-  }
-
-  // ── 설정 저장 ──
   const saveSettings = async () => {
     setSaving(true)
-    await onSave({
-      bgm_playlist: editList,
-      bgm_autoplay: profile?.bgm_autoplay || false,
-    })
+    await onSave({ bgm_playlist: editList, bgm_autoplay: false })
     setSaving(false)
-    setEditing(false)
+    setHasChanges(false)
+  }
+  const cancelEdit = () => {
+    setEditList(resolvedList.map(t => ({ ...t })))
+    setHasChanges(false)
+    setNewUrl('')
+    setNewTitle('')
   }
 
   // 데이터 없고 오너도 아님 → 렌더링 안 함
   if (!hasVideo && !isOwner) return null
 
   const currentTrack = resolvedList[currentIndex] || resolvedList[0]
-  const displayTitle = (currentTrack?.title || 'BGM').slice(0, 28)
-
-  // ── 인라인 바 UI (createPortal → 헤더 이미지 아래 슬롯) ──
-  const inlineBar = barSlotRef && barSlotReady && barSlotRef.current
-    ? createPortal(
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '9px 20px',
-          background: 'var(--color-surface)',
-          borderTop: '1px solid var(--color-border)',
-          minHeight: 50,
-          flexWrap: 'nowrap',
-        }}>
-          {/* 음표 아이콘 */}
-          <Mi size="sm" style={{
-            color: playing ? 'var(--color-primary)' : 'var(--color-text-light)',
-            flexShrink: 0,
-            transition: 'color 0.2s',
-          }}>music_note</Mi>
-
-          {hasVideo ? (
-            <>
-              {/* 곡명 */}
-              <span style={{
-                fontSize: '0.82rem', fontWeight: 600,
-                color: 'var(--color-accent)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                minWidth: 0, flex: '0 1 160px',
-              }}>
-                {displayTitle}
-              </span>
-
-              {/* 곡 번호 (2곡 이상) */}
-              {resolvedList.length > 1 && (
-                <span style={{ fontSize: '0.68rem', color: 'var(--color-text-light)', flexShrink: 0 }}>
-                  {currentIndex + 1}/{resolvedList.length}
-                </span>
-              )}
-
-              {/* 재생 컨트롤 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-                {resolvedList.length > 1 && (
-                  <button
-                    onClick={handlePrev} disabled={!ready}
-                    style={{ background: 'none', border: 'none', cursor: ready ? 'pointer' : 'default', color: 'var(--color-text)', padding: '2px 5px', fontSize: '0.8rem', opacity: ready ? 1 : 0.4 }}
-                    title="이전 곡"
-                  >⏮</button>
-                )}
-                <button
-                  onClick={togglePlay} disabled={!ready}
-                  style={{
-                    background: 'var(--color-primary)', border: 'none',
-                    cursor: ready ? 'pointer' : 'default', color: '#fff',
-                    padding: '4px 14px', fontSize: '0.78rem', borderRadius: 6,
-                    opacity: ready ? 1 : 0.6, minWidth: 68, fontWeight: 600,
-                  }}
-                >
-                  {!ready ? '로딩 중' : playing ? '⏸ 정지' : '▶ 재생'}
-                </button>
-                {resolvedList.length > 1 && (
-                  <button
-                    onClick={handleNext} disabled={!ready}
-                    style={{ background: 'none', border: 'none', cursor: ready ? 'pointer' : 'default', color: 'var(--color-text)', padding: '2px 5px', fontSize: '0.8rem', opacity: ready ? 1 : 0.4 }}
-                    title="다음 곡"
-                  >⏭</button>
-                )}
-              </div>
-
-              {/* Seek 바 */}
-              <input
-                type="range" min={0} max={duration || 100} step={0.5}
-                value={currentTime}
-                onChange={e => handleSeek(Number(e.target.value))}
-                disabled={!ready || duration === 0}
-                style={{
-                  flex: 1, minWidth: 60,
-                  accentColor: 'var(--color-primary)',
-                  cursor: ready && duration > 0 ? 'pointer' : 'default',
-                }}
-              />
-
-              {/* 시간 표시 */}
-              <span style={{ fontSize: '0.65rem', color: 'var(--color-text-light)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                {formatTime(currentTime)} / {formatTime(duration)}
-              </span>
-
-              {/* 볼륨 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                <Mi size="sm" color="light">volume_up</Mi>
-                <input
-                  type="range" min={0} max={100} value={volume}
-                  onChange={e => handleVolume(Number(e.target.value))}
-                  style={{ width: 60, accentColor: 'var(--color-primary)', cursor: 'pointer' }}
-                />
-              </div>
-            </>
-          ) : (
-            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-light)', flex: 1 }}>
-              BGM이 설정되지 않았어요
-            </span>
-          )}
-
-          {/* 오너: 설정 버튼 */}
-          {isOwner && (
-            <button
-              onClick={openEdit}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-light)', padding: '4px 6px', flexShrink: 0, display: 'flex', alignItems: 'center' }}
-              title="BGM 설정"
-            >
-              <Mi size="sm">settings</Mi>
-            </button>
-          )}
-        </div>,
-        barSlotRef.current
-      )
-    : null
-
-  // ── 플로팅 위젯 표시 조건 ──
-  // barSlotRef 있음: 바가 뷰포트 밖에 있을 때만 미니 버튼 표시
-  // barSlotRef 없음: 항상 원래 플로팅 위젯 표시
-  const showFloating = !barSlotRef || !barVisible
+  const displayTitle = (currentTrack?.title || 'BGM').slice(0, 24)
+  const multiTrack   = resolvedList.length > 1
 
   return (
     <>
       {/* 숨겨진 YouTube 플레이어 컨테이너 */}
-      <div style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>
+      <div style={{ position:'absolute', width:1, height:1, overflow:'hidden', opacity:0, pointerEvents:'none' }}>
         <div ref={containerRef} />
       </div>
 
-      {/* 인라인 바 (portal) */}
-      {inlineBar}
+      {/* ── 플로팅 위젯 ── */}
+      <div style={{
+        position:'fixed', bottom:164, right:20, zIndex:9998,
+        width:284,
+        background:'var(--color-surface)',
+        border:'1px solid var(--color-border)',
+        borderRadius:14,
+        boxShadow:'0 4px 20px rgba(0,0,0,0.15)',
+        backdropFilter:'blur(12px)',
+        overflow:'hidden',
+      }}>
 
-      {/* 플로팅 위젯 */}
-      {showFloating && (
-        <div style={{
-          position: 'fixed', bottom: 116, right: 20, zIndex: 9999,
-          background: 'var(--color-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: barSlotRef ? 100 : (expanded ? 16 : 100),
-          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-          backdropFilter: 'blur(12px)',
-          overflow: 'hidden',
-          transition: 'border-radius 0.2s',
-          minWidth: barSlotRef ? 36 : (expanded ? 270 : 36),
-        }}>
-          {barSlotRef ? (
-            /* ── barSlot 모드: 미니 play/pause 버튼만 ── */
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={hasVideo ? togglePlay : openEdit}
-                disabled={hasVideo && !ready}
-                style={{
-                  width: 36, height: 36,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'none', border: 'none',
-                  cursor: (hasVideo && !ready) ? 'default' : 'pointer',
-                  color: playing ? 'var(--color-primary)' : 'var(--color-text-light)',
-                }}
-                title={playing ? 'BGM 일시정지' : 'BGM 재생'}
-              >
-                <Mi size="sm">{playing ? 'pause' : 'music_note'}</Mi>
-              </button>
-              {playing && (
-                <span style={{
-                  position: 'absolute', top: 4, right: 4,
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: 'var(--color-primary)',
-                }} />
-              )}
-            </div>
-          ) : !expanded ? (
-            /* ── 원래 접힌 상태 (barSlot 없을 때) ── */
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => setExpanded(true)}
-                style={{
-                  width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: playing ? 'var(--color-primary)' : 'var(--color-text-light)',
-                }}
-                title="BGM 플레이어"
-              >
-                <Mi size="sm">music_note</Mi>
-              </button>
-              {playing && (
-                <span style={{
-                  position: 'absolute', top: 4, right: 4,
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: 'var(--color-primary)',
-                }} />
-              )}
-            </div>
-          ) : (
-            /* ── 원래 펼친 상태 (barSlot 없을 때) ── */
-            <div style={{ padding: '10px 14px', minWidth: 270 }}>
-              {/* 헤더 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                <Mi size="sm" color="accent">music_note</Mi>
-                <span style={{
-                  fontSize: '0.8rem', fontWeight: 700, flex: 1, color: 'var(--color-accent)',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {displayTitle}
-                </span>
-                {resolvedList.length > 1 && (
-                  <span style={{ fontSize: '0.7rem', color: 'var(--color-text-light)', flexShrink: 0 }}>
-                    {currentIndex + 1} / {resolvedList.length}
-                  </span>
-                )}
+        {/* ── 3행 컨트롤 영역 ── */}
+        <div style={{ padding:'10px 14px 8px' }}>
+
+          {/* 행①: 음표 + 곡명 + 시간 */}
+          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5 }}>
+            <Mi size="sm" style={{
+              color: playing ? 'var(--color-primary)' : 'var(--color-text-light)',
+              flexShrink:0, transition:'color 0.2s',
+            }}>music_note</Mi>
+            <span style={{
+              fontSize:'0.82rem', fontWeight:600, color:'var(--color-accent)',
+              overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+              flex:1, minWidth:0,
+            }}>
+              {hasVideo ? displayTitle : 'BGM 없음'}
+            </span>
+            <span style={{ fontSize:'0.65rem', color:'var(--color-text-light)', flexShrink:0, whiteSpace:'nowrap' }}>
+              {hasVideo ? `${formatTime(currentTime)} / ${formatTime(duration)}` : ''}
+            </span>
+          </div>
+
+          {/* 행②: Seek 바 */}
+          <input
+            type="range" min={0} max={duration || 100} step={0.5}
+            value={currentTime}
+            onChange={e => handleSeek(Number(e.target.value))}
+            disabled={!ready || !hasVideo || duration === 0}
+            style={{
+              width:'100%', display:'block', marginBottom:6,
+              accentColor:'var(--color-primary)',
+              cursor: ready && hasVideo && duration > 0 ? 'pointer' : 'default',
+            }}
+          />
+
+          {/* 행③: 햄버거 + 카운터 | 이전·재생·다음 */}
+          <div style={{ display:'flex', alignItems:'center' }}>
+
+            {/* 좌측: 햄버거 + 트랙 카운터 */}
+            <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+              {(multiTrack || isOwner) && (
                 <button
-                  onClick={() => setExpanded(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-light)', fontSize: '1rem', lineHeight: 1, padding: '0 2px' }}
-                >×</button>
-              </div>
-
-              {hasVideo ? (
-                <>
-                  {/* 재생 컨트롤 */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
-                    {resolvedList.length > 1 && (
-                      <button className="btn btn-outline btn-sm" onClick={handlePrev} disabled={!ready} style={{ padding: '4px 10px', fontSize: '0.85rem' }} title="이전 곡">⏮</button>
-                    )}
-                    <button className={`btn btn-sm ${playing ? 'btn-outline' : 'btn-primary'}`} onClick={togglePlay} disabled={!ready} style={{ flex: 1, fontSize: '0.78rem' }}>
-                      {!ready ? '로딩 중...' : playing ? '⏸ 일시정지' : '▶ 재생'}
-                    </button>
-                    {resolvedList.length > 1 && (
-                      <button className="btn btn-outline btn-sm" onClick={handleNext} disabled={!ready} style={{ padding: '4px 10px', fontSize: '0.85rem' }} title="다음 곡">⏭</button>
-                    )}
-                  </div>
-
-                  {/* 볼륨 슬라이더 */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Mi size="sm" color="light">volume_down</Mi>
-                    <input type="range" min={0} max={100} value={volume} onChange={e => handleVolume(Number(e.target.value))} style={{ flex: 1, accentColor: 'var(--color-primary)', cursor: 'pointer' }} />
-                    <Mi size="sm" color="light">volume_up</Mi>
-                  </div>
-
-                  {/* Seek Bar */}
-                  <div style={{ marginTop: 6 }}>
-                    <input type="range" min={0} max={duration || 100} step={0.5} value={currentTime} onChange={e => handleSeek(Number(e.target.value))} disabled={!ready || duration === 0} style={{ width: '100%', accentColor: 'var(--color-primary)', cursor: ready && duration > 0 ? 'pointer' : 'default' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--color-text-light)', marginTop: 1 }}>
-                      <span>{formatTime(currentTime)}</span>
-                      <span>{formatTime(duration)}</span>
-                    </div>
-                  </div>
-
-                  {/* 플레이리스트 (2곡 이상) */}
-                  {resolvedList.length > 1 && (
-                    <div style={{ marginTop: 8, maxHeight: 130, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {resolvedList.map((track, i) => {
-                        const isActive = i === currentIndex
-                        return (
-                          <button key={i} onClick={() => playTrackAt(i)} style={{
-                            width: '100%', display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '4px 8px', border: 'none', borderRadius: 6,
-                            background: isActive ? 'var(--color-primary)' : 'transparent',
-                            color: isActive ? '#fff' : 'var(--color-text)',
-                            cursor: 'pointer', fontSize: '0.73rem', textAlign: 'left',
-                            transition: 'background 0.15s',
-                          }}>
-                            <span style={{ minWidth: 14, fontSize: '0.62rem', color: isActive ? 'rgba(255,255,255,0.75)' : 'var(--color-text-light)', flexShrink: 0 }}>
-                              {isActive && playing ? '▶' : i + 1}
-                            </span>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                              {track.title || <span style={{ opacity: 0.6 }}>(제목 없음)</span>}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-light)', margin: '4px 0 8px' }}>
-                  BGM이 설정되지 않았어요
-                </p>
-              )}
-
-              {/* 오너: 설정 버튼 */}
-              {isOwner && (
-                <button className="btn btn-ghost btn-sm" onClick={openEdit} style={{ marginTop: 8, width: '100%', fontSize: '0.73rem' }}>
-                  <Mi size="sm">settings</Mi> BGM 설정
+                  onClick={() => setShowPlaylist(v => !v)}
+                  style={{
+                    background:'none', border:'none', cursor:'pointer', padding:'2px 3px',
+                    color: showPlaylist ? 'var(--color-primary)' : 'var(--color-text-light)',
+                    display:'flex', alignItems:'center',
+                  }}
+                  title="플레이리스트"
+                >
+                  <Mi size="sm">menu</Mi>
                 </button>
               )}
+              {multiTrack && (
+                <span style={{ fontSize:'0.7rem', color:'var(--color-text-light)' }}>
+                  {currentIndex + 1}/{resolvedList.length}
+                </span>
+              )}
             </div>
-          )}
-        </div>
-      )}
 
-      {/* ── BGM 설정 모달 ── */}
-      {editing && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-          zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-        }}>
-          <div style={{
-            background: 'var(--color-surface)', borderRadius: 16, padding: '24px 24px 20px',
-            maxWidth: 460, width: '100%', maxHeight: '80vh',
-            display: 'flex', flexDirection: 'column',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.25)',
-          }}>
-            {/* 모달 헤더 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <h3 style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: '1rem', margin: 0 }}>
-                🎵 BGM 플레이리스트
-              </h3>
-              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', marginLeft: 'auto' }}>
-                {editList.length} / {MAX_TRACKS}곡
+            {/* 우측: 재생 컨트롤 */}
+            <div style={{ display:'flex', alignItems:'center', gap:3, marginLeft:'auto' }}>
+              <button
+                onClick={handlePrev} disabled={!ready || !multiTrack}
+                style={{
+                  background:'none', border:'none', padding:'3px 5px',
+                  cursor: ready && multiTrack ? 'pointer' : 'default',
+                  color:'var(--color-text)', fontSize:'0.8rem',
+                  opacity: ready && multiTrack ? 1 : 0.3,
+                }}
+                title="이전 곡"
+              >⏮</button>
+
+              <button
+                onClick={togglePlay} disabled={!ready || !hasVideo}
+                style={{
+                  background:'var(--color-primary)', border:'none', borderRadius:6,
+                  color:'#fff', padding:'5px 14px', fontSize:'0.78rem', fontWeight:700,
+                  cursor: ready && hasVideo ? 'pointer' : 'default',
+                  opacity: ready && hasVideo ? 1 : 0.55,
+                  minWidth:66,
+                }}
+              >
+                {!ready ? '로딩 중' : playing ? '■ 정지' : '▶ 재생'}
+              </button>
+
+              <button
+                onClick={handleNext} disabled={!ready || !multiTrack}
+                style={{
+                  background:'none', border:'none', padding:'3px 5px',
+                  cursor: ready && multiTrack ? 'pointer' : 'default',
+                  color:'var(--color-text)', fontSize:'0.8rem',
+                  opacity: ready && multiTrack ? 1 : 0.3,
+                }}
+                title="다음 곡"
+              >⏭</button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 햄버거 패널 ── */}
+        {showPlaylist && (
+          <div style={{ borderTop:'1px solid var(--color-border)' }}>
+
+            {/* 패널 헤더 */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 14px 5px' }}>
+              <span style={{ fontSize:'0.77rem', fontWeight:700, color:'var(--color-accent)' }}>
+                BGM 플레이리스트
+              </span>
+              <span style={{ fontSize:'0.67rem', color:'var(--color-text-light)' }}>
+                {isOwner
+                  ? `${editList.length}/${MAX_TRACKS}곡`
+                  : `${resolvedList.length}곡`
+                }
               </span>
             </div>
-            <p style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', marginBottom: 14, marginTop: 2 }}>
-              유튜브 링크 또는 영상 ID 입력 · 순서대로 반복 재생
-            </p>
 
             {/* 트랙 목록 */}
-            <div style={{ overflowY: 'auto', flex: 1, marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {editList.length === 0 ? (
-                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-light)', textAlign: 'center', padding: '16px 0', margin: 0 }}>
+            <div style={{ maxHeight:200, overflowY:'auto', padding:'0 14px 4px' }}>
+              {(isOwner ? editList : resolvedList).length === 0 ? (
+                <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', textAlign:'center', padding:'12px 0', margin:0 }}>
                   아직 곡이 없어요
                 </p>
-              ) : editList.map((track, i) => (
-                <div
-                  key={i}
-                  draggable
-                  onDragStart={() => handleDragStart(i)}
-                  onDragOver={(e) => handleDragOver(e, i)}
-                  onDrop={() => handleDrop(i)}
-                  onDragEnd={handleDragEnd}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    background: 'var(--color-nav-active-bg)', borderRadius: 8, padding: '8px 10px',
-                    cursor: 'grab',
-                    opacity: dragIdx.current === i ? 0.4 : 1,
-                    borderTop: dragOverAt === i && dragIdx.current !== i
-                      ? '2px solid var(--color-primary)'
-                      : '2px solid transparent',
-                    transition: 'opacity 0.15s, border-top 0.1s',
-                  }}
-                >
-                  <span style={{ fontSize: '1rem', color: 'var(--color-text-light)', flexShrink: 0, lineHeight: 1, userSelect: 'none' }}>⠿</span>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', minWidth: 16, flexShrink: 0 }}>{i + 1}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {track.title || <span style={{ color: 'var(--color-text-light)', fontWeight: 400 }}>(제목 없음)</span>}
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-light)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {track.url}
-                    </div>
+              ) : (isOwner ? editList : resolvedList).map((track, i) => {
+                const isActive = i === currentIndex
+                return (
+                  <div key={i} style={{
+                    display:'flex', alignItems:'center', gap:4,
+                    padding:'5px 0',
+                    borderBottom:'1px solid var(--color-border)',
+                  }}>
+                    {/* 번호 + 제목 클릭 → 재생 */}
+                    <button
+                      onClick={() => playTrackAt(i)}
+                      style={{
+                        flex:1, display:'flex', alignItems:'center', gap:6,
+                        background:'none', border:'none', cursor:'pointer',
+                        textAlign:'left', padding:0, minWidth:0,
+                        color: isActive ? 'var(--color-primary)' : 'var(--color-text)',
+                      }}
+                    >
+                      <span style={{
+                        fontSize:'0.63rem', flexShrink:0, minWidth:14,
+                        color: isActive ? 'var(--color-primary)' : 'var(--color-text-light)',
+                        fontWeight: isActive ? 700 : 400,
+                      }}>
+                        {isActive && playing ? '▶' : i + 1}
+                      </span>
+                      <span style={{
+                        fontSize:'0.78rem', fontWeight: isActive ? 700 : 400,
+                        overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                      }}>
+                        {track.title || <span style={{ opacity:0.5, fontStyle:'italic' }}>제목 없음</span>}
+                      </span>
+                    </button>
+
+                    {/* 오너: ▲ ▼ × */}
+                    {isOwner && (
+                      <div style={{ display:'flex', alignItems:'center', gap:1, flexShrink:0 }}>
+                        <button
+                          onClick={() => moveTrack(i, -1)} disabled={i === 0}
+                          style={{ background:'none', border:'none', cursor: i > 0 ? 'pointer' : 'default', color:'var(--color-text-light)', fontSize:'0.6rem', padding:'2px 3px', opacity: i > 0 ? 1 : 0.25, lineHeight:1 }}
+                          title="위로"
+                        >▲</button>
+                        <button
+                          onClick={() => moveTrack(i, 1)} disabled={i === editList.length - 1}
+                          style={{ background:'none', border:'none', cursor: i < editList.length - 1 ? 'pointer' : 'default', color:'var(--color-text-light)', fontSize:'0.6rem', padding:'2px 3px', opacity: i < editList.length - 1 ? 1 : 0.25, lineHeight:1 }}
+                          title="아래로"
+                        >▼</button>
+                        <button
+                          onClick={() => removeTrack(i)}
+                          style={{ background:'none', border:'none', cursor:'pointer', color:'#e57373', fontSize:'0.85rem', padding:'2px 3px', lineHeight:1 }}
+                          title="삭제"
+                        >×</button>
+                      </div>
+                    )}
                   </div>
-                  <button
-                    onMouseDown={e => e.stopPropagation()}
-                    onClick={() => removeTrack(i)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e57373', fontSize: '1.1rem', lineHeight: 1, padding: '0 2px', flexShrink: 0 }}
-                  >×</button>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
-            {/* 곡 추가 폼 */}
-            {editList.length < MAX_TRACKS && (
-              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginBottom: 14 }}>
-                <div style={{ fontSize: '0.77rem', fontWeight: 600, color: 'var(--color-text-light)', marginBottom: 7 }}>곡 추가</div>
-                <input className="form-input" placeholder="YouTube URL 또는 영상 ID" value={newUrl} onChange={e => setNewUrl(e.target.value)} style={{ fontSize: '0.83rem', marginBottom: 6 }} />
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input className="form-input" placeholder="곡 제목 (선택)" value={newTitle} onChange={e => setNewTitle(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addTrack() }} style={{ flex: 1, fontSize: '0.83rem' }} />
-                  <button className="btn btn-outline btn-sm" onClick={addTrack} disabled={!newUrl.trim()} style={{ flexShrink: 0 }}>추가</button>
+            {/* 곡 추가 (오너 + 여유 슬롯 있을 때) */}
+            {isOwner && editList.length < MAX_TRACKS && (
+              <div style={{ padding:'10px 14px 6px', borderTop:'1px solid var(--color-border)' }}>
+                <div style={{ fontSize:'0.72rem', fontWeight:600, color:'var(--color-text-light)', marginBottom:6 }}>
+                  곡 추가
+                </div>
+                <input
+                  className="form-input"
+                  placeholder="YouTube URL 또는 영상 ID"
+                  value={newUrl}
+                  onChange={e => setNewUrl(e.target.value)}
+                  style={{ fontSize:'0.78rem', marginBottom:5 }}
+                />
+                <div style={{ display:'flex', gap:5 }}>
+                  <input
+                    className="form-input"
+                    placeholder={fetchingTitle ? '제목 불러오는 중...' : '곡 제목 (미입력시 유튜브 제목 자동 로드)'}
+                    value={newTitle}
+                    onChange={e => setNewTitle(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addTrack() }}
+                    style={{ flex:1, fontSize:'0.73rem' }}
+                    disabled={fetchingTitle}
+                  />
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={addTrack}
+                    disabled={!newUrl.trim() || fetchingTitle}
+                    style={{ flexShrink:0, fontWeight:700, minWidth:30 }}
+                    title="추가"
+                  >+</button>
                 </div>
               </div>
             )}
 
-            {/* 저장 / 취소 */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-primary" onClick={saveSettings} disabled={saving} style={{ flex: 1 }}>
-                {saving ? '저장 중...' : '저장'}
-              </button>
-              <button className="btn btn-outline" onClick={() => setEditing(false)}>취소</button>
-            </div>
+            {/* 저장 / 취소 (오너 전용) */}
+            {isOwner && (
+              <div style={{ display:'flex', gap:6, padding:'8px 14px 12px' }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={saveSettings}
+                  disabled={saving || !hasChanges}
+                  style={{ flex:1, fontSize:'0.78rem' }}
+                >
+                  {saving ? '저장 중...' : '저장'}
+                </button>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={cancelEdit}
+                  disabled={saving || !hasChanges}
+                  style={{ fontSize:'0.78rem' }}
+                >
+                  취소
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* ── BGM 말풍선 (barSlot 없을 때만) ── */}
+      {/* ── BGM 말풍선 (첫 방문 1회) ── */}
       <style>{`
         @keyframes bgmBubbleBounce {
           from { transform: translateY(0px); }
           to   { transform: translateY(-6px); }
         }
       `}</style>
-      {showBubble && !expanded && !barSlotRef && (
+      {showBubble && (
         <div style={{
-          position: 'fixed',
-          bottom: 124,
-          right: 62,
-          zIndex: 10000,
-          background: 'var(--color-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 10,
-          padding: '6px 12px',
-          fontSize: '0.78rem',
-          fontWeight: 600,
-          color: 'var(--color-text)',
-          boxShadow: '0 3px 14px rgba(0,0,0,0.13)',
-          whiteSpace: 'nowrap',
-          animation: 'bgmBubbleBounce 0.55s ease-in-out infinite alternate',
-          pointerEvents: 'none',
+          position:'fixed', bottom:182, right:312, zIndex:10000,
+          background:'var(--color-surface)',
+          border:'1px solid var(--color-border)',
+          borderRadius:10,
+          padding:'6px 12px',
+          fontSize:'0.78rem', fontWeight:600, color:'var(--color-text)',
+          boxShadow:'0 3px 14px rgba(0,0,0,0.13)',
+          whiteSpace:'nowrap',
+          animation:'bgmBubbleBounce 0.55s ease-in-out infinite alternate',
+          pointerEvents:'none',
         }}>
           🎵 재생 버튼을 눌러주세요
+          {/* 오른쪽 꼬리 */}
           <div style={{
-            position: 'absolute',
-            right: -7,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: 0,
-            height: 0,
-            borderTop: '6px solid transparent',
-            borderBottom: '6px solid transparent',
-            borderLeft: '7px solid var(--color-surface)',
-          }} />
+            position:'absolute', right:-7, top:'50%', transform:'translateY(-50%)',
+            width:0, height:0,
+            borderTop:'6px solid transparent', borderBottom:'6px solid transparent',
+            borderLeft:'7px solid var(--color-surface)',
+          }}/>
         </div>
       )}
     </>

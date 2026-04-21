@@ -214,7 +214,7 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
         <button
           onClick={() => setEditMode(true)}
           style={{
-            position:'fixed', bottom:164, right:20, zIndex:9999,
+            position:'fixed', bottom:116, right:20, zIndex:9999,
             width:36, height:36, borderRadius:'50%',
             background:'var(--color-surface)',
             border:'1px solid var(--color-border)',
