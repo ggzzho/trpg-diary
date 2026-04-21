@@ -9,9 +9,9 @@ import { Mi } from '../components/Mi'
 const TIER_META = {
   master: { label: '마스터',    color: '#9c27b0', bg: 'rgba(156,39,176,0.10)', icon: 'shield_person' },
   free:   { label: '일반',      color: '#7a6050', bg: 'rgba(122,96,80,0.10)',  icon: 'person' },
-  lv1:    { label: '후원 Lv.1', color: '#43a047', bg: 'rgba(67,160,71,0.10)', icon: 'favorite' },
-  lv2:    { label: '후원 Lv.2', color: '#1976d2', bg: 'rgba(25,118,210,0.10)',icon: 'stars' },
-  lv3:    { label: '후원 Lv.3', color: '#c8a96e', bg: 'rgba(200,169,110,0.12)',icon: 'workspace_premium' },
+  lv1:    { label: '♥',   color: '#43a047', bg: 'rgba(67,160,71,0.10)', icon: 'favorite' },
+  lv2:    { label: '♥♥',  color: '#1976d2', bg: 'rgba(25,118,210,0.10)',icon: 'stars' },
+  lv3:    { label: '♥♥♥', color: '#c8a96e', bg: 'rgba(200,169,110,0.12)',icon: 'workspace_premium' },
 }
 const ASSIGNABLE_TIERS = ['free', 'lv1', 'lv2', 'lv3'] // master는 DB 직접 설정만 가능
 
@@ -501,9 +501,9 @@ function SearchTab() {
 const TIER_FILTER_OPTIONS = [
   { value: null,     label: '전체' },
   { value: 'master', label: '마스터' },
-  { value: 'lv3',    label: '후원 Lv.3' },
-  { value: 'lv2',    label: '후원 Lv.2' },
-  { value: 'lv1',    label: '후원 Lv.1' },
+  { value: 'lv3',    label: '♥♥♥' },
+  { value: 'lv2',    label: '♥♥' },
+  { value: 'lv1',    label: '♥' },
   { value: 'free',   label: '일반' },
 ]
 const PER_PAGE = 30
