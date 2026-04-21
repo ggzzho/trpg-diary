@@ -1,5 +1,6 @@
 // src/pages/SettingsPage.js
 import React, { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { updateProfile, supabase } from '../lib/supabase'
@@ -37,9 +38,22 @@ const DEFAULT_SECTIONS = [
   {id:'extra_info', label:'기타 사항', value:''},
 ]
 
+const DONATION_TIER_LABEL = { master:'마스터', lv3:'♥♥♥', lv2:'♥♥', lv1:'♥' }
+const DONATION_TIER_COLOR = { master:'#7c5cbf', lv3:'#d4a017', lv2:'#9e9e9e', lv1:'#b87333' }
+
+const fmtDateShort = (iso) => {
+  if (!iso) return '-'
+  return new Date(iso).toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' })
+}
+const daysUntilExpiry = (iso) => {
+  if (!iso) return null
+  return Math.ceil((new Date(iso) - new Date()) / 86400000)
+}
+
 export default function SettingsPage() {
   const { user, profile, refreshProfile } = useAuth()
-  const [tab, setTab] = useState('profile')
+  const location = useLocation()
+  const [tab, setTab] = useState(location.state?.tab || 'profile')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [newLink, setNewLink] = useState({label:'',url:''})
@@ -182,7 +196,8 @@ export default function SettingsPage() {
     }
   }
 
-  const isLv2Plus = ['lv2','lv3','master'].includes(profile?.membership_tier)
+  const isLv2Plus   = ['lv2','lv3','master'].includes(profile?.membership_tier)
+  const isSupporter = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
   // cursor_effect 중첩 업데이트 헬퍼
   const setCE = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, [key]: val } }))
   const setCECursor = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, cursor: { ...f.cursor_effect.cursor, [key]: val } } }))
@@ -194,7 +209,8 @@ export default function SettingsPage() {
     {key:'theme',    label:'테마',      icon:'palette'},
     {key:'dashboard',label:'홈화면',    icon:'dashboard'},
     {key:'privacy',  label:'공개 설정', icon:'lock'},
-    ...(isLv2Plus ? [{key:'supporter', label:'커서 효과', icon:'auto_awesome'}] : []),
+    ...(isSupporter ? [{key:'donation',  label:'후원 정보',  icon:'favorite'}] : []),
+    ...(isLv2Plus   ? [{key:'supporter', label:'커서 효과', icon:'auto_awesome'}] : []),
     {key:'password', label:'비밀번호',  icon:'key'},
     {key:'withdraw', label:'회원 탈퇴', icon:'person_remove'},
   ]
@@ -499,6 +515,90 @@ export default function SettingsPage() {
           </>
         )}
 
+        {/* ── 후원 정보 탭 ── */}
+        {tab==='donation'&&isSupporter&&(()=>{
+          const tier    = profile?.membership_tier
+          const label   = DONATION_TIER_LABEL[tier] || tier
+          const color   = DONATION_TIER_COLOR[tier] || 'var(--color-primary)'
+          const expires = profile?.membership_expires_at
+          const started = profile?.membership_first_used_at
+          const days    = daysUntilExpiry(expires)
+          const urgent  = days !== null && days >= 0 && days <= 3
+          const expired = days !== null && days < 0
+          return (
+            <div>
+              <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:4,fontSize:'1rem',display:'flex',alignItems:'center',gap:6}}>
+                <Mi size='sm' color='accent'>favorite</Mi> 후원 정보
+              </h2>
+              <p style={{fontSize:'0.78rem',color:'var(--color-text-light)',marginBottom:20}}>
+                현재 후원 등급 및 멤버십 이용 기간을 확인할 수 있어요.
+              </p>
+
+              {/* 등급 + 이용 기간 */}
+              <div className="card" style={{padding:'16px 18px',marginBottom:12}}>
+                <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                  <span style={{padding:'3px 12px',borderRadius:100,fontSize:'0.8rem',fontWeight:700,background:color,color:'#fff'}}>
+                    {label}
+                  </span>
+                  <span style={{fontWeight:600,fontSize:'0.9rem'}}>후원 멤버십</span>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 20px',fontSize:'0.83rem'}}>
+                  <div>
+                    <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',marginBottom:3}}>혜택 시작일</div>
+                    <div style={{fontWeight:500}}>{fmtDateShort(started)}</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',marginBottom:3}}>만료일</div>
+                    <div style={{display:'flex',alignItems:'center',gap:6,fontWeight:500}}>
+                      {fmtDateShort(expires)}
+                      {urgent && (
+                        <span style={{padding:'1px 7px',borderRadius:100,fontSize:'0.68rem',fontWeight:700,background:'rgba(229,115,115,0.15)',color:'#e57373'}}>
+                          만료 {days}일 전
+                        </span>
+                      )}
+                      {expired && (
+                        <span style={{padding:'1px 7px',borderRadius:100,fontSize:'0.68rem',fontWeight:700,background:'rgba(229,115,115,0.15)',color:'#e57373'}}>
+                          만료됨
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 포스타입 링크 */}
+              <div className="card" style={{padding:'14px 16px',marginBottom:20}}>
+                <a href="https://posty.pe/6v8jm2" target="_blank" rel="noreferrer"
+                  style={{display:'inline-flex',alignItems:'center',gap:8,padding:'9px 18px',borderRadius:8,
+                    background:'var(--color-primary)',color:'#fff',textDecoration:'none',fontWeight:600,fontSize:'0.85rem'}}>
+                  <Mi size='sm' color='white'>open_in_new</Mi>포스타입 멤버십 페이지
+                </a>
+              </div>
+
+              {/* 후원 안내 텍스트 */}
+              <div style={{padding:'16px 18px',borderRadius:10,background:'var(--color-nav-active-bg)',border:'1px solid var(--color-border)',fontSize:'0.82rem',lineHeight:1.9,color:'var(--color-text-light)'}}>
+                {expires && !expired && (
+                  <p style={{marginBottom:12,color:'var(--color-text)',fontWeight:500}}>
+                    현재 월 정기 후원 만료 <strong style={{color: urgent?'#e57373':'var(--color-accent)'}}>{days}일 전</strong>입니다.
+                  </p>
+                )}
+                <p style={{marginBottom:12}}>
+                  포스타입 멤버십을 유지 중이신 경우, 관리자 확인을 거쳐 이용 기간이 영업일 기준 순차적으로 자동 연장됩니다.<br/>
+                  후원 중단을 원하실 경우, <a href="https://posty.pe/6v8jm2" target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',textDecoration:'underline'}}>포스타입 멤버십 설정</a>에서 구독을 취소해 주세요.
+                </p>
+                <div style={{borderTop:'1px solid var(--color-border)',paddingTop:12,marginTop:4}}>
+                  <div style={{fontWeight:600,marginBottom:6,color:'var(--color-text)',fontSize:'0.8rem'}}>⚠️ 주의사항</div>
+                  <ul style={{margin:0,paddingLeft:16,display:'flex',flexDirection:'column',gap:4}}>
+                    <li><strong style={{color:'var(--color-text)'}}>혜택 종료:</strong> 후원 만료 시 제공되던 모든 후원자 전용 기능의 이용이 제한됩니다.</li>
+                    <li><strong style={{color:'var(--color-text)'}}>데이터 보관:</strong> 등록하신 후원자 전용 데이터는 안전하게 보관되며, 재후원 시 별도의 복구 과정 없이 즉시 이전 상태로 연결됩니다.</li>
+                    <li>자세한 내용은 <a href="https://posty.pe/6v8jm2" target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',textDecoration:'underline'}}>포스타입 후원 및 멤버십 안내글</a> 또는 <a href="/privacy" style={{color:'var(--color-primary)',textDecoration:'underline'}}>개인정보처리방침</a>을 확인해주세요.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
         {/* ── 후원자 전용: 커서 효과 ── */}
         {tab==='supporter'&&isLv2Plus&&(
           <div>
@@ -630,7 +730,7 @@ export default function SettingsPage() {
         )}
 
         {/* 저장 버튼 (비밀번호/탈퇴 탭 제외) */}
-        {tab!=='password' && tab!=='withdraw' &&(
+        {tab!=='password' && tab!=='withdraw' && tab!=='donation' &&(
           <div style={{marginTop:20,paddingTop:16,borderTop:'1px solid var(--color-border)',display:'flex',justifyContent:'flex-end',alignItems:'center',gap:10}}>
             {saved&&<span className="text-sm" style={{color:'#558b2f'}}>✅ 저장됐어요!</span>}
             <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?'저장 중...':'설정 저장'}</button>
