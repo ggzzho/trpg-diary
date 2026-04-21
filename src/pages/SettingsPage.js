@@ -501,7 +501,7 @@ export default function SettingsPage() {
 
         {/* ── 후원자 전용: 커서 효과 ── */}
         {tab==='supporter'&&isLv2Plus&&(
-          <div style={{maxWidth:520}}>
+          <div>
             <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:4,fontSize:'1rem',display:'flex',alignItems:'center',gap:6}}>
               <Mi size='sm' color='accent'>auto_awesome</Mi> 커서 효과
             </h2>
