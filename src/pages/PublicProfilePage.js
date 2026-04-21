@@ -25,10 +25,10 @@ const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', 
 
 // ── 회원 등급 뱃지 ──
 const TIER_BADGE = {
-  master: { label: '마스터',    bg: '#7c5cbf', color: '#fff' },
-  lv3:    { label: '후원 Lv.3', bg: '#d4a017', color: '#fff' },
-  lv2:    { label: '후원 Lv.2', bg: '#9e9e9e', color: '#fff' },
-  lv1:    { label: '후원 Lv.1', bg: '#b87333', color: '#fff' },
+  master: { label: '마스터', bg: '#7c5cbf', color: '#fff' },
+  lv3:    { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
+  lv2:    { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
+  lv1:    { label: '♥',     bg: '#b87333', color: '#fff' },
 }
 function MembershipBadge({ tier }) {
   const badge = TIER_BADGE[tier]

@@ -379,10 +379,10 @@ export function Layout({ children }) {
                 <div className="user-name" style={{flexShrink:0}}>{profile?.display_name||profile?.username}</div>
                 {profile?.membership_tier && profile.membership_tier !== 'free' && (() => {
                   const TIER_BADGE = {
-                    master: { label: '마스터',    bg: '#7c5cbf', color: '#fff' },
-                    lv3:    { label: '후원 Lv.3', bg: '#d4a017', color: '#fff' },
-                    lv2:    { label: '후원 Lv.2', bg: '#9e9e9e', color: '#fff' },
-                    lv1:    { label: '후원 Lv.1', bg: '#b87333', color: '#fff' },
+                    master: { label: '마스터', bg: '#7c5cbf', color: '#fff' },
+                    lv3:    { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
+                    lv2:    { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
+                    lv1:    { label: '♥',     bg: '#b87333', color: '#fff' },
                   }
                   const badge = TIER_BADGE[profile.membership_tier]
                   return badge ? (
