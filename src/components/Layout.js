@@ -512,18 +512,9 @@ export function Layout({ children }) {
 export function Modal({ isOpen, onClose, title, children, footer }) {
   if (!isOpen) return null
   return (
-    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose?.() }}>
+    <div className="modal-overlay">
       <div className="modal">
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom: title ? 16 : 0 }}>
-          {title && <h2 className="modal-title" style={{ margin:0 }}>{title}</h2>}
-          {onClose && (
-            <button onClick={onClose} style={{
-              flexShrink:0, background:'none', border:'none', cursor:'pointer',
-              color:'var(--color-text-light)', padding:'2px 4px', lineHeight:1,
-              fontSize:'1.3rem', marginTop:2,
-            }} title="닫기">✕</button>
-          )}
-        </div>
+        {title&&<h2 className="modal-title">{title}</h2>}
         <form onSubmit={e=>e.preventDefault()}>
           {children}
         </form>

@@ -286,6 +286,8 @@ function InquiryBoard({ adminId, refreshNotifs }) {
                 <div style={{ display:'flex', gap:8 }}>
                   <button className="btn btn-ghost btn-sm" style={{ color:'#e57373' }}
                     onClick={() => setDeleteConfirm(selected.id)}>삭제</button>
+                  <button className="btn btn-outline btn-sm"
+                    onClick={() => setSelected(null)}>닫기</button>
                   <button className="btn btn-primary btn-sm"
                     onClick={saveReply} disabled={saving}>
                     {saving ? '저장 중...' : '저장'}
