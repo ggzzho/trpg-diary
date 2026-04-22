@@ -215,7 +215,7 @@ export function Layout({ children }) {
     }
   }, [location.pathname])
 
-  const isLv2Plus = ['lv2','lv3','master'].includes(profile?.membership_tier)
+  const isLv2Plus = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
 
   return (
     <div className="app-layout">

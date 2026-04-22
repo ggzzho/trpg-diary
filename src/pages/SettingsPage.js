@@ -196,7 +196,7 @@ export default function SettingsPage() {
     }
   }
 
-  const isLv2Plus   = ['lv2','lv3','master'].includes(profile?.membership_tier)
+  const isLv2Plus   = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
   const isSupporter = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
   // cursor_effect 중첩 업데이트 헬퍼
   const setCE = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, [key]: val } }))
