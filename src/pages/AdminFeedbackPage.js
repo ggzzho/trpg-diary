@@ -103,23 +103,7 @@ function InquiryBoard({ adminId, refreshNotifs }) {
     }).eq('id', selected.id)
     if (error) { alert('저장 실패: ' + error.message); setSaving(false); return }
 
-    // 답변 등록 시 알림 발송 (새 답변일 때만: 기존 reply 없거나 내용이 바뀐 경우)
-    const isNewReply = replyText.trim() && selected.user_id
-      && (replyText.trim() !== (selected.admin_reply || '').trim())
-    if (isNewReply) {
-      // 기존 inquiry_reply 알림 중복 방지: 이전 것 삭제 후 새로 삽입
-      await supabase.from('notifications').delete()
-        .eq('type', 'inquiry_reply').eq('ref_id', selected.id).eq('user_id', selected.user_id)
-      await supabase.from('notifications').insert({
-        user_id:  selected.user_id,
-        type:     'inquiry_reply',
-        message:  `문의하신 "${selected.title}"에 답변이 등록되었습니다.`,
-        ref_url:  '/support?tab=history',
-        ref_id:   selected.id,
-        is_read:  false,
-        preview:  replyText.trim().slice(0, 80),
-      })
-    }
+    // 알림 발송은 DB 트리거(notify_user_inquiry_reply)가 처리
 
     setSaving(false)
     setSelected(null)
