@@ -288,9 +288,9 @@ export const notificationsApi = {
       .eq('is_read', false)
     if (error) return { guestbook: 0, feedback: 0, total: 0 }
     const arr = data || []
-    const guestbook = arr.filter(n => n.type === 'guestbook_comment' || n.type === 'guestbook_reply').length
-    const feedback  = arr.filter(n => n.type === 'feedback_comment'  || n.type === 'feedback_reply').length
-    const inquiry   = arr.filter(n => n.type === 'inquiry_reply').length
+    const guestbook   = arr.filter(n => ['guestbook_comment','guestbook_reply'].includes(n.type)).length
+    const feedback    = arr.filter(n => ['feedback_comment','feedback_reply','inquiry_new'].includes(n.type)).length
+    const inquiry     = arr.filter(n => n.type === 'inquiry_reply').length
     return { guestbook, feedback, inquiry, total: arr.length }
   },
   getAll: async (limit = 20) => {

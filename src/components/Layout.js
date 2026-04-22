@@ -31,6 +31,7 @@ const NOTIF_ICON = {
   feedback_comment:  'support_agent',
   feedback_reply:    'mark_email_read',
   inquiry_reply:     'mark_email_read',
+  inquiry_new:       'support_agent',
 }
 
 const NAV_GROUPS = [
@@ -173,7 +174,7 @@ export function Layout({ children }) {
       refreshNotifs()
     }
     const path = n.ref_url || (
-      n.type === 'feedback_comment' || n.type === 'feedback_reply'
+      n.type === 'feedback_comment' || n.type === 'feedback_reply' || n.type === 'inquiry_new'
         ? '/admin/feedback'
         : n.type === 'inquiry_reply'
         ? '/support?tab=history'
