@@ -33,7 +33,7 @@ const CATEGORY_COLORS = {
 }
 
 // ── 신규 문의함 탭 ─────────────────────────────────────────────
-function InquiryBoard({ adminId }) {
+function InquiryBoard({ adminId, refreshNotifs }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
@@ -75,10 +75,20 @@ function InquiryBoard({ adminId }) {
   // 필터 변경 시 1페이지 리셋
   useEffect(() => { setPage(1) }, [statusFilter, categoryFilter, search])
 
-  const openDetail = (item) => {
+  const openDetail = async (item) => {
     setSelected(item)
     setReplyText(item.admin_reply || '')
     setReplyStatus(item.status === 'pending' ? 'resolved' : item.status)
+    // inquiry_new 알림 읽음 처리
+    const { count } = await supabase.from('notifications')
+      .select('id', { count:'exact', head:true })
+      .eq('type', 'inquiry_new').eq('ref_id', item.id).eq('is_read', false)
+    if (count > 0) {
+      await supabase.from('notifications')
+        .update({ is_read: true })
+        .eq('type', 'inquiry_new').eq('ref_id', item.id)
+      refreshNotifs?.()
+    }
   }
 
   const saveReply = async () => {
@@ -93,13 +103,19 @@ function InquiryBoard({ adminId }) {
     }).eq('id', selected.id)
     if (error) { alert('저장 실패: ' + error.message); setSaving(false); return }
 
-    // 답변 등록 시 알림 발송
-    if (replyText.trim() && selected.user_id) {
+    // 답변 등록 시 알림 발송 (새 답변일 때만: 기존 reply 없거나 내용이 바뀐 경우)
+    const isNewReply = replyText.trim() && selected.user_id
+      && (replyText.trim() !== (selected.admin_reply || '').trim())
+    if (isNewReply) {
+      // 기존 inquiry_reply 알림 중복 방지: 이전 것 삭제 후 새로 삽입
+      await supabase.from('notifications').delete()
+        .eq('type', 'inquiry_reply').eq('ref_id', selected.id).eq('user_id', selected.user_id)
       await supabase.from('notifications').insert({
         user_id:  selected.user_id,
         type:     'inquiry_reply',
         message:  `문의하신 "${selected.title}"에 답변이 등록되었습니다.`,
         ref_url:  '/support?tab=history',
+        ref_id:   selected.id,
         is_read:  false,
         preview:  replyText.trim().slice(0, 80),
       })
@@ -530,7 +546,7 @@ function LegacyFeedbackTab({ user, profile }) {
 
 // ── 메인 페이지 ────────────────────────────────────────────────
 export default function AdminFeedbackPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, refreshNotifs } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState('inquiry') // 'inquiry' | 'legacy'
 
@@ -571,7 +587,7 @@ export default function AdminFeedbackPage() {
         ))}
       </div>
 
-      {tab === 'inquiry' && <InquiryBoard adminId={user?.id}/>}
+      {tab === 'inquiry' && <InquiryBoard adminId={user?.id} refreshNotifs={refreshNotifs}/>}
       {tab === 'legacy'  && <LegacyFeedbackTab user={user} profile={profile}/>}
     </div>
   )
