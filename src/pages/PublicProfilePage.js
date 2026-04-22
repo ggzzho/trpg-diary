@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { getProfile, updateProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
-import { GuestbookPublicView, FeedbackPublicView } from './GuestbookPage'
+import { GuestbookPublicView } from './GuestbookPage'
 import { LogDetailContent } from './PlayLogPage'
 import { FOOTER_TEXT, Modal, Pagination } from '../components/Layout'
 import AlignmentChartSection from '../components/supporter/AlignmentChartSection'
@@ -428,7 +428,7 @@ export default function PublicProfilePage() {
 
   const loadTabData = async (tab, profileId) => {
     if (loadedRef.current.has(tab)) return
-    if (['guestbook','feedback'].includes(tab)) { loadedRef.current.add(tab); return }
+    if (tab === 'guestbook') { loadedRef.current.add(tab); return }
     loadedRef.current.add(tab)
     setTabLoading(t => ({...t, [tab]: true}))
     const safeQ = async p => { try { const r = await p; return r.data || [] } catch { return [] } }
@@ -629,7 +629,6 @@ export default function PublicProfilePage() {
     { key:'characters', label:'PC 목록', icon:'person', count: data.characters?.length ?? counts.characters },
     { key:'bookmarks', label:'북마크', icon:'bookmark', count: data.bookmarks?.length ?? counts.bookmarks },
     { key:'guestbook', label:'방명록', icon:'mail', count: counts.guestbook },
-    ...(profile?.is_admin ? [{ key:'feedback', label:'문의/피드백', icon:'support_agent' }] : []),
   ].filter(t => !hiddenTabs.includes(t.key))
 
   const pagedPairs = pairsPagination.paged
@@ -859,7 +858,7 @@ export default function PublicProfilePage() {
       </div>
 
       {/* 탭 검색바 (일정·방명록·피드백 제외) */}
-      {!['schedules','guestbook','feedback'].includes(activeTab) && !tabLoading[activeTab] && (
+      {!['schedules','guestbook'].includes(activeTab) && !tabLoading[activeTab] && (
         <div style={{ marginBottom:16 }}>
           <input className="form-input" placeholder="검색..." value={tabSearch} onChange={e => setTabSearch(e.target.value)} style={{ maxWidth:320 }}/>
         </div>
@@ -1353,8 +1352,6 @@ export default function PublicProfilePage() {
       {/* ── 방명록 ── */}
       {!tabLoading[activeTab] && activeTab==='guestbook' && <GuestbookPublicView ownerId={profile.id} postId={searchParams.get('post')}/>}
 
-      {/* ── 문의/피드백 (관리자 페이지만) ── */}
-      {!tabLoading[activeTab] && activeTab==='feedback' && profile?.is_admin && <FeedbackPublicView ownerId={profile.id} postId={searchParams.get('post')}/>}
 
       {/* 푸터 */}
       <footer style={{ marginTop:60, paddingTop:20, paddingBottom:20, borderTop:'1px solid var(--color-border)', textAlign:'center', color:'var(--color-text-light)', fontSize:'0.72rem' }}>

@@ -16,6 +16,7 @@ const SettingsPage      = React.lazy(() => import('./pages/SettingsPage'))
 const PublicProfilePage = React.lazy(() => import('./pages/PublicProfilePage'))
 const PrivacyPage       = React.lazy(() => import('./pages/PrivacyPage'))
 const AdminFeedbackPage      = React.lazy(() => import('./pages/AdminFeedbackPage'))
+const SupportPage            = React.lazy(() => import('./pages/SupportPage'))
 const AdminNoticePage        = React.lazy(() => import('./pages/AdminNoticePage'))
 const AdminMembershipPage    = React.lazy(() => import('./pages/AdminMembershipPage'))
 const NoticePage             = React.lazy(() => import('./pages/NoticePage'))
@@ -130,6 +131,7 @@ function AppRoutes() {
         <Route path="/notices" element={<PrivateLayout><NoticeListPage/></PrivateLayout>}/>
         <Route path="/notices/:id" element={<PrivateLayout><NoticePage/></PrivateLayout>}/>
         <Route path="/notifications" element={<PrivateLayout><NotificationCenterPage/></PrivateLayout>}/>
+        <Route path="/support" element={<PrivateLayout><SupportPage/></PrivateLayout>}/>
         <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
         <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
       </Routes>

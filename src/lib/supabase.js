@@ -290,7 +290,8 @@ export const notificationsApi = {
     const arr = data || []
     const guestbook = arr.filter(n => n.type === 'guestbook_comment' || n.type === 'guestbook_reply').length
     const feedback  = arr.filter(n => n.type === 'feedback_comment'  || n.type === 'feedback_reply').length
-    return { guestbook, feedback, total: arr.length }
+    const inquiry   = arr.filter(n => n.type === 'inquiry_reply').length
+    return { guestbook, feedback, inquiry, total: arr.length }
   },
   getAll: async (limit = 20) => {
     const { data, error } = await supabase
