@@ -30,6 +30,7 @@ const NOTIF_ICON = {
   guestbook_reply:   'subdirectory_arrow_right',
   feedback_comment:  'support_agent',
   feedback_reply:    'mark_email_read',
+  inquiry_reply:     'mark_email_read',
 }
 
 const NAV_GROUPS = [
@@ -136,6 +137,7 @@ export function Layout({ children }) {
   const badgeCounts = {
     '/guestbook':       notifCounts?.guestbook || 0,
     '/admin/feedback':  notifCounts?.feedback  || 0,
+    '/support':         notifCounts?.inquiry   || 0,
   }
 
   // ── 벨 알림 드롭다운 ──────────────────────────────────────────
@@ -172,7 +174,10 @@ export function Layout({ children }) {
     }
     const path = n.ref_url || (
       n.type === 'feedback_comment' || n.type === 'feedback_reply'
-        ? '/admin/feedback' : '/guestbook'
+        ? '/admin/feedback'
+        : n.type === 'inquiry_reply'
+        ? '/support?tab=history'
+        : '/guestbook'
     )
     navigate(path)
   }
@@ -244,10 +249,17 @@ export function Layout({ children }) {
               <span className="nav-icon"><span className="ms">open_in_new</span></span>내 공개 페이지
             </a>
           )}
-          <a href="https://trpg-diary.co.kr/u/trpg00_Z?tab=feedback" target="_blank" rel="noreferrer" className="nav-item"
+          <NavLink to="/support" className={({isActive})=>`nav-item ${isActive?'active':''}`}
             style={{ marginTop:4 }}>
             <span className="nav-icon"><span className="ms">support_agent</span></span>문의하기
-          </a>
+            {(notifCounts?.inquiry || 0) > 0 && (
+              <span style={{
+                marginLeft:'auto', background:'var(--color-primary)', color:'white',
+                borderRadius:100, fontSize:'0.6rem', fontWeight:700,
+                padding:'1px 6px', minWidth:16, textAlign:'center', lineHeight:'16px',
+              }}>{notifCounts.inquiry}</span>
+            )}
+          </NavLink>
           <NavLink to="/notices" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
             <span className="nav-icon"><span className="ms">campaign</span></span>
             공지사항
