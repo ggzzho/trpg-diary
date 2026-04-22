@@ -384,7 +384,7 @@ export default function SupportPage() {
 
               {/* 이메일 */}
               <div>
-                <label className="form-label">답변받을 이메일 *</label>
+                <label className="form-label">작성자 이메일 *</label>
                 <input className="form-input" type="email"
                   value={form.email}
                   onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
