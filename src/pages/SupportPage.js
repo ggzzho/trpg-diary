@@ -387,8 +387,8 @@ export default function SupportPage() {
                 <label className="form-label">작성자 이메일 *</label>
                 <input className="form-input" type="email"
                   value={form.email}
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  placeholder="example@email.com"/>
+                  readOnly
+                  style={{ background:'var(--color-nav-active-bg)', cursor:'default', color:'var(--color-text-light)' }}/>
               </div>
 
               {/* 문의 유형 */}
