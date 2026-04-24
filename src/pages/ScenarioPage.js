@@ -85,25 +85,27 @@ export function BaseScenarioPage({ config }) {
     if (oldTag && oldTag !== name) {
       const { data: fresh } = await supabase.from(table).select('id, status_tags').eq('user_id', user.id)
       const affected = (fresh || []).filter(i => (i.status_tags||[]).includes(oldTag))
-      if (affected.length > 0) {
-        await Promise.all(affected.map(i =>
-          supabase.from(table).update({ status_tags: i.status_tags.map(t => t === oldTag ? name : t) }).eq('id', i.id)
-        ))
+      // Promise.all이 Supabase 쿼리 빌더를 실행하지 못하는 경우 방지 → for...of 순차 실행
+      for (const i of affected) {
+        await supabase.from(table)
+          .update({ status_tags: (i.status_tags||[]).map(t => t === oldTag ? name : t) })
+          .eq('id', i.id).eq('user_id', user.id)
       }
     }
     await supabase.from(tagsTable).update({ name }).eq('id', id)
-    loadStatusTags()
-    load()
+    await loadStatusTags()
+    await load()
   }
   const removeStatusTag = async id => {
     const tag = statusTags.find(t => t.id === id)
     if (!tag) return
     const { data: fresh } = await supabase.from(table).select('id, status_tags').eq('user_id', user.id)
     const affected = (fresh || []).filter(i => (i.status_tags||[]).includes(tag.name))
-    if (affected.length > 0) {
-      await Promise.all(affected.map(i =>
-        supabase.from(table).update({ status_tags: (i.status_tags||[]).filter(t => t !== tag.name) }).eq('id', i.id)
-      ))
+    // Promise.all이 Supabase 쿼리 빌더를 실행하지 못하는 경우 방지 → for...of 순차 실행
+    for (const i of affected) {
+      await supabase.from(table)
+        .update({ status_tags: (i.status_tags||[]).filter(t => t !== tag.name) })
+        .eq('id', i.id).eq('user_id', user.id)
     }
     await supabase.from(tagsTable).delete().eq('id', id)
     setForm(f => ({ ...f, status_tags: (f.status_tags||[]).filter(t => t !== tag.name) }))
