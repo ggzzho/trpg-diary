@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { getProfile, updateProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase } from '../lib/supabase'
+import { getProfile, updateProfile, playLogsApi, rulebooksApi, scenariosApi, pairsApi, supabase, recordFirstMembershipUse } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
 import { GuestbookPublicView } from './GuestbookPage'
@@ -19,6 +19,7 @@ import {
   addDays, isSameMonth, isToday, addMonths, subMonths
 } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { getTodayKST } from '../lib/dateFormatters'
 
 const SCENARIO_STATUS = { unplayed:'미플', played:'PL완료', gm_done:'GM완료', want:'위시' }
 const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', digital_purchase:'전자', digital_free:'전자', physical_digital:'실물+전자', other:'기타' }
@@ -434,7 +435,7 @@ export default function PublicProfilePage() {
     const safeQ = async p => { try { const r = await p; return r.data || [] } catch { return [] } }
     let updates = {}
     if (tab === 'schedules') {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getTodayKST()
       const [schedsAll, rbooks] = await Promise.all([
         safeQ(supabase.from('schedules').select('*').eq('user_id',profileId).order('scheduled_date').limit(2500)),
         loadedRef.current.has('rulebooks')
@@ -512,7 +513,7 @@ export default function PublicProfilePage() {
       setViewDark(saved !== null ? saved === 'dark' : (p.dark_mode || false))
 
       // 탭 카운트 + 통계용 경량 head 쿼리
-      const today = new Date().toISOString().split('T')[0]
+      const today = getTodayKST()
       const safeC = async pr => { try { const r = await pr; return r.count || 0 } catch { return 0 } }
       const [logsCount, rulebooksCount, scenariosCount, wishCount, dotoriCount, pairsCount, charsCount, schedsCount, availCount, guestbookCount, bookmarksCount] = await Promise.all([
         safeC(supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',p.id).eq('is_private',false)),
@@ -573,6 +574,8 @@ export default function PublicProfilePage() {
 
   const handleSupporterSave = async (updates) => {
     if (!profile) return
+    // 혜택 최초 사용일 기록 (스티커/BGM/성향표 저장 시 한 번만)
+    if (isOwnPage) await recordFirstMembershipUse(profile, profile.id)
     const { data, error } = await updateProfile(profile.id, updates)
     if (!error && data) setProfile(data)
     return { error }
@@ -641,8 +644,8 @@ export default function PublicProfilePage() {
   return (
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0', position:'relative' }}>
 
-      {/* ── 후원자 전용: 커서 효과 (lv2+, 공개 설정된 경우) ── */}
-      {['lv2','lv3','master'].includes(profile?.membership_tier) &&
+      {/* ── 후원자 전용: 커서 효과 (lv1+, 공개 설정된 경우) ── */}
+      {['lv1','lv2','lv3','master'].includes(profile?.membership_tier) &&
         profile?.cursor_effect?.enabled_public && (
         <CursorEffect settings={profile.cursor_effect} />
       )}
@@ -849,7 +852,7 @@ export default function PublicProfilePage() {
         {TABS.map(t => (
           <button key={t.key}
             className={`btn btn-sm ${activeTab===t.key?'btn-primary':'btn-outline'}`}
-            onClick={() => { setActiveTab(t.key); setTabSearch(''); loadTabData(t.key, profile.id) }}
+            onClick={() => { setActiveTab(t.key); setTabSearch(''); loadTabData(t.key, profile.id); window.scrollTo(0, 0) }}
             style={{ display:'flex', alignItems:'center', gap:4 }}>
             <Mi size="sm" color={activeTab===t.key?'white':'accent'}>{t.icon}</Mi>
             {t.label}{t.count !== undefined ? ` (${t.count})` : ''}

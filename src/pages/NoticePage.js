@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Mi } from '../components/Mi'
 import { MarkdownRenderer } from './AdminNoticePage'
+import { getTodayKST } from '../lib/dateFormatters'
 
 export default function NoticePage() {
   const { id } = useParams()
@@ -27,7 +28,7 @@ export default function NoticePage() {
       setLoading(false)
 
       // 조회수 증가 (오늘 이미 본 공지는 카운트 안 함)
-      const todayStr = new Date().toISOString().split('T')[0]
+      const todayStr = getTodayKST()
       const viewKey = `notice_viewed_${id}_${todayStr}`
       if (!localStorage.getItem(viewKey)) {
         await supabase.rpc('increment_notice_view', { notice_id: id })

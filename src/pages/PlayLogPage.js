@@ -7,6 +7,7 @@ import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
 import { format } from 'date-fns'
 import { usePagination } from '../hooks/usePagination'
+import { getTodayKST } from '../lib/dateFormatters'
 
 const BLANK = {
   title:'', start_date:'', played_date:'', system_name:'', role:'PL',
@@ -139,7 +140,7 @@ export function PlayLogPage() {
   useEffect(() => { load() }, [user])
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
-  const openNew = () => { setEditing(null); setForm({...BLANK,played_date:new Date().toISOString().split('T')[0]}); setModal(true) }
+  const openNew = () => { setEditing(null); setForm({...BLANK,played_date:getTodayKST()}); setModal(true) }
   const openEdit = item => { setEditing(item); setForm({...item}); setModal(true) }
 
   const save = async () => {

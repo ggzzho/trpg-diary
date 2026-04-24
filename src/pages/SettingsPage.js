@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { applyTheme, applyBackground } from '../context/ThemeContext'
-import { updateProfile, supabase } from '../lib/supabase'
+import { updateProfile, supabase, recordFirstMembershipUse } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 
 const PRESET_COLORS = [
@@ -159,6 +159,11 @@ export default function SettingsPage() {
 
   const save = async () => {
     setSaving(true)
+    // 커서 효과 최초 ON 시 혜택 최초 사용일 기록
+    const ce = form.cursor_effect
+    if (ce && (ce.trail?.enabled || ce.click?.enabled)) {
+      await recordFirstMembershipUse(profile, user.id)
+    }
     const {error} = await updateProfile(user.id, form)
     if (!error) {
       await refreshProfile()

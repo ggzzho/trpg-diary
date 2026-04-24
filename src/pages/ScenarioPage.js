@@ -80,7 +80,21 @@ export function BaseScenarioPage({ config }) {
   useEffect(() => { if (profile?.[profileSortKey]) setSortOrder(profile[profileSortKey]) }, [profile])
 
   const addStatusTag    = async (name) => { await supabase.from(tagsTable).insert({ user_id:user.id, name }); loadStatusTags() }
-  const editStatusTag   = async (id, name) => { await supabase.from(tagsTable).update({ name }).eq('id', id); loadStatusTags() }
+  const editStatusTag   = async (id, name) => {
+    const oldTag = statusTags.find(t => t.id === id)?.name
+    if (oldTag && oldTag !== name) {
+      const { data: fresh } = await supabase.from(table).select('id, status_tags').eq('user_id', user.id)
+      const affected = (fresh || []).filter(i => (i.status_tags||[]).includes(oldTag))
+      if (affected.length > 0) {
+        await Promise.all(affected.map(i =>
+          supabase.from(table).update({ status_tags: i.status_tags.map(t => t === oldTag ? name : t) }).eq('id', i.id)
+        ))
+      }
+    }
+    await supabase.from(tagsTable).update({ name }).eq('id', id)
+    loadStatusTags()
+    load()
+  }
   const removeStatusTag = async id => {
     const tag = statusTags.find(t => t.id === id)
     if (!tag) return

@@ -28,3 +28,10 @@ export const fmtAgo = (dateStr) => {
 
 // 24시간 이내 여부 — NoticeListPage
 export const isNew = (dateStr) => Date.now() - new Date(dateStr).getTime() < 86400000
+
+// 오늘 날짜 KST 문자열 (YYYY-MM-DD) — UTC 오프셋 +9h 적용
+export const getTodayKST = () => {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().split('T')[0]
+}

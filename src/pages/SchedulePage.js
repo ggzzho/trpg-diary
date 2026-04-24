@@ -10,6 +10,7 @@ import { useRules } from '../context/RuleContext'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, isSameMonth, isToday, addMonths, subMonths, getYear, getMonth } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { getTodayKST } from '../lib/dateFormatters'
 
 const STATUS_MAP = {
   planned:{label:'예정',badge:'badge-blue'},
@@ -41,7 +42,7 @@ const hexToRgba = (hex, alpha) => {
 export default function SchedulePage() {
   const { user } = useAuth()
   const { colorMap } = useRules()
-  const today = new Date().toISOString().split('T')[0]
+  const today = getTodayKST()
   const [items, setItems] = useState([])
   const [blockedItems, setBlockedItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -128,7 +129,7 @@ export default function SchedulePage() {
 
   const setB = k => e => setBlockedForm(f=>({...f,[k]:e.target.value}))
   const resetRepeatBlocked = () => { setIsRepeatBlocked(false); setRepeatModeBlocked('count'); setRepeatCountBlocked(4); setRepeatEndDateBlocked(''); setRepeatPreviewBlocked([]) }
-  const openNewBlocked = (date) => { setEditingBlocked(null); setBlockedForm({...BLOCKED_BLANK, scheduled_date:date||new Date().toISOString().split('T')[0]}); resetRepeatBlocked(); setModalTab('blocked'); setModal(true) }
+  const openNewBlocked = (date) => { setEditingBlocked(null); setBlockedForm({...BLOCKED_BLANK, scheduled_date:date||getTodayKST()}); resetRepeatBlocked(); setModalTab('blocked'); setModal(true) }
   const openEditBlocked = item => { const {_sortTime,_type,_kind,_time,...clean}=item; setEditingBlocked(clean); setBlockedForm({...clean}); resetRepeatBlocked(); setModalTab('blocked'); setModal(true) }
   const saveBlocked = async () => {
     if (!blockedForm.scheduled_date) return
@@ -164,7 +165,7 @@ export default function SchedulePage() {
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const resetRepeat = () => { setIsRepeat(false); setRepeatMode('count'); setRepeatCount(4); setRepeatEndDate(''); setRepeatPreview([]) }
-  const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||new Date().toISOString().split('T')[0]}); resetRepeat(); setModalTab('session'); setModal(true) }
+  const openNew = date => { setEditing(null); setForm({...BLANK,scheduled_date:date||getTodayKST()}); resetRepeat(); setModalTab('session'); setModal(true) }
   const openEdit = item => { const {_sortTime,_type,_kind,_time,...clean}=item; setEditing(clean); setForm({...clean}); resetRepeat(); setModalTab('session'); setModal(true) }
 
   const calcRepeatDates = (baseDate, mode, count, endDate) => {

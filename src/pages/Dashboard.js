@@ -7,6 +7,7 @@ import { Mi } from '../components/Mi'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { MarkdownRenderer } from './AdminNoticePage'
+import { getTodayKST } from '../lib/dateFormatters'
 
 export default function Dashboard() {
   const { user, profile } = useAuth()
@@ -19,7 +20,7 @@ export default function Dashboard() {
   const [popupNotice, setPopupNotice] = useState(null)
   const [noticeModal, setNoticeModal] = useState(null)
   const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
+  const todayStr = getTodayKST()
 
   useEffect(() => {
     if (!user) return
