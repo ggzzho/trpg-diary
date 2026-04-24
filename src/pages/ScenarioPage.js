@@ -71,7 +71,9 @@ export function BaseScenarioPage({ config }) {
       load()
       const tags = await loadStatusTags()
       if (tags.length === 0) {
-        await supabase.from(tagsTable).insert(defaultTags.map(name => ({ user_id: user.id, name })))
+        // upsert + onConflict: init이 여러 번 실행돼도 중복 insert 방지
+        await supabase.from(tagsTable)
+          .upsert(defaultTags.map(name => ({ user_id: user.id, name })), { onConflict: 'user_id,name', ignoreDuplicates: true })
         await loadStatusTags()
       }
     }
@@ -224,7 +226,7 @@ export function BaseScenarioPage({ config }) {
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontWeight: isChildItem ? 500 : 700,fontSize:'0.9rem',marginBottom:3,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
           {item.title}
-          {(item.status_tags||[]).map(t => (
+          {(item.status_tags||[]).filter(t => statusTags.some(st => st.name === t)).map(t => (
             <span key={t} style={{padding:'1px 7px',borderRadius:100,fontSize:'0.65rem',fontWeight:600,whiteSpace:'nowrap',
               background:'var(--color-nav-active-bg)', color:'var(--color-accent)', border:'1px solid var(--color-border)'}}>
               {t}
