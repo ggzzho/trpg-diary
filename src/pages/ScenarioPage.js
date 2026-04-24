@@ -45,6 +45,7 @@ export function BaseScenarioPage({ config }) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [sortOrder, setSortOrder] = useState('asc')
+  const [sortField, setSortField] = useState('name')  // 'name' | 'created_at'
   const [isChild, setIsChild] = useState(false)
   const [expanded, setExpanded] = useState({})
   const [parentSearchText, setParentSearchText] = useState('')
@@ -200,10 +201,16 @@ export function BaseScenarioPage({ config }) {
         return matchStatus && (matchParent || matchChild)
       })
       .sort((a,b) => {
-        const ta=a.title.toLowerCase(), tb=b.title.toLowerCase()
-        return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
+        if (sortField === 'created_at') {
+          const va=a.created_at||'', vb=b.created_at||''
+          const cmp = va<vb?-1:va>vb?1:0
+          return sortOrder==='asc'?cmp:-cmp
+        }
+        const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
+        const cmp = ta.localeCompare(tb,'ko')
+        return sortOrder==='asc'?cmp:-cmp
       })
-  }, [parents, statusFilter, search, sortOrder, childMap])
+  }, [parents, statusFilter, search, sortOrder, sortField, childMap])
 
   const { paged, page, setPage, perPage, setPerPage } = usePagination(filteredParents, 20)
   const parentOptions = parents.filter(p => !editing || p.id !== editing.id).sort((a,b) => a.title.localeCompare(b.title, 'ko'))
@@ -289,10 +296,15 @@ export function BaseScenarioPage({ config }) {
       <div style={{marginBottom:16,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
         <input className="form-input" placeholder="🔍 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
         {search && <span className="text-xs text-light">({filteredParents.length}건)</span>}
-        <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
-          onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await supabase.from('profiles').update({[profileSortKey]:next}).eq('id',user.id) }}>
-          가나다순 {sortOrder==='asc'?'↑':'↓'}
-        </button>
+        <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:'auto',flexShrink:0}}>
+          <button className={`btn btn-sm ${sortField==='name'?'btn-primary':'btn-outline'}`} onClick={()=>setSortField('name')}>가나다순</button>
+          <button className={`btn btn-sm ${sortField==='created_at'?'btn-primary':'btn-outline'}`} onClick={()=>setSortField('created_at')}>등록순</button>
+          <button className="btn btn-sm btn-outline"
+            onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await supabase.from('profiles').update({[profileSortKey]:next}).eq('id',user.id) }}
+            title={sortOrder==='asc'?'오름차순':'내림차순'}>
+            <Mi size='sm'>{sortOrder==='asc'?'arrow_upward':'arrow_downward'}</Mi>
+          </button>
+        </div>
       </div>
 
       {loading?<LoadingSpinner/>:filteredParents.length===0
