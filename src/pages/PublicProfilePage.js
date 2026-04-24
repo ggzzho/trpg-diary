@@ -852,7 +852,7 @@ export default function PublicProfilePage() {
         {TABS.map(t => (
           <button key={t.key}
             className={`btn btn-sm ${activeTab===t.key?'btn-primary':'btn-outline'}`}
-            onClick={() => { setActiveTab(t.key); setTabSearch(''); loadTabData(t.key, profile.id); window.scrollTo(0, 0) }}
+            onClick={() => { setActiveTab(t.key); setTabSearch(''); loadTabData(t.key, profile.id) }}
             style={{ display:'flex', alignItems:'center', gap:4 }}>
             <Mi size="sm" color={activeTab===t.key?'white':'accent'}>{t.icon}</Mi>
             {t.label}{t.count !== undefined ? ` (${t.count})` : ''}
