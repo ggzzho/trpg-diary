@@ -67,6 +67,8 @@ export function CharactersPage() {
   const [search, setSearch] = useState('')
   const [ruleFilter, setRuleFilter] = useState('all')
   const [detailChar, setDetailChar] = useState(null)
+  const [sortField, setSortField] = useState('created_at')  // 'name' | 'created_at'
+  const [sortDir,   setSortDir]   = useState('desc')        // 'asc' | 'desc'
 
   // 히스토리
   const [historiesMap, setHistoriesMap] = useState({})
@@ -179,10 +181,10 @@ export function CharactersPage() {
     setHistoriesMap(m => ({...m, [charId]:(m[charId]||[]).filter(h=>h.history_id!==historyId)}))
   }
 
-  // 검색 + 필터
+  // 검색 + 필터 + 정렬
   const filtered = useMemo(() => {
     const s = search.toLowerCase()
-    return items.filter(i => {
+    const result = items.filter(i => {
       if (ruleFilter !== 'all' && !(i.rules||[]).includes(ruleFilter)) return false
       if (!s) return true
       return (
@@ -197,7 +199,14 @@ export function CharactersPage() {
         (i.rules||[]).some(r=>r.toLowerCase().includes(s))
       )
     })
-  }, [items, search, ruleFilter])
+    result.sort((a, b) => {
+      let va = sortField === 'name' ? (a.name||'') : (a.created_at||'')
+      let vb = sortField === 'name' ? (b.name||'') : (b.created_at||'')
+      const cmp = sortField === 'name' ? va.localeCompare(vb, 'ko') : va < vb ? -1 : va > vb ? 1 : 0
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return result
+  }, [items, search, ruleFilter, sortField, sortDir])
 
   const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
 
@@ -242,7 +251,7 @@ export function CharactersPage() {
         </div>
       </div>
 
-      {/* 검색 + 룰 필터 */}
+      {/* 검색 + 룰 필터 + 정렬 */}
       <div style={{display:'flex',gap:12,marginBottom:20,flexWrap:'wrap',alignItems:'center'}}>
         <input className="form-input" style={{flex:'1 1 200px',maxWidth:340}} placeholder="🔍 이름, 직업, 성격, 배경 등 검색..."
           value={search} onChange={e=>setSearch(e.target.value)}/>
@@ -254,6 +263,14 @@ export function CharactersPage() {
             ))}
           </div>
         )}
+        {/* 정렬 */}
+        <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:'auto',flexShrink:0}}>
+          <button className={`btn btn-sm ${sortField==='name'?'btn-primary':'btn-outline'}`} onClick={()=>setSortField('name')}>가나다순</button>
+          <button className={`btn btn-sm ${sortField==='created_at'?'btn-primary':'btn-outline'}`} onClick={()=>setSortField('created_at')}>등록순</button>
+          <button className="btn btn-sm btn-outline" onClick={()=>setSortDir(d=>d==='asc'?'desc':'asc')} title={sortDir==='asc'?'오름차순':'내림차순'}>
+            <Mi size='sm'>{sortDir==='asc'?'arrow_upward':'arrow_downward'}</Mi>
+          </button>
+        </div>
       </div>
 
       {loading ? <LoadingSpinner/> : filtered.length===0

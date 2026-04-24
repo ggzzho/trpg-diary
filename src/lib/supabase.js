@@ -279,6 +279,16 @@ const compressToFit = async (file, bucket) => {
   return blob
 }
 
+// ── 혜택 최초 사용일 기록 ─────────────────────────────────────
+// 스티커 추가 / BGM 추가 / 커서 효과 ON / 성향표 저장 중 하나라도 최초 사용 시 호출
+export const recordFirstMembershipUse = async (profile, userId) => {
+  if (profile?.membership_first_used_at) return  // 이미 기록됨
+  await supabase
+    .from('profiles')
+    .update({ membership_first_used_at: new Date().toISOString() })
+    .eq('id', userId)
+}
+
 // ── Notifications ─────────────────────────────────────────────
 export const notificationsApi = {
   getUnreadCounts: async () => {

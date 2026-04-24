@@ -186,6 +186,8 @@ export function RulebookPage() {
           supabase.from('play_logs').update({ system_name: form.title }).eq('user_id', user.id).eq('system_name', editing.title),
           supabase.from('schedules').update({ system_name: form.title }).eq('user_id', user.id).eq('system_name', editing.title),
           supabase.from('availability').update({ system_name: form.title }).eq('user_id', user.id).eq('system_name', editing.title),
+          supabase.from('scenarios').update({ system_name: form.title }).eq('user_id', user.id).eq('system_name', editing.title),
+          supabase.from('wish_scenarios').update({ system_name: form.title }).eq('user_id', user.id).eq('system_name', editing.title),
         ])
       }
     } else {
