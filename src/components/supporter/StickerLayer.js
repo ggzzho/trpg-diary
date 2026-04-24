@@ -289,7 +289,7 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
       <div
         ref={containerRef}
         style={{
-          position:'fixed', inset:0,
+          position:'absolute', top:0, left:0, right:0, height:'100vh',
           pointerEvents: editMode ? 'auto' : 'none',
           zIndex: editMode ? 150 : 90,
         }}
