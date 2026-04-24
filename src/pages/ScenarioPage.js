@@ -83,14 +83,10 @@ export function BaseScenarioPage({ config }) {
   const editStatusTag   = async (id, name) => {
     const oldTag = statusTags.find(t => t.id === id)?.name
     if (oldTag && oldTag !== name) {
-      const { data: fresh } = await supabase.from(table).select('id, status_tags').eq('user_id', user.id)
-      const affected = (fresh || []).filter(i => (i.status_tags||[]).includes(oldTag))
-      // Promise.all이 Supabase 쿼리 빌더를 실행하지 못하는 경우 방지 → for...of 순차 실행
-      for (const i of affected) {
-        await supabase.from(table)
-          .update({ status_tags: (i.status_tags||[]).map(t => t === oldTag ? name : t) })
-          .eq('id', i.id).eq('user_id', user.id)
-      }
+      // DB 서버 SQL로 직접 교체 (JS 클라이언트 UPDATE로는 JSONB 배열 교체 불안정)
+      await supabase.rpc('cascade_rename_status_tag', {
+        p_user_id: user.id, p_table: table, p_old_tag: oldTag, p_new_tag: name,
+      })
     }
     await supabase.from(tagsTable).update({ name }).eq('id', id)
     await loadStatusTags()
@@ -99,14 +95,10 @@ export function BaseScenarioPage({ config }) {
   const removeStatusTag = async id => {
     const tag = statusTags.find(t => t.id === id)
     if (!tag) return
-    const { data: fresh } = await supabase.from(table).select('id, status_tags').eq('user_id', user.id)
-    const affected = (fresh || []).filter(i => (i.status_tags||[]).includes(tag.name))
-    // Promise.all이 Supabase 쿼리 빌더를 실행하지 못하는 경우 방지 → for...of 순차 실행
-    for (const i of affected) {
-      await supabase.from(table)
-        .update({ status_tags: (i.status_tags||[]).filter(t => t !== tag.name) })
-        .eq('id', i.id).eq('user_id', user.id)
-    }
+    // DB 서버 SQL로 직접 제거
+    await supabase.rpc('cascade_remove_status_tag', {
+      p_user_id: user.id, p_table: table, p_tag: tag.name,
+    })
     await supabase.from(tagsTable).delete().eq('id', id)
     setForm(f => ({ ...f, status_tags: (f.status_tags||[]).filter(t => t !== tag.name) }))
     await loadStatusTags()
