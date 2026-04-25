@@ -1,5 +1,5 @@
 // src/pages/StoragePage.js
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -71,9 +71,10 @@ function BoardDeleteModal({ board, count, onConfirm, onCancel, loading }) {
   )
 }
 
-// ── 잠긴 데이터 포함 삭제 모달 ───────────────────────────
-function LockedDeleteModal({ totalCount, lockedCount, onExclude, onInclude, onCancel, loading }) {
-  const unlocked = totalCount - lockedCount
+// ── 아카이브 항목 포함 삭제 모달 ────────────────────────
+// "잠긴 데이터" = is_archived된 항목 (한도 초과 시 자동 잠김, Phase 3)
+function ArchivedDeleteModal({ totalCount, archivedCount, onArchivedOnly, onAll, onCancel, loading }) {
+  const notArchived = totalCount - archivedCount
   return (
     <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.45)',
       display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
@@ -82,19 +83,21 @@ function LockedDeleteModal({ totalCount, lockedCount, onExclude, onInclude, onCa
         <h3 style={{ fontWeight:700, textAlign:'center', marginBottom:10 }}>잠긴 데이터가 포함되어 있어요</h3>
         <p style={{ color:'var(--color-text-light)', fontSize:'0.88rem', textAlign:'center', marginBottom:6 }}>
           선택한 <strong style={{ color:'var(--color-text)' }}>{totalCount}개</strong> 중{' '}
-          <strong style={{ color:'#e57373' }}>{lockedCount}개</strong>가 잠긴 항목입니다.
+          <strong style={{ color:'#e57373' }}>{archivedCount}개</strong>가 잠긴(아카이브) 항목이에요.
         </p>
         <p style={{ color:'var(--color-text-light)', fontSize:'0.82rem', textAlign:'center', marginBottom:24 }}>
           잠긴 데이터부터 삭제하시겠습니까?
         </p>
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           <button className="btn" style={{ background:'#e53935', color:'#fff', border:'none' }}
-            onClick={onInclude} disabled={loading}>
-            {loading ? '삭제 중...' : `잠긴 항목 포함 전체 삭제 (${totalCount}개)`}
+            onClick={onArchivedOnly} disabled={loading}>
+            {loading ? '삭제 중...' : `잠긴 항목만 먼저 삭제 (${archivedCount}개)`}
           </button>
-          {unlocked > 0 && (
-            <button className="btn btn-outline" onClick={onExclude} disabled={loading}>
-              {loading ? '삭제 중...' : `잠긴 항목 제외하고 삭제 (${unlocked}개)`}
+          {notArchived > 0 && (
+            <button className="btn btn-outline"
+              style={{ color:'#e53935', borderColor:'#ef9a9a' }}
+              onClick={onAll} disabled={loading}>
+              {loading ? '삭제 중...' : `선택 전체 삭제 (${totalCount}개)`}
             </button>
           )}
           <button className="btn btn-outline" onClick={onCancel} disabled={loading}>취소</button>
@@ -147,16 +150,15 @@ export default function StoragePage() {
   const [recLoading,  setRecLoading]  = useState(false)
   const [recPage,     setRecPage]     = useState(1)
 
-  // ── 잠금 ──
-  const [lockedIds,   setLockedIds]   = useState(new Set())
-  const [lockBusy,    setLockBusy]    = useState(new Set())  // 토글 중인 ID
+  // ── 레코드 메타 캐시 (페이지 이동해도 is_archived 정보 유지) ──
+  const [recordsMeta, setRecordsMeta] = useState({}) // id → { is_archived }
 
   // ── 다중 선택 ──
   const [selected,    setSelected]    = useState(new Set())
 
   // ── 삭제 모달 ──
   const [confirmBoard,    setConfirmBoard]    = useState(null)   // 게시판 전체삭제
-  const [bulkModal,       setBulkModal]       = useState(null)   // null | 'simple' | 'locked'
+  const [bulkModal,       setBulkModal]       = useState(null)   // null | 'simple' | 'archived'
   const [isBoardDeleting, setIsBoardDeleting] = useState(false)
   const [isBulkDeleting,  setIsBulkDeleting]  = useState(false)
 
@@ -201,50 +203,29 @@ export default function StoragePage() {
     const end   = start + RECS_PER_PAGE - 1
     const { data } = await supabase
       .from(boardKey)
-      .select(`id, ${board.labelCol}, created_at`)
+      .select(`id, ${board.labelCol}, created_at, is_archived`)
       .eq('user_id', user.id)
       .order('created_at', { ascending: sortOld })
       .range(start, end)
-    setRecords(data || [])
+    const rows = data || []
+    setRecords(rows)
+    // 메타 캐시 업데이트 (페이지 이동해도 is_archived 정보 유지)
+    setRecordsMeta(prev => {
+      const next = { ...prev }
+      rows.forEach(r => { next[r.id] = { is_archived: r.is_archived || false } })
+      return next
+    })
     setRecLoading(false)
   }, [user, boardKey, sortOld, recPage])
 
   useEffect(() => { loadRecords() }, [loadRecords])
-
-  // ── 잠금 ID 로드 ──
-  const loadLockedIds = useCallback(async () => {
-    if (!user || boardKey === 'all') { setLockedIds(new Set()); return }
-    const { data } = await supabase
-      .from('locked_records')
-      .select('record_id')
-      .eq('user_id', user.id)
-      .eq('table_name', boardKey)
-    setLockedIds(new Set((data || []).map(r => r.record_id)))
-  }, [user, boardKey])
-
-  useEffect(() => { loadLockedIds() }, [loadLockedIds])
 
   // ── 게시판 전환 ──
   const switchBoard = (key) => {
     setBoardKey(key)
     setRecPage(1)
     setSelected(new Set())
-  }
-
-  // ── 잠금 토글 ──
-  const toggleLock = async (id) => {
-    if (lockBusy.has(id)) return
-    setLockBusy(p => new Set([...p, id]))
-    const isLocked = lockedIds.has(id)
-    if (isLocked) {
-      await supabase.from('locked_records').delete()
-        .eq('user_id', user.id).eq('table_name', boardKey).eq('record_id', id)
-      setLockedIds(p => { const n = new Set(p); n.delete(id); return n })
-    } else {
-      await supabase.from('locked_records').insert({ user_id: user.id, table_name: boardKey, record_id: id })
-      setLockedIds(p => new Set([...p, id]))
-    }
-    setLockBusy(p => { const n = new Set(p); n.delete(id); return n })
+    setRecordsMeta({})
   }
 
   // ── 선택 토글 ──
@@ -276,27 +257,31 @@ export default function StoragePage() {
   }
 
   // ── 선택 삭제 요청 (모달 분기) ──
+  // 선택 항목 중 is_archived인 것이 있으면 → 아카이브 팝업
   const requestBulkDelete = () => {
-    const lockedCount = [...selected].filter(id => lockedIds.has(id)).length
-    setBulkModal(lockedCount > 0 ? 'locked' : 'simple')
+    const hasArchived = [...selected].some(id => recordsMeta[id]?.is_archived)
+    setBulkModal(hasArchived ? 'archived' : 'simple')
   }
 
   // ── 실제 선택 삭제 ──
-  const executeBulkDelete = async (includeIds) => {
+  const executeBulkDelete = async (idsToDelete) => {
     setIsBulkDeleting(true)
-    const ids = Array.from(includeIds)
+    const ids = Array.from(idsToDelete)
     const { error } = await supabase.rpc('delete_selected_records', { p_table: boardKey, p_ids: ids })
     setIsBulkDeleting(false)
     setBulkModal(null)
     if (error) { showToast('삭제 중 오류가 발생했어요.', 'error'); return }
     showToast(`${ids.length}개를 삭제했어요.`)
     setSelected(p => { const n = new Set(p); ids.forEach(id => n.delete(id)); return n })
+    setRecordsMeta(p => { const n = { ...p }; ids.forEach(id => delete n[id]); return n })
     await loadCounts()
     await loadRecords()
-    await loadLockedIds()
   }
 
-  const lockedCount = useMemo(() => [...selected].filter(id => lockedIds.has(id)).length, [selected, lockedIds])
+  // 선택 중 아카이브 항목 수
+  const archivedCount = useMemo(() =>
+    [...selected].filter(id => recordsMeta[id]?.is_archived).length,
+  [selected, recordsMeta])
 
   // ── JSON 내보내기 ──
   const handleExport = async () => {
@@ -484,7 +469,7 @@ export default function StoragePage() {
                 {isAllSelected ? '현재 페이지 전체 선택됨' : '현재 페이지 전체 선택'}
               </span>
               <span style={{ fontSize:'0.75rem', color:'var(--color-text-light)' }}>
-                🔒 아이콘 클릭으로 잠금 설정
+                🔒 = 한도 초과로 자동 잠긴 항목
               </span>
             </div>
 
@@ -500,10 +485,8 @@ export default function StoragePage() {
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
                 {records.map((rec, i) => {
-                  const isSelected = selected.has(rec.id)
-                  const isLocked   = lockedIds.has(rec.id)
-                  const isBusy     = lockBusy.has(rec.id)
-                  const name       = rec[currentBoard?.labelCol] || '(제목 없음)'
+                  const isSelected  = selected.has(rec.id)
+                  const name        = rec[currentBoard?.labelCol] || '(제목 없음)'
                   return (
                     <div key={rec.id} style={{
                       display:'flex', alignItems:'center', gap:10,
@@ -529,19 +512,12 @@ export default function StoragePage() {
                         {fmtDate(rec.created_at)}
                       </span>
 
-                      {/* 잠금 버튼 */}
-                      <button
-                        onClick={() => toggleLock(rec.id)}
-                        disabled={isBusy}
-                        title={isLocked ? '잠금 해제' : '잠금 설정'}
-                        style={{ background:'none', border:'none', cursor:isBusy?'wait':'pointer',
-                          padding:'2px 4px', display:'flex', alignItems:'center', flexShrink:0,
-                          opacity:isBusy?0.5:1 }}>
-                        <Mi size="sm" style={{ color: isLocked ? '#e57373' : 'var(--color-text-light)',
-                          fontSize:'1.1rem' }}>
-                          {isLocked ? 'lock' : 'lock_open'}
-                        </Mi>
-                      </button>
+                      {/* 아카이브(잠김) 표시 — 클릭 불가, Phase 3에서 자동 설정 */}
+                      {rec.is_archived && (
+                        <span title="한도 초과로 잠긴 항목 (편집 불가)" style={{ flexShrink:0, display:'flex', alignItems:'center' }}>
+                          <Mi size="sm" style={{ color:'#e57373', fontSize:'1.1rem' }}>lock</Mi>
+                        </span>
+                      )}
                     </div>
                   )
                 })}
@@ -606,9 +582,11 @@ export default function StoragePage() {
         }}>
           <span style={{ fontSize:'0.88rem', fontWeight:600 }}>
             {selected.size}개 선택됨
-            {lockedCount > 0 && <span style={{ fontSize:'0.75rem', fontWeight:400, marginLeft:6, opacity:0.8 }}>
-              (잠긴 항목 {lockedCount}개 포함)
-            </span>}
+            {archivedCount > 0 && (
+              <span style={{ fontSize:'0.75rem', fontWeight:400, marginLeft:6, opacity:0.8 }}>
+                (잠긴 항목 {archivedCount}개 포함)
+              </span>
+            )}
           </span>
           <button
             className="btn btn-sm"
@@ -642,15 +620,15 @@ export default function StoragePage() {
           loading={isBulkDeleting}/>
       )}
 
-      {bulkModal === 'locked' && (
-        <LockedDeleteModal
+      {bulkModal === 'archived' && (
+        <ArchivedDeleteModal
           totalCount={selected.size}
-          lockedCount={lockedCount}
-          onInclude={() => executeBulkDelete(selected)}
-          onExclude={() => {
-            const ids = new Set([...selected].filter(id => !lockedIds.has(id)))
-            executeBulkDelete(ids)
+          archivedCount={archivedCount}
+          onArchivedOnly={() => {
+            const archivedIds = new Set([...selected].filter(id => recordsMeta[id]?.is_archived))
+            executeBulkDelete(archivedIds)
           }}
+          onAll={() => executeBulkDelete(selected)}
           onCancel={() => setBulkModal(null)}
           loading={isBulkDeleting}/>
       )}
