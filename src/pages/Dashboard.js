@@ -141,35 +141,53 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 사용량 위젯 */}
+      {/* 데이터 사용량 위젯 — 항상 표시 */}
       {(()=>{
         const tier  = profile?.membership_tier || 'free'
         const limit = TIER_LIMITS[tier]
-        if (!limit) return null
-        const total = stats.scheduleTotal + stats.rulebooks + stats.scenarios +
-          stats.wish_scenarios + stats.dotori + stats.availability +
-          stats.logs + stats.pairs + (stats.characters||0) + stats.bookmarks
-        const pct = Math.min((total / limit) * 100, 100)
-        const barColor = pct >= 90 ? '#e53935' : pct >= 70 ? '#fb8c00' : 'var(--color-primary)'
-        if (pct < 50) return null // 50% 미만이면 위젯 숨김
+        if (!limit) return null  // 마스터는 무제한이므로 숨김
+        const total = (stats.scheduleTotal||0) + (stats.rulebooks||0) + (stats.scenarios||0) +
+          (stats.wish_scenarios||0) + (stats.dotori||0) + (stats.availability||0) +
+          (stats.logs||0) + (stats.pairs||0) + (stats.characters||0) + (stats.bookmarks||0)
+        const pct      = Math.min((total / limit) * 100, 100)
+        const isCrit   = pct >= 90
+        const isWarn   = pct >= 70 && pct < 90
+        const barColor = isCrit ? '#e53935' : isWarn ? '#fb8c00' : 'var(--color-primary)'
         return (
-          <Link to="/storage" style={{textDecoration:'none',display:'block',marginBottom:16}}>
+          <Link to="/storage" style={{textDecoration:'none',display:'block',marginBottom:20}}>
             <div className="card" style={{
-              padding:'14px 18px',
-              border: pct>=90 ? '1px solid #ef9a9a' : pct>=70 ? '1px solid #ffcc80' : '1px solid var(--color-border)',
-              background: pct>=90 ? '#fdecea' : pct>=70 ? '#fff8f0' : 'var(--color-card-bg)',
+              padding:'16px 18px',
+              border: isCrit ? '1.5px solid #ef9a9a' : isWarn ? '1.5px solid #ffcc80' : '1px solid var(--color-border)',
+              background: isCrit ? '#fdecea' : isWarn ? '#fff8f0' : 'var(--color-card-bg)',
+              transition:'border-color 0.3s',
             }}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                <div style={{display:'flex',alignItems:'center',gap:6,fontSize:'0.82rem',fontWeight:600,color:barColor}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
                   <Mi size="sm" style={{color:barColor}}>storage</Mi>
-                  {pct>=90 ? '⚠️ 저장 공간이 거의 찼어요!' : '📦 저장 공간 확인'}
+                  <span style={{fontSize:'0.85rem',fontWeight:700,color:barColor}}>
+                    {isCrit ? '⚠️ 저장 공간이 거의 찼어요!' : '데이터 사용량'}
+                  </span>
                 </div>
-                <span style={{fontSize:'0.75rem',color:'var(--color-text-light)'}}>
-                  {total.toLocaleString()} / {limit.toLocaleString()}개 ({pct.toFixed(0)}%)
+                <span style={{fontSize:'0.72rem',color:'var(--color-text-light)'}}>
+                  관리하기 →
                 </span>
               </div>
-              <div style={{background:'var(--color-border)',borderRadius:99,height:6,overflow:'hidden'}}>
+              {/* 프로그레스 바 */}
+              <div style={{background:'var(--color-border)',borderRadius:99,height:8,overflow:'hidden',marginBottom:8}}>
                 <div style={{width:`${pct}%`,height:'100%',borderRadius:99,background:barColor,transition:'width 0.5s'}}/>
+              </div>
+              {/* 수치 + 경고 메시지 */}
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:'0.78rem',color: isCrit||isWarn ? barColor : 'var(--color-text-light)'}}>
+                  {isCrit
+                    ? '데이터를 정리하거나 후원으로 용량을 늘려보세요.'
+                    : isWarn
+                    ? '용량의 70% 이상을 사용 중이에요.'
+                    : '여유 있어요 👍'}
+                </span>
+                <span style={{fontSize:'0.8rem',fontWeight:600,color:barColor}}>
+                  {total.toLocaleString()} <span style={{fontWeight:400,color:'var(--color-text-light)'}}>/ {limit.toLocaleString()}개</span>
+                </span>
               </div>
             </div>
           </Link>
