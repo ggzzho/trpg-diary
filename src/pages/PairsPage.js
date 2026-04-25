@@ -6,6 +6,7 @@ import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Paginatio
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { format } from 'date-fns'
+import { handleStorageLimitError } from '../lib/storageError'
 
 // PlayLogPage와 동일한 TagChip
 const TAG_COLORS = {
@@ -120,12 +121,14 @@ export function PairsPage() {
   const openEdit = item => { setEditing(item); setForm({...item,relations:item.relations||[]}); setModal(true) }
   const save = async () => {
     if (!form.name) return
-    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 페어/팀 목록을 정리해주세요.'); return }
     const validTagNames = relationTags.map(t=>t.name)
     const cleanedRelations = (form.relations||[]).filter(r=>validTagNames.includes(r))
     const payload = cleanPayload({...form,relations:cleanedRelations})
     if (editing) await pairsApi.update(editing.id,payload)
-    else await pairsApi.create({...payload,user_id:user.id})
+    else {
+      const { error } = await pairsApi.create({...payload,user_id:user.id})
+      if (handleStorageLimitError(error)) return
+    }
     setModal(false); load()
   }
   const remove = async id => { await pairsApi.remove(id); load() }

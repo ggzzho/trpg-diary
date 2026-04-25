@@ -6,6 +6,7 @@ import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Paginatio
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { format } from 'date-fns'
+import { handleStorageLimitError } from '../lib/storageError'
 
 // 다녀온 기록 칩 (PairsPage 동일)
 const TAG_COLORS = {
@@ -125,12 +126,14 @@ export function CharactersPage() {
 
   const save = async () => {
     if (!form.name) return
-    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. PC 목록을 정리해주세요.'); return }
     const validTagNames = ruleTags.map(t=>t.name)
     const cleanedRules = (form.rules||[]).filter(r=>validTagNames.includes(r))
     const payload = cleanPayload({...form, rules:cleanedRules})
     if (editing) await supabase.from('characters').update(payload).eq('id', editing.id)
-    else await supabase.from('characters').insert({...payload, user_id:user.id})
+    else {
+      const { error } = await supabase.from('characters').insert({...payload, user_id:user.id})
+      if (handleStorageLimitError(error)) return
+    }
     setModal(false); load()
   }
   const remove = async id => { await supabase.from('characters').delete().eq('id', id); load() }

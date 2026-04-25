@@ -9,6 +9,7 @@ import { RuleSelect } from '../components/RuleSelect'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { handleStorageLimitError } from '../lib/storageError'
 
 const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
 const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', digital_purchase:'전자', digital_free:'전자', physical_digital:'실물+전자', other:'기타' }
@@ -129,14 +130,14 @@ export function BaseScenarioPage({ config }) {
   }
   const save = async () => {
     if (!form.title) return
-    if (!editing && items.length >= 2500) { alert(`게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. ${alertLabel}를 정리해주세요.`); return }
     const parentId = isChild ? (form.parent_id||null) : null
     const payload = cleanPayload({...form, parent_id: parentId})
     if (editing) {
       await api.update(editing.id, payload)
     } else {
       const so = parentId ? (childMap[parentId]?.length || 0) : undefined
-      await api.create({...payload, user_id:user.id, ...(so !== undefined ? {sort_order:so} : {})})
+      const { error } = await api.create({...payload, user_id:user.id, ...(so !== undefined ? {sort_order:so} : {})})
+      if (handleStorageLimitError(error)) return
     }
     setModal(false); load()
   }

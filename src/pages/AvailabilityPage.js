@@ -6,6 +6,7 @@ import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '..
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
+import { handleStorageLimitError } from '../lib/storageError'
 
 const BLANK = { title:'', role:'PL', system_name:'', description:'', together_with:'', scenario_link:'', is_active:true }
 
@@ -38,10 +39,12 @@ export function AvailabilityPage() {
   const openEdit = item => { setEditing(item); setForm({...item}); setModal(true) }
   const save = async () => {
     if (!form.title) return
-    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 공수표 목록을 정리해주세요.'); return }
     const { id, user_id, created_at, ...formFields } = form
     if (editing) await availabilityApi.update(editing.id, formFields)
-    else await availabilityApi.create({...formFields,user_id:user.id})
+    else {
+      const { error } = await availabilityApi.create({...formFields,user_id:user.id})
+      if (handleStorageLimitError(error)) return
+    }
     setModal(false); load()
   }
   const remove = async id => { await availabilityApi.remove(id); load() }
