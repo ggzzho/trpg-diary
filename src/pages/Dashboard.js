@@ -8,7 +8,7 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { MarkdownRenderer } from './AdminNoticePage'
 import { getTodayKST } from '../lib/dateFormatters'
-import { TIER_LIMITS } from './StoragePage'
+import { TIER_LIMITS } from '../lib/tierLimits'
 
 export default function Dashboard() {
   const { user, profile } = useAuth()

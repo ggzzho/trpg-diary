@@ -5,18 +5,9 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 
-// ── 공개 상수 (Dashboard에서 import) ────────────────────
-export const TIER_LIMITS = {
-  free:   1000,
-  lv1:    3000,
-  lv2:    5000,
-  lv3:    8000,
-  master: null,
-}
-
-const TIER_LABEL = {
-  free: '일반', lv1: '♥ 원하트', lv2: '♥♥ 투하트', lv3: '♥♥♥ 풀하트', master: '마스터',
-}
+// ── 공통 상수 (tierLimits.js에서 import, re-export) ─────
+export { TIER_LIMITS } from '../lib/tierLimits'
+import { TIER_LIMITS, TIER_LABEL } from '../lib/tierLimits'
 
 // labelCol: 레코드 목록에서 제목으로 쓸 컬럼명
 const BOARDS = [

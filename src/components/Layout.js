@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { signOut, notificationsApi, supabase } from '../lib/supabase'
 import { fmtAgo } from '../lib/dateFormatters'
 import CursorEffect from './CursorEffect'
+import { TIER_LIMITS } from '../lib/tierLimits'
 
 const NOTICE_VIEWED_KEY = 'noticeLastViewed'
 
@@ -460,6 +461,41 @@ export function Layout({ children }) {
         </div>
       </aside>
       <main className="main-content">
+        {/* 데이터 한도 배너 — 70% 이상 시 표시 */}
+        {(() => {
+          const tier  = profile?.membership_tier || 'free'
+          const limit = TIER_LIMITS[tier]
+          if (!limit) return null
+          const count = profile?.data_count || 0
+          const pct   = Math.min((count / limit) * 100, 100)
+          if (pct < 70) return null
+          const isAt   = pct >= 100
+          const isCrit = pct >= 90
+          return (
+            <div
+              onClick={() => navigate('/storage')}
+              style={{
+                marginBottom: 20, padding: '10px 16px', borderRadius: 10, cursor: 'pointer',
+                background: isAt ? '#fdecea' : isCrit ? '#fff3e0' : '#fffde7',
+                border: `1px solid ${isAt ? '#ef9a9a' : isCrit ? '#ffcc80' : '#fff176'}`,
+                display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.82rem',
+                color: isAt ? '#c62828' : isCrit ? '#e65100' : '#f57f17',
+              }}>
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>
+                {isAt ? '🔴' : isCrit ? '🟠' : '🟡'}
+              </span>
+              <span style={{ flex: 1, fontWeight: isAt ? 700 : 500 }}>
+                {isAt
+                  ? `저장 공간이 꽉 찼어요! 새 데이터를 추가하려면 정리가 필요해요.`
+                  : `저장 공간이 ${pct.toFixed(0)}% 찼어요.`}
+                <span style={{ fontWeight: 400, marginLeft: 6, opacity: 0.75 }}>
+                  ({count.toLocaleString()} / {limit.toLocaleString()}개)
+                </span>
+              </span>
+              <span style={{ fontSize: '0.75rem', opacity: 0.65, flexShrink: 0 }}>데이터 관리 →</span>
+            </div>
+          )
+        })()}
         <div className="fade-in">{children}</div>
         <footer style={{marginTop:60,paddingTop:20,borderTop:'1px solid var(--color-border)',textAlign:'center',color:'var(--color-text-light)',fontSize:'0.72rem'}}>
           <div style={{marginBottom:10, display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap'}}>
