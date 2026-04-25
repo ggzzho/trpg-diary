@@ -148,7 +148,9 @@ export default function AdminDataStatsPage() {
 
   const [rows,    setRows]    = useState([])
   const [loading, setLoading] = useState(true)
-  const [tierFilter, setTierFilter] = useState('all')
+  const [tierFilter,  setTierFilter]  = useState('all')
+  const [nameSearch,  setNameSearch]  = useState('')
+  const [boardFilter, setBoardFilter] = useState('all')
   const [sortKey,    setSortKey]    = useState('total_count')
   const [sortDir,    setSortDir]    = useState('desc')
 
@@ -210,12 +212,22 @@ export default function AdminDataStatsPage() {
   // 필터 + 정렬
   const filtered = useMemo(() => {
     let list = tierFilter === 'all' ? rows : rows.filter(r => r.membership_tier === tierFilter)
+    if (nameSearch.trim()) {
+      const s = nameSearch.trim().toLowerCase()
+      list = list.filter(r =>
+        (r.display_name || '').toLowerCase().includes(s) ||
+        (r.username     || '').toLowerCase().includes(s)
+      )
+    }
+    if (boardFilter !== 'all') {
+      list = list.filter(r => Number(r[boardFilter] || 0) > 0)
+    }
     return [...list].sort((a, b) => {
       const va = Number(a[sortKey] ?? 0)
       const vb = Number(b[sortKey] ?? 0)
       return sortDir === 'desc' ? vb - va : va - vb
     })
-  }, [rows, tierFilter, sortKey, sortDir])
+  }, [rows, tierFilter, nameSearch, boardFilter, sortKey, sortDir])
 
   const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
   const maxTotal = filtered.length ? Number(filtered[0]?.total_count ?? 1) : 1
@@ -328,7 +340,8 @@ export default function AdminDataStatsPage() {
 
       {/* ⑤ 상위 유저 테이블 */}
       <div className="card" style={{ padding: '20px 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+        {/* 타이틀 + 등급 필터 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
           <h3 style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-accent)', margin: 0 }}>
             사용량 상위 유저 ({filtered.length.toLocaleString()}명)
           </h3>
@@ -342,6 +355,44 @@ export default function AdminDataStatsPage() {
               </button>
             ))}
           </div>
+        </div>
+        {/* 검색 필터 행 */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: '1 1 180px', minWidth: 140 }}>
+            <Mi size="sm" style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-light)', pointerEvents: 'none' }}>search</Mi>
+            <input
+              type="text"
+              placeholder="닉네임 검색"
+              value={nameSearch}
+              onChange={e => { setNameSearch(e.target.value); setPage(1) }}
+              style={{
+                width: '100%', padding: '6px 10px 6px 28px', fontSize: '0.8rem', boxSizing: 'border-box',
+                border: '1px solid var(--color-border)', borderRadius: 8,
+                background: 'var(--color-bg)', color: 'var(--color-text)', outline: 'none',
+              }}
+            />
+          </div>
+          <select
+            value={boardFilter}
+            onChange={e => { setBoardFilter(e.target.value); setPage(1) }}
+            style={{
+              padding: '6px 10px', fontSize: '0.8rem', flex: '0 0 auto',
+              border: '1px solid var(--color-border)', borderRadius: 8,
+              background: 'var(--color-bg)', color: 'var(--color-text)', cursor: 'pointer',
+            }}>
+            <option value="all">메뉴 전체</option>
+            {BOARDS.map(b => (
+              <option key={b.key} value={b.key}>{b.label} 있는 유저</option>
+            ))}
+          </select>
+          {(nameSearch || boardFilter !== 'all') && (
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={() => { setNameSearch(''); setBoardFilter('all'); setPage(1) }}
+              style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
+              초기화
+            </button>
+          )}
         </div>
 
         <div style={{ overflowX: 'auto' }}>
