@@ -25,17 +25,17 @@ const TIER_COLOR = {
 const TIER_ORDER = ['free', 'lv1', 'lv2', 'lv3', 'master']
 
 const BOARDS = [
-  { key: 'play_logs_count',      label: '기록' },
+  { key: 'schedules_count',      label: '일정' },
+  { key: 'rulebooks_count',      label: '보유 룰북' },
   { key: 'scenarios_count',      label: '보유 시나리오' },
   { key: 'wish_scenarios_count', label: '위시 시나리오' },
-  { key: 'availability_count',   label: '공수표' },
-  { key: 'bookmarks_count',      label: '북마크' },
+  { key: 'dotori_count',         label: '도토리' },
+  { key: 'availability_count',   label: '공수표 목록' },
+  { key: 'play_logs_count',      label: '다녀온 기록' },
+  { key: 'pairs_count',          label: '페어/팀 목록' },
   { key: 'characters_count',     label: 'PC 목록' },
   { key: 'char_hist_count',      label: 'PC 히스토리' },
-  { key: 'schedules_count',      label: '일정' },
-  { key: 'pairs_count',          label: '페어/팀' },
-  { key: 'rulebooks_count',      label: '룰북' },
-  { key: 'dotori_count',         label: '도토리' },
+  { key: 'bookmarks_count',      label: '북마크' },
 ]
 
 const RANGES = [
@@ -78,15 +78,15 @@ function StatCard({ icon, label, value, sub }) {
 
 // ── CSV 내보내기 ──
 function downloadCsv(rows) {
-  const headers = ['순위','닉네임','username','등급','총계','기록','보유시나리오','위시시나리오','공수표','북마크','PC목록','PC히스토리','일정','페어팀','룰북','도토리','가입일']
+  const headers = ['순위','닉네임','username','등급','총계','일정','보유룰북','보유시나리오','위시시나리오','도토리','공수표','다녀온기록','페어팀','PC목록','PC히스토리','북마크','가입일']
   const lines = rows.map((r, i) => [
     i + 1, r.display_name || '', r.username || '',
     TIER_LABEL[r.membership_tier] || r.membership_tier || '',
     r.total_count,
-    r.play_logs_count, r.scenarios_count, r.wish_scenarios_count,
-    r.availability_count, r.bookmarks_count, r.characters_count,
-    r.char_hist_count, r.schedules_count, r.pairs_count,
-    r.rulebooks_count, r.dotori_count,
+    r.schedules_count, r.rulebooks_count, r.scenarios_count,
+    r.wish_scenarios_count, r.dotori_count, r.availability_count,
+    r.play_logs_count, r.pairs_count, r.characters_count,
+    r.char_hist_count, r.bookmarks_count,
     r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '',
   ].join(','))
   const csv = '﻿' + [headers.join(','), ...lines].join('\n')
@@ -304,17 +304,17 @@ export default function AdminDataStatsPage() {
                 <th style={{ padding: '8px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>등급</th>
                 {[
                   { k: 'total_count',            l: '총계' },
-                  { k: 'play_logs_count',        l: '기록' },
+                  { k: 'schedules_count',        l: '일정' },
+                  { k: 'rulebooks_count',        l: '룰북' },
                   { k: 'scenarios_count',        l: '시나리오' },
                   { k: 'wish_scenarios_count',   l: '위시' },
-                  { k: 'availability_count',     l: '공수표' },
-                  { k: 'bookmarks_count',        l: '북마크' },
-                  { k: 'characters_count',       l: 'PC' },
-                  { k: 'char_hist_count',        l: '히스토리' },
-                  { k: 'schedules_count',        l: '일정' },
-                  { k: 'pairs_count',            l: '페어' },
-                  { k: 'rulebooks_count',        l: '룰북' },
                   { k: 'dotori_count',           l: '도토리' },
+                  { k: 'availability_count',     l: '공수표' },
+                  { k: 'play_logs_count',        l: '기록' },
+                  { k: 'pairs_count',            l: '페어/팀' },
+                  { k: 'characters_count',       l: 'PC' },
+                  { k: 'char_hist_count',        l: 'PC히스토리' },
+                  { k: 'bookmarks_count',        l: '북마크' },
                 ].map(col => (
                   <th key={col.k}
                     onClick={() => handleSort(col.k)}
@@ -358,10 +358,10 @@ export default function AdminDataStatsPage() {
                       <MiniBar value={Number(r.total_count)} max={maxTotal} height={5} />
                     </td>
                     {[
-                      'play_logs_count','scenarios_count','wish_scenarios_count',
-                      'availability_count','bookmarks_count','characters_count',
-                      'char_hist_count','schedules_count','pairs_count',
-                      'rulebooks_count','dotori_count',
+                      'schedules_count','rulebooks_count','scenarios_count',
+                      'wish_scenarios_count','dotori_count','availability_count',
+                      'play_logs_count','pairs_count','characters_count',
+                      'char_hist_count','bookmarks_count',
                     ].map(k => (
                       <td key={k} style={{ padding: '8px 6px', textAlign: 'right', color: Number(r[k]) > 0 ? 'var(--color-text)' : 'var(--color-text-light)' }}>
                         {Number(r[k]).toLocaleString()}
