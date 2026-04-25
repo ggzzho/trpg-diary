@@ -245,6 +245,9 @@ export function Layout({ children }) {
           <NavLink to="/settings" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
             <span className="nav-icon"><span className="ms">settings</span></span>환경설정
           </NavLink>
+          <NavLink to="/storage" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
+            <span className="nav-icon"><span className="ms">storage</span></span>데이터 관리
+          </NavLink>
           {profile&&(
             <a href={`/u/${profile.username}`} target="_blank" rel="noreferrer" className="nav-item">
               <span className="nav-icon"><span className="ms">open_in_new</span></span>내 공개 페이지

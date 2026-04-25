@@ -8,10 +8,11 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { MarkdownRenderer } from './AdminNoticePage'
 import { getTodayKST } from '../lib/dateFormatters'
+import { TIER_LIMITS } from './StoragePage'
 
 export default function Dashboard() {
   const { user, profile } = useAuth()
-  const [stats, setStats] = useState({ logs:0, rulebooks:0, scenarios:0, wish_scenarios:0, dotori:0, pairs:0, schedule:0, availability:0, guestbook:0, bookmarks:0 })
+  const [stats, setStats] = useState({ logs:0, rulebooks:0, scenarios:0, wish_scenarios:0, dotori:0, pairs:0, schedule:0, scheduleTotal:0, availability:0, guestbook:0, bookmarks:0 })
   const [upcoming, setUpcoming] = useState([])
   const [recentLogs, setRecentLogs] = useState([])
   const [favorites, setFavorites] = useState([])
@@ -28,7 +29,7 @@ export default function Dashboard() {
       const [
         logsCount, recentLogsRes,
         rbCount, scCount, wishCount, dotCount, pairsCount, charsCount,
-        schedRes, fav, noticeRes, avail, guest, book
+        schedRes, schedTotal, fav, noticeRes, avail, guest, book
       ] = await Promise.all([
         // 카운트만 필요한 테이블: head:true로 행 전송 없이 카운트만
         supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',user.id),
@@ -48,6 +49,7 @@ export default function Dashboard() {
           .neq('entry_type','blocked').neq('status','cancelled').neq('status','completed')
           .gte('scheduled_date',todayStr)
           .order('scheduled_date').limit(10),
+        supabase.from('schedules').select('id',{count:'exact',head:true}).eq('user_id',user.id),
         supabase.from('favorites').select('*').eq('user_id',user.id).order('created_at',{ascending:false}),
         supabase.from('notices').select('*').eq('is_active',true).order('created_at',{ascending:false}),
         supabase.from('availability').select('id',{count:'exact',head:true}).eq('user_id',user.id),
@@ -64,6 +66,7 @@ export default function Dashboard() {
         pairs: pairsCount.count||0,
         characters: charsCount.count||0,
         schedule: upcomingData.length,
+        scheduleTotal: schedTotal.count||0,
         availability: avail.count||0,
         guestbook: guest.count||0,
         bookmarks: book.count||0,
@@ -137,6 +140,41 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* 사용량 위젯 */}
+      {(()=>{
+        const tier  = profile?.membership_tier || 'free'
+        const limit = TIER_LIMITS[tier]
+        if (!limit) return null
+        const total = stats.scheduleTotal + stats.rulebooks + stats.scenarios +
+          stats.wish_scenarios + stats.dotori + stats.availability +
+          stats.logs + stats.pairs + (stats.characters||0) + stats.bookmarks
+        const pct = Math.min((total / limit) * 100, 100)
+        const barColor = pct >= 90 ? '#e53935' : pct >= 70 ? '#fb8c00' : 'var(--color-primary)'
+        if (pct < 50) return null // 50% 미만이면 위젯 숨김
+        return (
+          <Link to="/storage" style={{textDecoration:'none',display:'block',marginBottom:16}}>
+            <div className="card" style={{
+              padding:'14px 18px',
+              border: pct>=90 ? '1px solid #ef9a9a' : pct>=70 ? '1px solid #ffcc80' : '1px solid var(--color-border)',
+              background: pct>=90 ? '#fdecea' : pct>=70 ? '#fff8f0' : 'var(--color-card-bg)',
+            }}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,fontSize:'0.82rem',fontWeight:600,color:barColor}}>
+                  <Mi size="sm" style={{color:barColor}}>storage</Mi>
+                  {pct>=90 ? '⚠️ 저장 공간이 거의 찼어요!' : '📦 저장 공간 확인'}
+                </div>
+                <span style={{fontSize:'0.75rem',color:'var(--color-text-light)'}}>
+                  {total.toLocaleString()} / {limit.toLocaleString()}개 ({pct.toFixed(0)}%)
+                </span>
+              </div>
+              <div style={{background:'var(--color-border)',borderRadius:99,height:6,overflow:'hidden'}}>
+                <div style={{width:`${pct}%`,height:'100%',borderRadius:99,background:barColor,transition:'width 0.5s'}}/>
+              </div>
+            </div>
+          </Link>
+        )
+      })()}
 
       <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12,marginBottom:24}}>
         {STAT_CARDS.map(c=>(
