@@ -75,6 +75,14 @@ function StatCard({ icon, label, value, sub }) {
   )
 }
 
+// ── 다운로드 헬퍼 ──
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const a   = document.createElement('a')
+  a.href = url; a.download = filename
+  a.click(); URL.revokeObjectURL(url)
+}
+
 // ── CSV 내보내기 ──
 function downloadCsv(rows) {
   const headers = ['순위','닉네임','username','등급','총계','일정','보유룰북','보유시나리오','위시시나리오','도토리','공수표','다녀온기록','페어팀','PC목록','북마크','가입일']
@@ -89,11 +97,48 @@ function downloadCsv(rows) {
     r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '',
   ].join(','))
   const csv = '﻿' + [headers.join(','), ...lines].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href = url; a.download = `trpg_data_stats_${new Date().toISOString().slice(0,10)}.csv`
-  a.click(); URL.revokeObjectURL(url)
+  triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `trpg_data_stats_${new Date().toISOString().slice(0,10)}.csv`)
+}
+
+// ── JSON 내보내기 ──
+function downloadJson(rows, summary, distribution, tierStats) {
+  const payload = {
+    exported_at: new Date().toISOString(),
+    summary: {
+      user_count:     summary?.userCount    ?? 0,
+      total_records:  summary?.totalRecords ?? 0,
+      avg_per_user:   summary?.avg          ?? 0,
+      max_per_user:   summary?.max          ?? 0,
+    },
+    distribution: distribution.map(d => ({
+      range: d.label, user_count: d.count, pct: Number(d.pct),
+    })),
+    tier_stats: tierStats.map(t => ({
+      tier: t.tier, label: TIER_LABEL[t.tier], user_count: t.count, avg: t.avg,
+    })),
+    users: rows.map((r, i) => ({
+      rank:             i + 1,
+      display_name:     r.display_name || '',
+      username:         r.username     || '',
+      membership_tier:  TIER_LABEL[r.membership_tier] || r.membership_tier || '',
+      created_at:       r.created_at   || '',
+      total_count:      Number(r.total_count),
+      boards: {
+        schedules:      Number(r.schedules_count),
+        rulebooks:      Number(r.rulebooks_count),
+        scenarios:      Number(r.scenarios_count),
+        wish_scenarios: Number(r.wish_scenarios_count),
+        dotori:         Number(r.dotori_count),
+        availability:   Number(r.availability_count),
+        play_logs:      Number(r.play_logs_count),
+        pairs:          Number(r.pairs_count),
+        characters:     Number(r.characters_count),
+        bookmarks:      Number(r.bookmarks_count),
+      },
+    })),
+  }
+  const json = JSON.stringify(payload, null, 2)
+  triggerDownload(new Blob([json], { type: 'application/json;charset=utf-8;' }), `trpg_data_stats_${new Date().toISOString().slice(0,10)}.json`)
 }
 
 // ── 메인 컴포넌트 ────────────────────────────────────────
@@ -201,9 +246,14 @@ export default function AdminDataStatsPage() {
           </h1>
           <p className="page-subtitle">전체 회원의 게시판 등록 현황 · 관리자 전용</p>
         </div>
-        <button className="btn btn-outline btn-sm" onClick={() => downloadCsv(filtered)}>
-          <Mi size="sm">download</Mi> CSV 내보내기
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-outline btn-sm" onClick={() => downloadCsv(filtered)}>
+            <Mi size="sm">download</Mi> CSV
+          </button>
+          <button className="btn btn-outline btn-sm" onClick={() => downloadJson(filtered, summary, distribution, tierStats)}>
+            <Mi size="sm">data_object</Mi> JSON
+          </button>
+        </div>
       </div>
 
       {/* ① 요약 카드 */}
