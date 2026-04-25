@@ -19,6 +19,7 @@ const AdminFeedbackPage      = React.lazy(() => import('./pages/AdminFeedbackPag
 const SupportPage            = React.lazy(() => import('./pages/SupportPage'))
 const AdminNoticePage        = React.lazy(() => import('./pages/AdminNoticePage'))
 const AdminMembershipPage    = React.lazy(() => import('./pages/AdminMembershipPage'))
+const AdminDataStatsPage     = React.lazy(() => import('./pages/AdminDataStatsPage'))
 const NoticePage             = React.lazy(() => import('./pages/NoticePage'))
 const NoticeListPage         = React.lazy(() => import('./pages/NoticeListPage'))
 const NotificationCenterPage = React.lazy(() => import('./pages/NotificationCenterPage'))
@@ -128,6 +129,7 @@ function AppRoutes() {
         <Route path="/admin/feedback" element={<PrivateLayout><AdminFeedbackPage/></PrivateLayout>}/>
         <Route path="/admin/notices" element={<PrivateLayout><AdminNoticePage/></PrivateLayout>}/>
         <Route path="/admin/membership" element={<PrivateLayout><AdminMembershipPage/></PrivateLayout>}/>
+        <Route path="/admin/data-stats" element={<PrivateLayout><AdminDataStatsPage/></PrivateLayout>}/>
         <Route path="/notices" element={<PrivateLayout><NoticeListPage/></PrivateLayout>}/>
         <Route path="/notices/:id" element={<PrivateLayout><NoticePage/></PrivateLayout>}/>
         <Route path="/notifications" element={<PrivateLayout><NotificationCenterPage/></PrivateLayout>}/>
