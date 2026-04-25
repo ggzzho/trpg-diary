@@ -646,7 +646,7 @@ export default function PublicProfilePage() {
 
       {/* ── 후원자 전용: 커서 효과 (lv1+, 공개 설정된 경우) ── */}
       {['lv1','lv2','lv3','master'].includes(profile?.membership_tier) &&
-        profile?.cursor_effect?.enabled_public && (
+        profile?.cursor_effect?.enabled_public !== false && (
         <CursorEffect settings={profile.cursor_effect} />
       )}
 

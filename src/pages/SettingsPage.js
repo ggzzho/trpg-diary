@@ -87,11 +87,12 @@ export default function SettingsPage() {
     dashboard_cards: p?.dashboard_cards || ['logs','rulebooks','scenarios','pairs'],
     theme_text_color: p?.theme_text_color || '',
     dark_mode: p?.dark_mode || false,
-    cursor_effect: p?.cursor_effect || {
+    cursor_effect: {
       enabled_public: true,
       cursor: { type: 'default' },
       trail:  { enabled: false, type: 'sparkle' },
       click:  { enabled: false, type: 'ripple'  },
+      ...(p?.cursor_effect || {}),
     },
   })
 
