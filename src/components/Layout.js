@@ -174,11 +174,18 @@ export function Layout({ children }) {
       await notificationsApi.markReadById(n.id)
       refreshNotifs()
     }
+    // 운영자 메시지 → 알림 센터에서 모달로 확인
+    if (n.type === 'admin_notice') {
+      navigate('/notifications')
+      return
+    }
     const path = n.ref_url || (
       n.type === 'feedback_comment' || n.type === 'feedback_reply' || n.type === 'inquiry_new'
         ? '/admin/feedback'
         : n.type === 'inquiry_reply'
         ? '/support?tab=history'
+        : n.type === 'storage_warning' || n.type === 'backup_ready'
+        ? '/storage'
         : '/guestbook'
     )
     navigate(path)
