@@ -7,6 +7,7 @@ import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { format } from 'date-fns'
 import { handleStorageLimitError } from '../lib/storageError'
+import { TIER_LIMITS } from '../lib/tierLimits'
 
 // PlayLogPage와 동일한 TagChip
 const TAG_COLORS = {
@@ -30,7 +31,8 @@ function calcDday(dateStr) {
 const SORT_KEY = 'trpg_pair_sort_order'
 
 export function PairsPage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const readLimit = TIER_LIMITS[profile?.membership_tier] ?? 10000
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -90,7 +92,7 @@ export function PairsPage() {
   }
   const loadAllLogs = async () => {
     if (logsLoaded) return
-    const {data}=await supabase.from('play_logs').select(LOG_SELECT).eq('user_id',user.id).order('played_date',{ascending:false}).limit(2500)
+    const {data}=await supabase.from('play_logs').select(LOG_SELECT).eq('user_id',user.id).order('played_date',{ascending:false}).limit(readLimit)
     setAllLogs(data||[])
     setLogsLoaded(true)
   }

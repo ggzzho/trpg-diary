@@ -10,6 +10,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { handleStorageLimitError } from '../lib/storageError'
+import { TIER_LIMITS } from '../lib/tierLimits'
 
 const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
 const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', digital_purchase:'전자', digital_free:'전자', physical_digital:'실물+전자', other:'기타' }
@@ -37,6 +38,7 @@ const cleanPayload = f => {
 export function BaseScenarioPage({ config }) {
   const { table, tagsTable, api, defaultTags, profileSortKey, title, subtitle, icon, emptyTitle, alertLabel, tagModalTitle, tagPlaceholder } = config
   const { user, profile } = useAuth()
+  const readLimit = TIER_LIMITS[profile?.membership_tier] ?? 10000
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -58,7 +60,7 @@ export function BaseScenarioPage({ config }) {
     const { data } = await supabase.from(table).select('*').eq('user_id', user.id)
       .order('sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true })
-      .limit(2500)
+      .limit(readLimit)
     setItems(data || [])
     setLoading(false)
   }

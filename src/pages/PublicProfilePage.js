@@ -437,24 +437,24 @@ export default function PublicProfilePage() {
     if (tab === 'schedules') {
       const today = getTodayKST()
       const [schedsAll, rbooks] = await Promise.all([
-        safeQ(supabase.from('schedules').select('*').eq('user_id',profileId).order('scheduled_date').limit(2500)),
+        safeQ(supabase.from('schedules').select('*').eq('user_id',profileId).order('scheduled_date').limit(10000)),
         loadedRef.current.has('rulebooks')
           ? Promise.resolve(null)
-          : safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(2500))
+          : safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(10000))
       ])
       updates.schedules = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
       updates.blocked = schedsAll.filter(s => s.entry_type === 'blocked')
       if (rbooks !== null) { updates.rulebooks = rbooks; loadedRef.current.add('rulebooks') }
     } else if (tab === 'logs') {
-      updates.logs = await safeQ(supabase.from('play_logs').select('*').eq('user_id',profileId).order('played_date',{ascending:false,nullsFirst:false}).limit(2500))
+      updates.logs = await safeQ(supabase.from('play_logs').select('*').eq('user_id',profileId).order('played_date',{ascending:false,nullsFirst:false}).limit(10000))
     } else if (tab === 'rulebooks') {
-      updates.rulebooks = await safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(2500))
+      updates.rulebooks = await safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(10000))
     } else if (tab === 'scenarios') {
-      updates.scenarios = await safeQ(supabase.from('scenarios').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:true}).limit(2500))
+      updates.scenarios = await safeQ(supabase.from('scenarios').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:true}).limit(10000))
     } else if (tab === 'wish_scenarios') {
-      updates.wish_scenarios = await safeQ(supabase.from('wish_scenarios').select('*').eq('user_id',profileId).order('created_at',{ascending:true}).limit(2500))
+      updates.wish_scenarios = await safeQ(supabase.from('wish_scenarios').select('*').eq('user_id',profileId).order('created_at',{ascending:true}).limit(10000))
     } else if (tab === 'dotori') {
-      updates.dotori = await safeQ(supabase.from('dotori').select('*').eq('user_id',profileId).order('title').limit(2500))
+      updates.dotori = await safeQ(supabase.from('dotori').select('*').eq('user_id',profileId).order('title').limit(10000))
     } else if (tab === 'pairs') {
       const pairs = await safeQ(pairsApi.getAll(profileId))
       updates.pairs = pairs
@@ -471,7 +471,7 @@ export default function PublicProfilePage() {
       })
       setPairHistoriesMap(hMap)
     } else if (tab === 'characters') {
-      const chars = await safeQ(supabase.from('characters').select('*').eq('user_id',profileId).order('created_at',{ascending:false}).limit(2500))
+      const chars = await safeQ(supabase.from('characters').select('*').eq('user_id',profileId).order('created_at',{ascending:false}).limit(10000))
       updates.characters = chars
       // 히스토리 pre-load
       const { data: hData } = await supabase.from('character_histories')
@@ -486,9 +486,9 @@ export default function PublicProfilePage() {
       })
       setCharHistoriesMap(hMap)
     } else if (tab === 'availability') {
-      updates.availability = await safeQ(supabase.from('availability').select('*').eq('user_id',profileId).eq('is_active',true).limit(2500))
+      updates.availability = await safeQ(supabase.from('availability').select('*').eq('user_id',profileId).eq('is_active',true).limit(10000))
     } else if (tab === 'bookmarks') {
-      updates.bookmarks = await safeQ(supabase.from('bookmarks').select('*').eq('user_id',profileId).order('title').limit(2500))
+      updates.bookmarks = await safeQ(supabase.from('bookmarks').select('*').eq('user_id',profileId).order('title').limit(10000))
     }
     setData(d => ({...d, ...updates}))
     setTabLoading(t => ({...t, [tab]: false}))
