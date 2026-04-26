@@ -518,7 +518,7 @@ export function Layout({ children }) {
                 color:'#b8960c',fontSize:'0.75rem',fontWeight:600,cursor:'pointer'}}>
               💛 카카오페이로 후원하기
             </button>
-            <a href="https://posty.pe/0k44m9" target="_blank" rel="noreferrer"
+            <a href="https://posty.pe/w12k0g" target="_blank" rel="noreferrer"
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:100,
                 background:'rgba(200,169,110,0.08)',border:'1px solid var(--color-border)',
                 color:'var(--color-accent)',textDecoration:'none',fontSize:'0.75rem',fontWeight:600}}>
