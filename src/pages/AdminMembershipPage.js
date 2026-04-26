@@ -549,7 +549,11 @@ function NotifyTab() {
     setCondLoading(false)
     if (error) { setCondError(error.message || '조회 실패'); return }
     const rows = data || []
-    setCondUsers({ ids: rows.map(r => r.id), preview: rows.slice(0, 5), total: rows.length })
+    setCondUsers({
+      ids:     rows.map(r => r.uid),
+      preview: rows.slice(0, 5).map(r => ({ id: r.uid, username: r.uname, display_name: r.udname })),
+      total:   rows.length,
+    })
   }
 
   // ── 수동 검색 ──
