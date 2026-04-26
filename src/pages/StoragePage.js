@@ -1,6 +1,5 @@
 // src/pages/StoragePage.js
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
@@ -669,14 +668,14 @@ export default function StoragePage() {
             <Mi size="sm">download</Mi>{exporting ? '내보내는 중...' : 'JSON으로 내보내기'}
           </button>
         ) : (
-          <Link to="/settings" state={{ tab:'donation' }} style={{ textDecoration:'none' }}>
+          <a href="https://posty.pe/6v8jm2" target="_blank" rel="noreferrer" style={{ textDecoration:'none' }}>
             <div style={{ padding:'14px 18px', borderRadius:10, background:'var(--color-nav-active-bg)',
               border:'1px dashed var(--color-border)', color:'var(--color-text-light)', fontSize:'0.82rem',
               display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
               <Mi size="sm" color="light">lock</Mi>
               투하트 이상 후원 시 이용 가능 · 후원 페이지로 이동 →
             </div>
-          </Link>
+          </a>
         )}
       </div>
 
