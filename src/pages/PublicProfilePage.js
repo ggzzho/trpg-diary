@@ -659,8 +659,8 @@ export default function PublicProfilePage() {
         />
       )}
 
-      {/* ── 후원자 전용: BGM 플레이어 ── */}
-      {isSupporter && (
+      {/* ── 투하트 이상 전용: BGM 플레이어 ── */}
+      {['lv2','lv3','master'].includes(profile?.membership_tier) && (
         <BgmPlayer
           profile={profile}
           isOwner={isOwnPage}
