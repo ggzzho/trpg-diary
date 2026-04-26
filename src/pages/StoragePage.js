@@ -667,7 +667,7 @@ export default function StoragePage() {
 
       {/* ④ 예약 백업 (lv3/master 전용) */}
       {canAutoBackup && (
-        <div className="card" style={{ padding:'20px 24px' }}>
+        <div className="card" style={{ padding:'20px 24px', marginTop:12 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
             <h3 style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--color-accent)', margin:0 }}>
               예약 백업
@@ -752,7 +752,7 @@ export default function StoragePage() {
           {exportFree && (
             <>
               <span style={{ opacity:0.4, fontSize:'0.8rem' }}>|</span>
-              <span style={{ fontSize:'0.75rem', opacity:0.85 }}>내보내기</span>
+              <span style={{ fontSize:'0.75rem', opacity:0.85 }}>선택 내보내기</span>
               <button
                 className="btn btn-sm"
                 style={{ background:'rgba(255,255,255,0.18)', border:'1px solid rgba(255,255,255,0.4)',
