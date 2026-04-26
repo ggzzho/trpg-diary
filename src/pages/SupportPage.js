@@ -1,11 +1,12 @@
 // src/pages/SupportPage.js
 import React, { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 import { EmptyState, LoadingSpinner, ConfirmDialog } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
+import { FAQList } from './FAQPage'
 
 const CATEGORIES = ['버그신고', '기능제안', '계정문의', '기타']
 
@@ -231,8 +232,14 @@ function InquiryCard({ item, onDelete, isUnread, onMarkRead }) {
 // ── 메인 페이지 ───────────────────────────────────────────────
 export default function SupportPage() {
   const { user, refreshNotifs } = useAuth()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [tab, setTab] = useState(() => searchParams.get('tab') === 'history' ? 'history' : 'form')
+  const [tab, setTab] = useState(() => {
+    const t = searchParams.get('tab')
+    if (t === 'history') return 'history'
+    if (t === 'faq') return 'faq'
+    return 'form'
+  })
 
   // 문의 폼
   const [form, setForm] = useState({ email:'', category:'버그신고', title:'', content:'' })
@@ -339,7 +346,8 @@ export default function SupportPage() {
       {/* 탭 */}
       <div style={{ display:'flex', gap:8, marginBottom:20, borderBottom:'1px solid var(--color-border)', paddingBottom:0 }}>
         {[
-          { key:'form', label:'문의하기', icon:'edit_note' },
+          { key:'form',    label:'문의하기',    icon:'edit_note' },
+          { key:'faq',     label:'FAQ',         icon:'help_outline' },
           { key:'history', label:'내 문의 내역', icon:'history', badge: unreadCount },
         ].map(t => (
           <button key={t.key}
@@ -377,6 +385,26 @@ export default function SupportPage() {
           </div>
         ) : (
           <div style={{ maxWidth:600 }}>
+            {/* FAQ 배너 */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '12px 16px', borderRadius: 10, marginBottom: 14,
+              background: 'rgba(var(--color-primary-rgb),0.05)',
+              border: '1px solid rgba(var(--color-primary-rgb),0.2)',
+              gap: 12,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Mi style={{ color: 'var(--color-primary)', fontSize: 20 }}>help_outline</Mi>
+                <span style={{ fontSize: '0.88rem', color: 'var(--color-text)' }}>
+                  문의 전 <strong>FAQ</strong>에서 먼저 확인해보세요!
+                </span>
+              </div>
+              <button className="btn btn-outline btn-sm" onClick={() => setTab('faq')}
+                style={{ flexShrink: 0, fontSize: '0.80rem' }}>
+                FAQ 바로가기
+              </button>
+            </div>
+
             {/* 가이드라인 카드 */}
             <GuidelineCard/>
 
@@ -452,6 +480,24 @@ export default function SupportPage() {
             </div>
           </div>
         )
+      )}
+
+      {/* ── FAQ 탭 ── */}
+      {tab === 'faq' && (
+        <div>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: 16, flexWrap: 'wrap', gap: 8,
+          }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-light)', margin: 0 }}>
+              원하는 답변을 찾지 못하셨나요?
+            </p>
+            <button className="btn btn-primary btn-sm" onClick={() => setTab('form')}>
+              <Mi size="sm" color="white">edit_note</Mi> 문의하기
+            </button>
+          </div>
+          <FAQList />
+        </div>
       )}
 
       {/* ── 내 문의 내역 탭 ── */}

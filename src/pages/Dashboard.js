@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [notices, setNotices] = useState([])
   const [popupNotice, setPopupNotice] = useState(null)
   const [noticeModal, setNoticeModal] = useState(null)
+  const [faqs, setFaqs] = useState([])
   const today = new Date()
   const todayStr = getTodayKST()
 
@@ -28,7 +29,7 @@ export default function Dashboard() {
       const [
         logsCount, recentLogsRes,
         rbCount, scCount, wishCount, dotCount, pairsCount, charsCount,
-        schedRes, fav, noticeRes, avail, guest, book
+        schedRes, fav, noticeRes, faqRes, avail, guest, book
       ] = await Promise.all([
         // 카운트만 필요한 테이블: head:true로 행 전송 없이 카운트만
         supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',user.id),
@@ -50,6 +51,7 @@ export default function Dashboard() {
           .order('scheduled_date').limit(10),
         supabase.from('favorites').select('*').eq('user_id',user.id).order('created_at',{ascending:false}),
         supabase.from('notices').select('*').eq('is_active',true).order('created_at',{ascending:false}),
+        supabase.from('faqs').select('id,category,question').eq('is_active',true).order('sort_order',{ascending:true}).order('created_at',{ascending:true}).limit(5),
         supabase.from('availability').select('id',{count:'exact',head:true}).eq('user_id',user.id),
         supabase.from('guestbook').select('id',{count:'exact',head:true}).eq('owner_id',user.id),
         supabase.from('bookmarks').select('id',{count:'exact',head:true}).eq('user_id',user.id),
@@ -73,6 +75,7 @@ export default function Dashboard() {
       setFavorites(fav.data||[])
       const activeNotices = noticeRes.data || []
       setNotices(activeNotices)
+      setFaqs(faqRes.data || [])
       const popups = activeNotices.filter(n => n.is_popup)
       if (popups.length > 0) {
         const latest = popups[0]
@@ -260,36 +263,77 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── 공지사항 섹션 ── */}
-      {notices.length > 0 && (
-        <div className="card" style={{marginTop:16}}>
-          <div className="flex justify-between items-center" style={{marginBottom:12}}>
-            <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem'}}>
-              <Mi style={{marginRight:6}}>campaign</Mi>공지사항
-            </h2>
-            <Link to="/notices" style={{fontSize:'0.78rem',color:'var(--color-text-light)',textDecoration:'none',display:'flex',alignItems:'center',gap:2}}>
-              전체보기 <Mi size="sm" color="light">chevron_right</Mi>
-            </Link>
-          </div>
-          <div style={{display:'flex',flexDirection:'column',gap:8}}>
-            {notices.slice(0,5).map(n => (
-              <div key={n.id}
-                style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:8,
-                  background:'var(--color-nav-active-bg)',cursor:'pointer',transition:'opacity 0.15s'}}
-                onClick={()=>setNoticeModal(n)}
-                onMouseEnter={e=>e.currentTarget.style.opacity='0.8'}
-                onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
-                {n.is_popup && <Mi size="sm" color="accent">notifications</Mi>}
-                <span style={{flex:1,fontSize:'0.88rem',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                  {n.title}
-                </span>
-                <span style={{fontSize:'0.72rem',color:'var(--color-text-light)',flexShrink:0}}>
-                  {new Date(n.created_at).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})} {new Date(n.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}
-                </span>
-                <Mi size="sm" color="light">chevron_right</Mi>
+      {/* ── 공지사항 + FAQ 섹션 ── */}
+      {(notices.length > 0 || faqs.length > 0) && (
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))', gap:16, marginTop:16}}>
+
+          {/* 공지사항 */}
+          {notices.length > 0 && (
+            <div className="card">
+              <div className="flex justify-between items-center" style={{marginBottom:12}}>
+                <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem'}}>
+                  <Mi style={{marginRight:6}}>campaign</Mi>공지사항
+                </h2>
+                <Link to="/notices" style={{fontSize:'0.78rem',color:'var(--color-text-light)',textDecoration:'none',display:'flex',alignItems:'center',gap:2}}>
+                  전체보기 <Mi size="sm" color="light">chevron_right</Mi>
+                </Link>
               </div>
-            ))}
-          </div>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                {notices.slice(0,5).map(n => (
+                  <div key={n.id}
+                    style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:8,
+                      background:'var(--color-nav-active-bg)',cursor:'pointer',transition:'opacity 0.15s'}}
+                    onClick={()=>setNoticeModal(n)}
+                    onMouseEnter={e=>e.currentTarget.style.opacity='0.8'}
+                    onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+                    {n.is_popup && <Mi size="sm" color="accent">notifications</Mi>}
+                    <span style={{flex:1,fontSize:'0.88rem',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      {n.title}
+                    </span>
+                    <span style={{fontSize:'0.72rem',color:'var(--color-text-light)',flexShrink:0}}>
+                      {new Date(n.created_at).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})} {new Date(n.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}
+                    </span>
+                    <Mi size="sm" color="light">chevron_right</Mi>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* FAQ */}
+          {faqs.length > 0 && (
+            <div className="card">
+              <div className="flex justify-between items-center" style={{marginBottom:12}}>
+                <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem'}}>
+                  <Mi style={{marginRight:6}}>help_outline</Mi>자주 묻는 질문
+                </h2>
+                <Link to="/faq" style={{fontSize:'0.78rem',color:'var(--color-text-light)',textDecoration:'none',display:'flex',alignItems:'center',gap:2}}>
+                  전체보기 <Mi size="sm" color="light">chevron_right</Mi>
+                </Link>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                {faqs.map(f => (
+                  <Link key={f.id} to="/faq"
+                    style={{
+                      display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:8,
+                      background:'var(--color-nav-active-bg)', textDecoration:'none', color:'inherit',
+                      transition:'opacity 0.15s',
+                    }}
+                    onMouseEnter={e=>e.currentTarget.style.opacity='0.8'}
+                    onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+                    <span style={{
+                      fontSize:'0.65rem', fontWeight:700, padding:'1px 7px', borderRadius:100, flexShrink:0,
+                      background:'var(--color-primary)', color:'white',
+                    }}>{f.category}</span>
+                    <span style={{flex:1,fontSize:'0.85rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      {f.question}
+                    </span>
+                    <Mi size="sm" color="light">chevron_right</Mi>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

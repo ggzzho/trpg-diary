@@ -24,6 +24,8 @@ const NoticePage             = React.lazy(() => import('./pages/NoticePage'))
 const NoticeListPage         = React.lazy(() => import('./pages/NoticeListPage'))
 const NotificationCenterPage = React.lazy(() => import('./pages/NotificationCenterPage'))
 const ResetPasswordPage      = React.lazy(() => import('./pages/ResetPasswordPage'))
+const FAQPage                = React.lazy(() => import('./pages/FAQPage'))
+const AdminFAQPage           = React.lazy(() => import('./pages/AdminFAQPage'))
 
 // 페이지 lazy load (named export)
 const AvailabilityPage = React.lazy(() => import('./pages/AvailabilityPage').then(m => ({ default: m.AvailabilityPage })))
@@ -134,6 +136,8 @@ function AppRoutes() {
         <Route path="/notices/:id" element={<PrivateLayout><NoticePage/></PrivateLayout>}/>
         <Route path="/notifications" element={<PrivateLayout><NotificationCenterPage/></PrivateLayout>}/>
         <Route path="/support" element={<PrivateLayout><SupportPage/></PrivateLayout>}/>
+        <Route path="/faq" element={<PrivateLayout><FAQPage/></PrivateLayout>}/>
+        <Route path="/admin/faq" element={<PrivateLayout><AdminFAQPage/></PrivateLayout>}/>
         <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
         <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
       </Routes>

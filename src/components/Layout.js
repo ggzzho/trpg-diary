@@ -282,6 +282,7 @@ export function Layout({ children }) {
                 label:'Master',
                 items:[
                   { to:'/admin/notices', icon:'campaign', label:'공지 관리' },
+                  { to:'/admin/faq', icon:'help_outline', label:'FAQ 관리' },
                   { to:'/admin/feedback', icon:'support_agent', label:'문의함' },
                   { to:'/admin/membership', icon:'workspace_premium', label:'멤버십 관리' },
                   { to:'/admin/data-stats', icon:'bar_chart', label:'데이터 통계' },
