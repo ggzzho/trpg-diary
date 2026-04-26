@@ -429,19 +429,34 @@ export default function StoragePage() {
           {limit && (
             <div style={{
               padding:'5px 14px', borderRadius:99, fontSize:'0.8rem', fontWeight:700,
-              background: pct>=90?'#fdecea':pct>=70?'#fff3e0':'var(--color-nav-active-bg)',
-              color: barColor, border:`1px solid ${pct>=90?'#ef9a9a':pct>=70?'#ffcc80':'var(--color-border)'}`,
+              background: total>limit?'#fdecea':pct>=90?'#fdecea':pct>=70?'#fff3e0':'var(--color-nav-active-bg)',
+              color: barColor, border:`1px solid ${total>limit?'#ef9a9a':pct>=90?'#ef9a9a':pct>=70?'#ffcc80':'var(--color-border)'}`,
             }}>
-              {pct.toFixed(1)}% 사용 중
+              {(limit ? (total / limit * 100) : 0).toFixed(1)}% 사용 중
             </div>
           )}
         </div>
         {limit && (
           <>
+            {/* 한도 초과 배너 */}
+            {total > limit && (
+              <div style={{
+                display:'flex', alignItems:'flex-start', gap:8,
+                padding:'10px 14px', borderRadius:10, marginBottom:12,
+                background:'#fdecea', border:'1px solid #ef9a9a',
+                fontSize:'0.83rem', color:'#c62828', fontWeight:500, lineHeight:1.5,
+              }}>
+                <Mi size="sm" style={{ color:'#e53935', flexShrink:0, marginTop:1 }}>error</Mi>
+                <span>
+                  현재 한도({limit.toLocaleString()}개)를 초과한 상태입니다. 새로운 항목 추가가 제한됩니다.
+                  불필요한 항목을 정리하시면 다시 입력이 가능합니다.
+                </span>
+              </div>
+            )}
             <div style={{ background:'var(--color-border)', borderRadius:99, height:14, overflow:'hidden', marginBottom:10 }}>
               <div style={{ width:`${pct}%`, height:'100%', borderRadius:99, background:barColor, transition:'width 0.5s' }}/>
             </div>
-            {pct >= 90 && <p style={{ fontSize:'0.8rem', color:'#e53935', marginTop:4 }}>⚠️ 용량이 거의 찼어요. 데이터를 정리하거나 후원을 통해 용량을 늘려보세요!</p>}
+            {total <= limit && pct >= 90 && <p style={{ fontSize:'0.8rem', color:'#e53935', marginTop:4 }}>⚠️ 용량이 거의 찼습니다. 필요 없는 항목을 정리해 주세요.</p>}
             {pct >= 70 && pct < 90 && <p style={{ fontSize:'0.8rem', color:'#fb8c00', marginTop:4 }}>📦 용량의 70% 이상을 사용 중이에요.</p>}
           </>
         )}
