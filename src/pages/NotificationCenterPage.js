@@ -12,6 +12,7 @@ const NOTIF_ICON = {
   guestbook_reply:   'subdirectory_arrow_right',
   feedback_comment:  'support_agent',
   feedback_reply:    'mark_email_read',
+  backup_ready:      'cloud_done',
 }
 
 const NOTIF_LABEL = {
@@ -19,6 +20,7 @@ const NOTIF_LABEL = {
   guestbook_reply:   '방명록 답글',
   feedback_comment:  '문의함 댓글',
   feedback_reply:    '문의 답변',
+  backup_ready:      '자동 백업 완료',
 }
 
 const PER_PAGE = 30

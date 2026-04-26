@@ -153,6 +153,10 @@ export default function StoragePage() {
   const [isBoardDeleting, setIsBoardDeleting] = useState(false)
   const [isBulkDeleting,  setIsBulkDeleting]  = useState(false)
 
+  // ── 예약 백업 (lv3/master) ──
+  const [backupFiles,   setBackupFiles]   = useState([])
+  const [backupLoading, setBackupLoading] = useState(false)
+
   const tier        = profile?.membership_tier || 'free'
   const limit       = TIER_LIMITS[tier]
   const canExport   = ['lv2','lv3','master'].includes(tier)
@@ -273,6 +277,38 @@ export default function StoragePage() {
   const archivedCount = useMemo(() =>
     [...selected].filter(id => recordsMeta[id]?.is_archived).length,
   [selected, recordsMeta])
+
+  // ── 예약 백업 목록 로드 (lv3/master) ──
+  const canAutoBackup = ['lv3', 'master'].includes(tier)
+
+  const loadBackups = useCallback(async () => {
+    if (!user || !canAutoBackup) return
+    setBackupLoading(true)
+    const { data } = await supabase
+      .from('backup_files')
+      .select('id, file_path, file_size, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(8)
+    setBackupFiles(data || [])
+    setBackupLoading(false)
+  }, [user, canAutoBackup])
+
+  useEffect(() => { loadBackups() }, [loadBackups])
+
+  const handleDownloadBackup = async (filePath, dateStr) => {
+    const { data, error } = await supabase.storage
+      .from('backups')
+      .createSignedUrl(filePath, 3600)  // 1시간 유효
+    if (error || !data?.signedUrl) {
+      showToast('다운로드 링크 생성에 실패했어요.', 'error')
+      return
+    }
+    const a = document.createElement('a')
+    a.href = data.signedUrl
+    a.download = `trpg_diary_auto_backup_${dateStr}.json`
+    a.click()
+  }
 
   // ── JSON 내보내기 ──
   const handleExport = async () => {
@@ -561,6 +597,65 @@ export default function StoragePage() {
           </Link>
         )}
       </div>
+
+      {/* ④ 예약 백업 (lv3/master 전용) */}
+      {canAutoBackup && (
+        <div className="card" style={{ padding:'20px 24px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+            <h3 style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--color-accent)', margin:0 }}>
+              예약 백업
+            </h3>
+            <span style={{ fontSize:'0.65rem', fontWeight:700, padding:'2px 8px', borderRadius:99,
+              background:'var(--color-nav-active-bg)', color:'var(--color-primary)',
+              border:'1px solid var(--color-border)' }}>
+              풀하트 전용 · 매주 자동
+            </span>
+          </div>
+          <p style={{ fontSize:'0.82rem', color:'var(--color-text-light)', marginBottom:16 }}>
+            매주 일요일 자정에 전체 데이터가 자동 백업돼요. 최근 4주분을 보관해요.
+          </p>
+          {backupLoading ? (
+            <div style={{ color:'var(--color-text-light)', fontSize:'0.82rem' }}>불러오는 중...</div>
+          ) : backupFiles.length === 0 ? (
+            <div style={{ padding:'14px 18px', borderRadius:10, background:'var(--color-nav-active-bg)',
+              border:'1px dashed var(--color-border)', color:'var(--color-text-light)',
+              fontSize:'0.82rem', textAlign:'center' }}>
+              아직 생성된 자동 백업이 없어요.<br/>
+              <span style={{ fontSize:'0.75rem', opacity:0.7 }}>첫 번째 백업은 다음 일요일 자정에 생성돼요.</span>
+            </div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {backupFiles.map(f => {
+                const dateStr = f.file_path.match(/backup_(\d{4}-\d{2}-\d{2})/)?.[1] || f.created_at.slice(0,10)
+                const sizeKB  = f.file_size ? (f.file_size / 1024).toFixed(1) : null
+                return (
+                  <div key={f.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+                    padding:'10px 14px', borderRadius:8, background:'var(--color-nav-active-bg)',
+                    border:'1px solid var(--color-border)' }}>
+                    <div>
+                      <div style={{ fontSize:'0.88rem', fontWeight:600 }}>
+                        <Mi size="sm" style={{ verticalAlign:'middle', marginRight:5 }}>backup</Mi>
+                        {dateStr} 백업
+                      </div>
+                      {sizeKB && (
+                        <div style={{ fontSize:'0.72rem', color:'var(--color-text-light)', marginTop:2 }}>
+                          {sizeKB} KB
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      className="btn btn-sm btn-outline"
+                      style={{ fontSize:'0.78rem' }}
+                      onClick={() => handleDownloadBackup(f.file_path, dateStr)}>
+                      <Mi size="sm">download</Mi>다운로드
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── 플로팅 선택 삭제 바 ── */}
       {selected.size > 0 && boardKey !== 'all' && (
