@@ -517,10 +517,11 @@ function NotifyTab() {
   const [mode, setMode]               = useState('condition') // 'condition' | 'manual'
 
   // ── A. 조건 선택 ──
-  const [condition, setCondition]     = useState(null)
-  const [condUsers, setCondUsers]     = useState(null)  // { ids, preview }
-  const [condLoading, setCondLoading] = useState(false)
-  const [condError, setCondError]     = useState('')
+  const [condition, setCondition]       = useState(null)
+  const [condUsers, setCondUsers]       = useState(null)    // { users:[{id,username,display_name}], total }
+  const [condSelected, setCondSelected] = useState(new Set()) // 체크된 uid Set
+  const [condLoading, setCondLoading]   = useState(false)
+  const [condError, setCondError]       = useState('')
 
   // ── B. 직접 선택 ──
   const [manualInput, setManualInput]   = useState('')
@@ -538,21 +539,26 @@ function NotifyTab() {
   const [sendResult, setSendResult]   = useState(null) // null | {ok, count} | {error}
 
   const targets = mode === 'condition'
-    ? (condUsers?.ids || [])
+    ? [...condSelected]
     : selectedUsers.map(u => u.id)
 
   // ── 조건 조회 ──
   const handleConditionQuery = async () => {
     if (!condition) return
-    setCondLoading(true); setCondError(''); setCondUsers(null)
+    setCondLoading(true); setCondError(''); setCondUsers(null); setCondSelected(new Set())
     const { data, error } = await supabase.rpc('admin_get_condition_users', { p_condition: condition })
     setCondLoading(false)
     if (error) { setCondError(error.message || '조회 실패'); return }
-    const rows = data || []
-    setCondUsers({
-      ids:     rows.map(r => r.uid),
-      preview: rows.slice(0, 5).map(r => ({ id: r.uid, username: r.uname, display_name: r.udname })),
-      total:   rows.length,
+    const rows = (data || []).map(r => ({ id: r.uid, username: r.uname, display_name: r.udname }))
+    setCondUsers({ users: rows, total: rows.length })
+    setCondSelected(new Set(rows.map(r => r.id))) // 기본: 전체 선택
+  }
+
+  const toggleCondUser = (id) => {
+    setCondSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
     })
   }
 
@@ -595,7 +601,7 @@ function NotifyTab() {
       setSendResult({ ok: true, count: data })
       setPreviewOpen(false)
       setMessage(''); setRefUrl('')
-      if (mode === 'condition') { setCondUsers(null); setCondition(null) }
+      if (mode === 'condition') { setCondUsers(null); setCondition(null); setCondSelected(new Set()) }
       else { setSelectedUsers([]); setManualResults([]) }
     }
   }
@@ -670,33 +676,59 @@ function NotifyTab() {
             </div>
 
             {condUsers && (
-              <div style={{
-                marginTop:14, padding:'12px 14px', borderRadius:10,
-                background:'var(--color-nav-active-bg)', border:'1px solid var(--color-border)',
-              }}>
-                <div style={{ fontSize:'0.83rem', fontWeight:700, marginBottom:8 }}>
-                  <Mi size="sm" style={{ verticalAlign:'middle', marginRight:4, color:'var(--color-primary)' }}>check_circle</Mi>
-                  총 <strong style={{ color:'var(--color-primary)' }}>{condUsers.total}명</strong> 해당
-                  {condMeta?.warn && condUsers.total > 100 && (
-                    <span style={{ marginLeft:8, fontSize:'0.78rem', color:'#f57c00', fontWeight:600 }}>
-                      ⚠️ 대량 발송 — 신중히 확인하세요
+              <div style={{ marginTop:14, border:'1px solid var(--color-border)', borderRadius:10, overflow:'hidden' }}>
+                {/* 헤더: 전체 선택/해제 */}
+                <div style={{
+                  display:'flex', alignItems:'center', justifyContent:'space-between',
+                  padding:'10px 14px', background:'var(--color-nav-active-bg)',
+                  borderBottom:'1px solid var(--color-border)',
+                }}>
+                  <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:'0.85rem', fontWeight:700 }}>
+                    <input type="checkbox"
+                      checked={condSelected.size === condUsers.total && condUsers.total > 0}
+                      onChange={e => setCondSelected(e.target.checked ? new Set(condUsers.users.map(u => u.id)) : new Set())}
+                      style={{ width:15, height:15, accentColor:'var(--color-primary)', cursor:'pointer' }}
+                    />
+                    총 {condUsers.total}명
+                    <span style={{ fontWeight:400, color:'var(--color-text-light)', fontSize:'0.78rem' }}>
+                      ({condSelected.size}명 선택)
+                    </span>
+                    {condMeta?.warn && condUsers.total > 100 && (
+                      <span style={{ fontSize:'0.75rem', color:'#f57c00', fontWeight:600 }}>
+                        ⚠️ 대량 발송
+                      </span>
+                    )}
+                  </label>
+                  {condSelected.size !== condUsers.total && condSelected.size > 0 && (
+                    <span style={{ fontSize:'0.75rem', color:'var(--color-text-light)' }}>
+                      {condUsers.total - condSelected.size}명 제외됨
                     </span>
                   )}
                 </div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                  {condUsers.preview.map(u => (
-                    <span key={u.id} style={{
-                      fontSize:'0.78rem', padding:'3px 10px', borderRadius:100,
-                      background:'var(--color-surface)', border:'1px solid var(--color-border)',
+
+                {/* 유저 리스트 */}
+                <div style={{ maxHeight:260, overflowY:'auto' }}>
+                  {condUsers.users.map((u, i) => (
+                    <label key={u.id} style={{
+                      display:'flex', alignItems:'center', gap:10,
+                      padding:'9px 14px', cursor:'pointer',
+                      borderTop: i === 0 ? 'none' : '1px solid var(--color-border)',
+                      background: condSelected.has(u.id) ? 'rgba(var(--color-primary-rgb),0.04)' : 'transparent',
+                      transition:'background 0.1s',
                     }}>
-                      {u.display_name || u.username || '(이름 없음)'}
-                    </span>
+                      <input type="checkbox"
+                        checked={condSelected.has(u.id)}
+                        onChange={() => toggleCondUser(u.id)}
+                        style={{ width:15, height:15, accentColor:'var(--color-primary)', cursor:'pointer', flexShrink:0 }}
+                      />
+                      <span style={{ fontSize:'0.85rem', fontWeight: condSelected.has(u.id) ? 600 : 400, flex:1 }}>
+                        {u.display_name || u.username || '(이름 없음)'}
+                      </span>
+                      {u.username && (
+                        <span style={{ fontSize:'0.75rem', color:'var(--color-text-light)' }}>@{u.username}</span>
+                      )}
+                    </label>
                   ))}
-                  {condUsers.total > 5 && (
-                    <span style={{ fontSize:'0.78rem', color:'var(--color-text-light)', padding:'3px 6px' }}>
-                      외 {condUsers.total - 5}명
-                    </span>
-                  )}
                 </div>
               </div>
             )}
@@ -850,21 +882,27 @@ function NotifyTab() {
                 <span style={{ fontSize:'0.82rem', color:'var(--color-text-light)', marginLeft:8 }}>
                   {mode === 'condition' && condMeta ? `(조건: ${condMeta.label})` : '(직접 선택)'}
                 </span>
-                {mode === 'manual' && selectedUsers.length > 0 && (
-                  <div style={{ marginTop:6, display:'flex', flexWrap:'wrap', gap:4 }}>
-                    {selectedUsers.slice(0,5).map(u => (
-                      <span key={u.id} style={{ fontSize:'0.75rem', padding:'2px 8px', borderRadius:100,
-                        background:'var(--color-surface)', border:'1px solid var(--color-border)' }}>
-                        {u.display_name || u.username}
-                      </span>
-                    ))}
-                    {selectedUsers.length > 5 && (
-                      <span style={{ fontSize:'0.75rem', color:'var(--color-text-light)', padding:'2px 4px' }}>
-                        외 {selectedUsers.length - 5}명
-                      </span>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const previewList = mode === 'condition'
+                    ? (condUsers?.users || []).filter(u => condSelected.has(u.id))
+                    : selectedUsers
+                  if (!previewList.length) return null
+                  return (
+                    <div style={{ marginTop:6, display:'flex', flexWrap:'wrap', gap:4 }}>
+                      {previewList.slice(0, 5).map(u => (
+                        <span key={u.id} style={{ fontSize:'0.75rem', padding:'2px 8px', borderRadius:100,
+                          background:'var(--color-surface)', border:'1px solid var(--color-border)' }}>
+                          {u.display_name || u.username}
+                        </span>
+                      ))}
+                      {previewList.length > 5 && (
+                        <span style={{ fontSize:'0.75rem', color:'var(--color-text-light)', padding:'2px 4px' }}>
+                          외 {previewList.length - 5}명
+                        </span>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             </div>
 
