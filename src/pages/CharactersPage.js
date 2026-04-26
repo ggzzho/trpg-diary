@@ -213,7 +213,7 @@ export function CharactersPage() {
     return result
   }, [items, search, ruleFilter, sortField, sortDir])
 
-  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 10)
 
   // 히스토리 뷰 필터링
   const historyViewLogs = useMemo(() => {

@@ -300,7 +300,7 @@ export default function SchedulePage() {
     return (a.scheduled_time||'').localeCompare(b.scheduled_time||'')
   })
 
-  const { paged: pagedSchedule, page: schedulePage, setPage: setSchedulePage, perPage: schedulePerPage, setPerPage: setSchedulePerPage } = usePagination(filtered, 20)
+  const { paged: pagedSchedule, page: schedulePage, setPage: setSchedulePage, perPage: schedulePerPage, setPerPage: setSchedulePerPage } = usePagination(filtered, 10)
 
   const summaryStats = useMemo(() => {
     let t=items.filter(i=>i.status==='completed'||i.scheduled_date<today)

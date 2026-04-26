@@ -94,7 +94,7 @@ export function DotoriPage() {
     return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
   }),[items,search,tagFilter,ruleFilter,sortOrder])
 
-  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 10)
 
   return (
     <div className="fade-in">

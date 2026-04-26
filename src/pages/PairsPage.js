@@ -159,7 +159,7 @@ export function PairsPage() {
       return sortOrder==='asc'?da.localeCompare(db):db.localeCompare(da)
     })
 
-  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 10)
 
   const filteredLogs = useMemo(() => {
     if (!historyModal) return []

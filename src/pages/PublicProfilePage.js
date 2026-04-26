@@ -260,7 +260,7 @@ export default function PublicProfilePage() {
       (l.together_with||'').toLowerCase().includes(s)
     )
   }, [publicLogs, tabSearch])
-  const logsPagination = usePagination(filteredLogs, 20)
+  const logsPagination = usePagination(filteredLogs, 10)
 
   const scenarioParents = [...(data.scenarios||[]).filter(s => !s.parent_id)].sort((a,b) => {
     const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
@@ -283,7 +283,7 @@ export default function PublicProfilePage() {
       )
     )
   }, [scenarioParents, scenarioChildMap, tabSearch])
-  const scenariosPagination = usePagination(filteredScenarioParents, 20)
+  const scenariosPagination = usePagination(filteredScenarioParents, 10)
 
   const sortedAvailability = [...(data.availability||[])].sort((a,b) => {
     const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
@@ -299,7 +299,7 @@ export default function PublicProfilePage() {
       (a.together_with||'').toLowerCase().includes(s)
     )
   }, [sortedAvailability, tabSearch])
-  const availabilityPagination = usePagination(filteredAvailability, 20)
+  const availabilityPagination = usePagination(filteredAvailability, 10)
 
   const sortedBookmarks = [...(data.bookmarks||[])].sort((a,b) => {
     const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
@@ -314,7 +314,7 @@ export default function PublicProfilePage() {
       b.tags?.some(t => t.toLowerCase().includes(s))
     )
   }, [sortedBookmarks, tabSearch])
-  const bookmarksPagination = usePagination(filteredBookmarks, 20)
+  const bookmarksPagination = usePagination(filteredBookmarks, 10)
 
   const sortedFilteredPairs = useMemo(() => {
     const sorted = [...(data.pairs||[])].sort((a,b) => {
@@ -332,7 +332,7 @@ export default function PublicProfilePage() {
       (p.relations||[]).some(r => r.toLowerCase().includes(s))
     )
   }, [data.pairs, pairSort, tabSearch])
-  const pairsPagination = usePagination(sortedFilteredPairs, 20)
+  const pairsPagination = usePagination(sortedFilteredPairs, 10)
 
   // PC 탭 필터링
   const filteredCharacters = useMemo(() => {
@@ -350,7 +350,7 @@ export default function PublicProfilePage() {
       (c.rules||[]).some(r=>r.toLowerCase().includes(s))
     )
   }, [data.characters, tabSearch])
-  const charactersPagination = usePagination(filteredCharacters, 20)
+  const charactersPagination = usePagination(filteredCharacters, 10)
 
   const pubCharHistoryViewLogs = useMemo(() => {
     if (!pubCharHistoryViewChar) return []
@@ -402,7 +402,7 @@ export default function PublicProfilePage() {
       )
     )
   }, [wishScenarioParents, wishScenarioChildMap, tabSearch])
-  const wishScenariosPagination = usePagination(filteredWishScenarioParents, 20)
+  const wishScenariosPagination = usePagination(filteredWishScenarioParents, 10)
 
   const sortedDotori = [...(data.dotori||[])].sort((a,b) =>
     (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase(),'ko')
@@ -417,7 +417,7 @@ export default function PublicProfilePage() {
       d.tags?.some(t => t.toLowerCase().includes(s))
     )
   }, [sortedDotori, tabSearch])
-  const dotoriPagination = usePagination(filteredDotori, 20)
+  const dotoriPagination = usePagination(filteredDotori, 10)
 
   // 공개 캘린더용 colorMap: 해당 유저의 룰북 title → color
   // ⚠️ Hook이므로 early return 전에 선언 필수

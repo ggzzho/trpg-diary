@@ -32,7 +32,7 @@ export function AvailabilityPage() {
       const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
       return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
     })
-  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 10)
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const openNew = () => { setEditing(null); setForm(BLANK); setModal(true) }

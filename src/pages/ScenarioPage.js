@@ -215,7 +215,7 @@ export function BaseScenarioPage({ config }) {
       })
   }, [parents, statusFilter, search, sortOrder, sortField, childMap])
 
-  const { paged, page, setPage, perPage, setPerPage } = usePagination(filteredParents, 20)
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filteredParents, 10)
   const parentOptions = parents.filter(p => !editing || p.id !== editing.id).sort((a,b) => a.title.localeCompare(b.title, 'ko'))
 
   const renderItem = (item, isChildItem=false, dragHandle=null) => (
