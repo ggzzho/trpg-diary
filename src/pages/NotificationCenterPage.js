@@ -13,6 +13,8 @@ const NOTIF_ICON = {
   feedback_comment:  'support_agent',
   feedback_reply:    'mark_email_read',
   backup_ready:      'cloud_done',
+  admin_notice:      'campaign',
+  storage_warning:   'data_usage',
 }
 
 const NOTIF_LABEL = {
@@ -21,6 +23,8 @@ const NOTIF_LABEL = {
   feedback_comment:  '문의함 댓글',
   feedback_reply:    '문의 답변',
   backup_ready:      '자동 백업 완료',
+  admin_notice:      '운영자 메시지',
+  storage_warning:   '데이터 한도 안내',
 }
 
 const PER_PAGE = 30
@@ -32,6 +36,7 @@ export default function NotificationCenterPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [filter, setFilter] = useState('all') // all | unread
+  const [msgModal, setMsgModal] = useState(null) // { message, ref_url } | null
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -53,11 +58,18 @@ export default function NotificationCenterPage() {
       setList(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x))
       refreshNotifs()
     }
-    const path = n.ref_url || (
-      n.type === 'feedback_comment' || n.type === 'feedback_reply'
-        ? '/admin/feedback' : '/guestbook'
-    )
-    navigate(path)
+    // 운영자 메시지 → 모달로 표시
+    if (n.type === 'admin_notice') {
+      setMsgModal({ message: n.message, ref_url: n.ref_url })
+      return
+    }
+    // 타입별 폴백 경로
+    const fallback =
+      n.type === 'feedback_comment' || n.type === 'feedback_reply' ? '/admin/feedback' :
+      n.type === 'storage_warning'                                  ? '/storage' :
+      n.type === 'backup_ready'                                     ? '/storage' :
+      '/guestbook'
+    navigate(n.ref_url || fallback)
   }
 
   const handleMarkAllRead = async () => {
@@ -70,6 +82,63 @@ export default function NotificationCenterPage() {
 
   return (
     <div className="fade-in">
+
+      {/* 운영자 메시지 모달 */}
+      {msgModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:9999,
+          display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={() => setMsgModal(null)}>
+          <div style={{
+            background:'var(--color-surface)', borderRadius:16, padding:'28px 24px',
+            maxWidth:440, width:'100%', border:'1px solid var(--color-border)',
+            boxShadow:'0 8px 32px rgba(0,0,0,0.2)',
+          }} onClick={e => e.stopPropagation()}>
+            {/* 헤더 */}
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
+              <div style={{
+                width:36, height:36, borderRadius:'50%', flexShrink:0,
+                background:'rgba(200,169,110,0.12)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>
+                <Mi style={{ fontSize:18, color:'var(--color-accent)' }}>campaign</Mi>
+              </div>
+              <div>
+                <div style={{ fontWeight:700, fontSize:'0.95rem' }}>운영자 메시지</div>
+                <div style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>TRPG 다이어리 운영진</div>
+              </div>
+              <button onClick={() => setMsgModal(null)}
+                style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer',
+                  color:'var(--color-text-light)', fontSize:'1.1rem', lineHeight:1, padding:4 }}>
+                ✕
+              </button>
+            </div>
+
+            {/* 메시지 본문 */}
+            <div style={{
+              padding:'14px 16px', borderRadius:10, fontSize:'0.9rem', lineHeight:1.7,
+              background:'var(--color-nav-active-bg)', border:'1px solid var(--color-border)',
+              whiteSpace:'pre-wrap', wordBreak:'break-word', marginBottom: msgModal.ref_url ? 14 : 20,
+            }}>
+              {msgModal.message}
+            </div>
+
+            {/* 바로가기 (ref_url 있을 때만) */}
+            {msgModal.ref_url && (
+              <button className="btn btn-outline btn-sm"
+                style={{ marginBottom:16, width:'100%', justifyContent:'center' }}
+                onClick={() => { setMsgModal(null); navigate(msgModal.ref_url) }}>
+                <Mi size="sm">open_in_new</Mi>자세히 보기
+              </button>
+            )}
+
+            <button className="btn btn-primary btn-sm"
+              style={{ width:'100%', justifyContent:'center' }}
+              onClick={() => setMsgModal(null)}>
+              확인
+            </button>
+          </div>
+        </div>
+      )}
       <div className="page-header">
         <h1 className="page-title">
           <Mi style={{ marginRight:8, verticalAlign:'middle' }}>notifications</Mi>알림 센터
