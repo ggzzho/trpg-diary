@@ -10,19 +10,19 @@ import { usePagination } from '../hooks/usePagination'
 // ── 상수 ──────────────────────────────────────────────────
 const TIER_LABEL = {
   free:   '일반',
-  lv1:    '♥ 원하트',
-  lv2:    '♥♥ 투하트',
-  lv3:    '♥♥♥ 풀하트',
+  '1ht':  '♥ 원하트',
+  '2ht':  '♥♥ 투하트',
+  '3ht':  '♥♥♥ 풀하트',
   master: '마스터',
 }
 const TIER_COLOR = {
   free:   '#aaaaaa',
-  lv1:    '#e57373',
-  lv2:    '#e57373',
-  lv3:    '#e57373',
+  '1ht':  '#e57373',
+  '2ht':  '#e57373',
+  '3ht':  '#e57373',
   master: '#c8a96e',
 }
-const TIER_ORDER = ['free', 'lv1', 'lv2', 'lv3', 'master']
+const TIER_ORDER = ['free', '1ht', '2ht', '3ht', 'master']
 
 const BOARDS = [
   { key: 'schedules_count',      label: '일정' },

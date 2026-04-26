@@ -159,8 +159,8 @@ export default function StoragePage() {
 
   const tier        = profile?.membership_tier || 'free'
   const limit       = TIER_LIMITS[tier]
-  const canExport   = ['lv2','lv3','master'].includes(tier)
-  const exportFree  = ['lv3','master'].includes(tier)   // 무제한
+  const canExport   = ['2ht','3ht','master'].includes(tier)
+  const exportFree  = ['3ht','master'].includes(tier)   // 무제한
   const canAutoBackup = exportFree
 
   // ── 월별 내보내기 한도 계산 (lv2: 월 4회) ──
@@ -448,7 +448,7 @@ export default function StoragePage() {
         {/* 등급별 한도 */}
         <div style={{ marginTop:18, padding:'10px 16px', borderRadius:10, background:'var(--color-nav-active-bg)',
           border:'1px solid var(--color-border)', display:'flex', gap:16, flexWrap:'wrap' }}>
-          {[{t:'free',l:'일반',v:1000},{t:'lv1',l:'♥',v:3000},{t:'lv2',l:'♥♥',v:5000},{t:'lv3',l:'♥♥♥',v:8000}].map(d=>(
+          {[{t:'free',l:'일반',v:1000},{t:'1ht',l:'♥',v:3000},{t:'2ht',l:'♥♥',v:5000},{t:'3ht',l:'♥♥♥',v:8000}].map(d=>(
             <div key={d.t} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2, flex:'1 1 60px', opacity:tier===d.t?1:0.45 }}>
               <span style={{ fontSize:'0.68rem', fontWeight:700, color:tier===d.t?'var(--color-primary)':'var(--color-text-light)' }}>{d.l}</span>
               <span style={{ fontSize:'0.72rem', color:'var(--color-text-light)' }}>{d.v.toLocaleString()}개</span>

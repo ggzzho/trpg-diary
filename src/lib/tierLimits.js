@@ -3,16 +3,16 @@
 
 export const TIER_LIMITS = {
   free:   1000,
-  lv1:    3000,
-  lv2:    5000,
-  lv3:    8000,
+  '1ht':  3000,
+  '2ht':  5000,
+  '3ht':  8000,
   master: null, // 무제한
 }
 
 export const TIER_LABEL = {
   free:   '일반',
-  lv1:    '♥ 원하트',
-  lv2:    '♥♥ 투하트',
-  lv3:    '♥♥♥ 풀하트',
+  '1ht':  '♥ 원하트',
+  '2ht':  '♥♥ 투하트',
+  '3ht':  '♥♥♥ 풀하트',
   master: '마스터',
 }

@@ -38,8 +38,8 @@ const DEFAULT_SECTIONS = [
   {id:'extra_info', label:'기타 사항', value:''},
 ]
 
-const DONATION_TIER_LABEL = { master:'마스터', lv3:'♥♥♥', lv2:'♥♥', lv1:'♥' }
-const DONATION_TIER_COLOR = { master:'#7c5cbf', lv3:'#d4a017', lv2:'#9e9e9e', lv1:'#b87333' }
+const DONATION_TIER_LABEL = { master:'마스터', '3ht':'♥♥♥', '2ht':'♥♥', '1ht':'♥' }
+const DONATION_TIER_COLOR = { master:'#7c5cbf', '3ht':'#d4a017', '2ht':'#9e9e9e', '1ht':'#b87333' }
 
 const fmtDateShort = (iso) => {
   if (!iso) return '-'
@@ -202,8 +202,8 @@ export default function SettingsPage() {
     }
   }
 
-  const isLv2Plus   = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
-  const isSupporter = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
+  const isLv2Plus   = ['1ht','2ht','3ht','master'].includes(profile?.membership_tier)
+  const isSupporter = ['1ht','2ht','3ht','master'].includes(profile?.membership_tier)
   // cursor_effect 중첩 업데이트 헬퍼
   const setCE = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, [key]: val } }))
   const setCECursor = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, cursor: { ...f.cursor_effect.cursor, [key]: val } } }))

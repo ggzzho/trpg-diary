@@ -27,9 +27,9 @@ const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', 
 // ── 회원 등급 뱃지 ──
 const TIER_BADGE = {
   master: { label: '마스터', bg: '#7c5cbf', color: '#fff' },
-  lv3:    { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
-  lv2:    { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
-  lv1:    { label: '♥',     bg: '#b87333', color: '#fff' },
+  '3ht':  { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
+  '2ht':  { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
+  '1ht':  { label: '♥',     bg: '#b87333', color: '#fff' },
 }
 function MembershipBadge({ tier }) {
   const badge = TIER_BADGE[tier]
@@ -570,7 +570,7 @@ export default function PublicProfilePage() {
 
   // ── 후원자 전용 기능 저장 ──
   const isOwnPage   = !!(user && profile && user.id === profile.id)
-  const isSupporter = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
+  const isSupporter = ['1ht','2ht','3ht','master'].includes(profile?.membership_tier)
 
   const handleSupporterSave = async (updates) => {
     if (!profile) return
@@ -645,7 +645,7 @@ export default function PublicProfilePage() {
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0', position:'relative' }}>
 
       {/* ── 후원자 전용: 커서 효과 (lv1+, 공개 설정된 경우) ── */}
-      {['lv1','lv2','lv3','master'].includes(profile?.membership_tier) &&
+      {['1ht','2ht','3ht','master'].includes(profile?.membership_tier) &&
         profile?.cursor_effect?.enabled_public !== false && (
         <CursorEffect settings={profile.cursor_effect} />
       )}
@@ -660,7 +660,7 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 투하트 이상 전용: BGM 플레이어 ── */}
-      {['lv2','lv3','master'].includes(profile?.membership_tier) && (
+      {['2ht','3ht','master'].includes(profile?.membership_tier) && (
         <BgmPlayer
           profile={profile}
           isOwner={isOwnPage}
