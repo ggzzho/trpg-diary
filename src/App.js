@@ -16,7 +16,9 @@ const SettingsPage      = React.lazy(() => import('./pages/SettingsPage'))
 const PublicProfilePage = React.lazy(() => import('./pages/PublicProfilePage'))
 const PrivacyPage       = React.lazy(() => import('./pages/PrivacyPage'))
 const AdminFeedbackPage      = React.lazy(() => import('./pages/AdminFeedbackPage'))
+const AdminFAQPage           = React.lazy(() => import('./pages/AdminFAQPage'))
 const SupportPage            = React.lazy(() => import('./pages/SupportPage'))
+const FAQPage                = React.lazy(() => import('./pages/FAQPage'))
 const AdminNoticePage        = React.lazy(() => import('./pages/AdminNoticePage'))
 const AdminMembershipPage    = React.lazy(() => import('./pages/AdminMembershipPage'))
 const AdminDataStatsPage     = React.lazy(() => import('./pages/AdminDataStatsPage'))
@@ -128,6 +130,7 @@ function AppRoutes() {
         <Route path="/guestbook" element={<PrivateLayout><GuestbookPage/></PrivateLayout>}/>
         <Route path="/settings" element={<PrivateLayout><SettingsPage/></PrivateLayout>}/>
         <Route path="/admin/feedback" element={<PrivateLayout><AdminFeedbackPage/></PrivateLayout>}/>
+        <Route path="/admin/faq" element={<PrivateLayout><AdminFAQPage/></PrivateLayout>}/>
         <Route path="/admin/notices" element={<PrivateLayout><AdminNoticePage/></PrivateLayout>}/>
         <Route path="/admin/membership" element={<PrivateLayout><AdminMembershipPage/></PrivateLayout>}/>
         <Route path="/admin/data-stats" element={<PrivateLayout><AdminDataStatsPage/></PrivateLayout>}/>
@@ -136,6 +139,7 @@ function AppRoutes() {
         <Route path="/notifications" element={<PrivateLayout><NotificationCenterPage/></PrivateLayout>}/>
         <Route path="/storage" element={<PrivateLayout><StoragePage/></PrivateLayout>}/>
         <Route path="/support" element={<PrivateLayout><SupportPage/></PrivateLayout>}/>
+        <Route path="/faq" element={<PrivateLayout><FAQPage/></PrivateLayout>}/>
         <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
         <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
       </Routes>
