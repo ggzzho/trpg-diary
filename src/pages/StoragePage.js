@@ -126,7 +126,7 @@ function BulkDeleteModal({ count, onConfirm, onCancel, loading }) {
 
 // ── 메인 컴포넌트 ────────────────────────────────────────
 export default function StoragePage() {
-  const { user, profile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
 
   // ── 사용량 상태 ──
   const [counts,    setCounts]    = useState({})
@@ -160,7 +160,16 @@ export default function StoragePage() {
   const tier        = profile?.membership_tier || 'free'
   const limit       = TIER_LIMITS[tier]
   const canExport   = ['lv2','lv3','master'].includes(tier)
-  const exportFree  = ['lv3','master'].includes(tier)
+  const exportFree  = ['lv3','master'].includes(tier)   // 무제한
+  const canAutoBackup = exportFree
+
+  // ── 월별 내보내기 한도 계산 (lv2: 월 4회) ──
+  const EXPORT_LIMIT_LV2 = 4
+  const currentMonth  = new Date().toISOString().slice(0, 7)  // YYYY-MM
+  const isSameMonth   = profile?.export_month === currentMonth
+  const exportUsed    = isSameMonth ? (profile?.export_count ?? 0) : 0
+  const exportsLeft   = exportFree ? Infinity : Math.max(0, EXPORT_LIMIT_LV2 - exportUsed)
+  const canDoExport   = exportFree || exportsLeft > 0
 
   const currentBoard = BOARDS.find(b => b.key === boardKey)
   const recTotal     = boardKey !== 'all' ? (counts[boardKey] || 0) : 0
@@ -279,8 +288,6 @@ export default function StoragePage() {
   [selected, recordsMeta])
 
   // ── 예약 백업 목록 로드 (lv3/master) ──
-  const canAutoBackup = ['lv3', 'master'].includes(tier)
-
   const loadBackups = useCallback(async () => {
     if (!user || !canAutoBackup) return
     setBackupLoading(true)
@@ -310,9 +317,20 @@ export default function StoragePage() {
     a.click()
   }
 
-  // ── JSON 내보내기 ──
+  // ── 블롭 다운로드 헬퍼 ──
+  const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = filename; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ── 전체 데이터 내보내기 (투하트: 월 4회 / 풀하트: 무제한) ──
   const handleExport = async () => {
-    if (!user || !canExport) return
+    if (!user || !canExport || !canDoExport) {
+      if (canExport && !canDoExport) showToast(`이번 달 내보내기 횟수(${EXPORT_LIMIT_LV2}회)를 모두 사용했어요.`, 'error')
+      return
+    }
     setExporting(true)
     try {
       const results = await Promise.all(
@@ -326,14 +344,55 @@ export default function StoragePage() {
         summary: { total, boards: Object.fromEntries(BOARDS.map(b => [b.key, counts[b.key]||0])) },
         data: dataObj,
       }
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json;charset=utf-8;' })
-      const url  = URL.createObjectURL(blob)
-      const a    = document.createElement('a')
-      a.href = url; a.download = `trpg_diary_backup_${new Date().toISOString().slice(0,10)}.json`
-      a.click(); URL.revokeObjectURL(url)
+      downloadBlob(
+        new Blob([JSON.stringify(payload, null, 2)], { type:'application/json;charset=utf-8;' }),
+        `trpg_diary_backup_${new Date().toISOString().slice(0,10)}.json`
+      )
+      // 투하트: 횟수 차감
+      if (!exportFree) {
+        const newCount = isSameMonth ? exportUsed + 1 : 1
+        await supabase.from('profiles').update({ export_month: currentMonth, export_count: newCount }).eq('id', user.id)
+        refreshProfile()
+      }
       showToast('데이터를 내보냈어요.')
     } catch { showToast('내보내기 중 오류가 발생했어요.', 'error') }
     setExporting(false)
+  }
+
+  // ── 선택 데이터 내보내기 (lv3/master) ──
+  const handleExportSelected = async (format) => {
+    if (!user || selected.size === 0 || boardKey === 'all') return
+    const board = BOARDS.find(b => b.key === boardKey)
+    if (!board) return
+    const ids = [...selected]
+    const { data } = await supabase.from(boardKey).select('*').in('id', ids).eq('user_id', user.id)
+    const rows = data || []
+    if (rows.length === 0) return
+    const dateStr = new Date().toISOString().slice(0, 10)
+    const baseName = `trpg_diary_${board.label}_선택_${dateStr}`
+    if (format === 'json') {
+      downloadBlob(
+        new Blob([JSON.stringify({ exported_at: new Date().toISOString(), board: board.label, count: rows.length, data: rows }, null, 2)], { type:'application/json;charset=utf-8;' }),
+        baseName + '.json'
+      )
+    } else {
+      const excludeKeys = new Set(['user_id'])
+      const keys = Object.keys(rows[0]).filter(k => !excludeKeys.has(k))
+      const csvRows = [
+        keys.join(','),
+        ...rows.map(r => keys.map(k => {
+          const v = r[k]
+          if (v === null || v === undefined) return ''
+          const str = typeof v === 'object' ? JSON.stringify(v) : String(v)
+          return '"' + str.replace(/"/g, '""') + '"'
+        }).join(','))
+      ]
+      downloadBlob(
+        new Blob(['﻿' + csvRows.join('\n')], { type:'text/csv;charset=utf-8;' }),
+        baseName + '.csv'
+      )
+    }
+    showToast(`${rows.length}개를 ${format === 'json' ? 'JSON' : 'CSV'}으로 내보냈어요.`)
   }
 
   if (loading) return (
@@ -567,15 +626,21 @@ export default function StoragePage() {
         )}
       </div>
 
-      {/* ③ 내보내기 */}
+      {/* ③ 전체 데이터 내보내기 */}
       <div className="card" style={{ padding:'20px 24px' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-          <h3 style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--color-accent)', margin:0 }}>데이터 내보내기</h3>
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:6 }}>
+          <h3 style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--color-accent)', margin:0 }}>전체 데이터 내보내기</h3>
           {canExport && (
             <span style={{ fontSize:'0.65rem', fontWeight:700, padding:'2px 8px', borderRadius:99,
               background:'var(--color-nav-active-bg)', color:'var(--color-primary)',
               border:'1px solid var(--color-border)' }}>
-              {exportFree ? '풀하트 · 자유 내보내기' : '투하트 · 수동 내보내기'}
+              {exportFree ? '풀하트 · 무제한' : `투하트 · 월 ${EXPORT_LIMIT_LV2}회`}
+            </span>
+          )}
+          {/* 투하트: 남은 횟수 */}
+          {canExport && !exportFree && (
+            <span style={{ fontSize:'0.72rem', color: exportsLeft === 0 ? '#e53935' : 'var(--color-text-light)' }}>
+              이번 달 {exportsLeft === 0 ? '사용 완료' : `${exportsLeft}회 남음`}
             </span>
           )}
         </div>
@@ -583,7 +648,9 @@ export default function StoragePage() {
           {canExport ? '내 모든 게시판 데이터를 JSON 파일로 내보낼 수 있어요.' : '♥♥ 투하트 이상 후원자에게 제공되는 기능이에요.'}
         </p>
         {canExport ? (
-          <button className="btn btn-primary btn-sm" onClick={handleExport} disabled={exporting || total === 0}>
+          <button className="btn btn-primary btn-sm" onClick={handleExport}
+            disabled={exporting || total === 0 || !canDoExport}
+            title={!canDoExport ? '이번 달 내보내기 횟수를 모두 사용했어요.' : ''}>
             <Mi size="sm">download</Mi>{exporting ? '내보내는 중...' : 'JSON으로 내보내기'}
           </button>
         ) : (
@@ -681,6 +748,27 @@ export default function StoragePage() {
             onClick={() => setSelected(new Set())}>
             선택 해제
           </button>
+          {/* 선택 내보내기 — lv3/master만 */}
+          {exportFree && (
+            <>
+              <span style={{ opacity:0.4, fontSize:'0.8rem' }}>|</span>
+              <span style={{ fontSize:'0.75rem', opacity:0.85 }}>내보내기</span>
+              <button
+                className="btn btn-sm"
+                style={{ background:'rgba(255,255,255,0.18)', border:'1px solid rgba(255,255,255,0.4)',
+                  color:'#fff', fontSize:'0.78rem' }}
+                onClick={() => handleExportSelected('json')}>
+                <Mi size="sm">data_object</Mi>JSON
+              </button>
+              <button
+                className="btn btn-sm"
+                style={{ background:'rgba(255,255,255,0.18)', border:'1px solid rgba(255,255,255,0.4)',
+                  color:'#fff', fontSize:'0.78rem' }}
+                onClick={() => handleExportSelected('csv')}>
+                <Mi size="sm">table</Mi>CSV
+              </button>
+            </>
+          )}
           <button
             className="btn btn-sm"
             style={{ background:'#e53935', border:'none', color:'#fff', fontSize:'0.82rem' }}
