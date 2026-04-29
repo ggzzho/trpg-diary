@@ -163,7 +163,7 @@ export function PlayLogPage() {
     return ms&&mr
   })
 
-  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 20)
+  const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 10)
 
   const relatedItems = detail?.series_tag
     ? items.filter(i=>i.series_tag===detail.series_tag&&i.id!==detail.id).sort((a,b)=>(a.played_date||'').localeCompare(b.played_date||''))

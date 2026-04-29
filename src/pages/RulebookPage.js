@@ -311,7 +311,7 @@ export function RulebookPage() {
     return parents.filter(i => matchItem(i) || supplMap[i.id]?.some(c => matchItem(c)))
   }, [parents, search, supplMap])
 
-  const { paged: pagedRulebooks, page: rbPage, setPage: setRbPage, perPage: rbPerPage, setPerPage: setRbPerPage } = usePagination(filteredParents, 20)
+  const { paged: pagedRulebooks, page: rbPage, setPage: setRbPage, perPage: rbPerPage, setPerPage: setRbPerPage } = usePagination(filteredParents, 10)
 
   // 부모 룰북 목록 (서플 선택용)
   const parentOptions = parents
