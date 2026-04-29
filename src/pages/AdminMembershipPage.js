@@ -503,14 +503,15 @@ function SearchTab() {
 // Tab 3: 알림 발송
 // ══════════════════════════════════════════════════════════════
 const CONDITION_OPTIONS = [
-  { value: 'all',          label: '전체 유저',         icon: 'groups',      warn: true },
-  { value: 'free',         label: '일반',              icon: 'person' },
-  { value: '1ht',          label: '♥ 원하트',          icon: 'favorite' },
-  { value: '2ht',          label: '♥♥ 투하트',         icon: 'stars' },
-  { value: '3ht',          label: '♥♥♥ 풀하트',        icon: 'workspace_premium' },
-  { value: 'master',       label: '마스터',             icon: 'shield_person' },
-  { value: 'storage_over', label: '데이터 한도 초과',   icon: 'error_outline' },
-  { value: 'storage_80',   label: '데이터 80% 이상',    icon: 'data_usage' },
+  { value: 'all',                label: '전체 유저',           icon: 'groups',         warn: true },
+  { value: 'free',               label: '일반',                icon: 'person' },
+  { value: '1ht',                label: '♥ 원하트',            icon: 'favorite' },
+  { value: '2ht',                label: '♥♥ 투하트',           icon: 'stars' },
+  { value: '3ht',                label: '♥♥♥ 풀하트',          icon: 'workspace_premium' },
+  { value: 'master',             label: '마스터',               icon: 'shield_person' },
+  { value: 'wish_scenario_users',label: '위시 시나리오 등록',   icon: 'bookmark_add' },
+  { value: 'storage_over',       label: '데이터 한도 초과',     icon: 'error_outline' },
+  { value: 'storage_80',         label: '데이터 80% 이상',      icon: 'data_usage' },
 ]
 
 function NotifyTab() {
@@ -537,6 +538,24 @@ function NotifyTab() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [sending, setSending]         = useState(false)
   const [sendResult, setSendResult]   = useState(null) // null | {ok, count} | {error}
+
+  // ── 발송 이력 ──
+  const [broadcasts, setBroadcasts]             = useState([])
+  const [broadcastsLoading, setBroadcastsLoading] = useState(false)
+  const [expandedId, setExpandedId]             = useState(null)
+
+  const loadBroadcasts = useCallback(async () => {
+    setBroadcastsLoading(true)
+    const { data } = await supabase
+      .from('notification_broadcasts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(30)
+    setBroadcastsLoading(false)
+    setBroadcasts(data || [])
+  }, [])
+
+  useEffect(() => { loadBroadcasts() }, [loadBroadcasts])
 
   const targets = mode === 'condition'
     ? [...condSelected]
@@ -588,11 +607,15 @@ function NotifyTab() {
   const handleSend = async () => {
     if (!targets.length || !message.trim()) return
     setSending(true); setSendResult(null)
+    const condLabel = mode === 'condition'
+      ? (condMeta?.label || condition || '조건 선택')
+      : `직접 선택 ${targets.length}명`
     const { data, error } = await supabase.rpc('admin_send_notifications', {
-      target_ids: targets,
-      p_message:  message.trim(),
-      p_type:     'admin_notice',
-      p_ref_url:  refUrl.trim() || null,
+      target_ids:        targets,
+      p_message:         message.trim(),
+      p_type:            'admin_notice',
+      p_ref_url:         refUrl.trim() || null,
+      p_condition_label: condLabel,
     })
     setSending(false)
     if (error) {
@@ -603,6 +626,7 @@ function NotifyTab() {
       setMessage(''); setRefUrl('')
       if (mode === 'condition') { setCondUsers(null); setCondition(null); setCondSelected(new Set()) }
       else { setSelectedUsers([]); setManualResults([]) }
+      loadBroadcasts()
     }
   }
 
@@ -943,6 +967,86 @@ function NotifyTab() {
           </div>
         </div>
       )}
+
+      {/* ── 발송 이력 ── */}
+      <div className="card" style={{ marginTop:24 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+          <h3 style={{ fontSize:'0.9rem', fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
+            <Mi size="sm" style={{ color:'var(--color-primary)' }}>history</Mi>
+            발송 이력
+          </h3>
+          <button className="btn btn-ghost btn-sm" onClick={loadBroadcasts} disabled={broadcastsLoading}>
+            <Mi size="sm">refresh</Mi>{broadcastsLoading ? '...' : '새로고침'}
+          </button>
+        </div>
+
+        {broadcastsLoading && broadcasts.length === 0 ? (
+          <div style={{ textAlign:'center', padding:'24px 0', color:'var(--color-text-light)', fontSize:'0.85rem' }}>
+            불러오는 중...
+          </div>
+        ) : broadcasts.length === 0 ? (
+          <div style={{ textAlign:'center', padding:'24px 0', color:'var(--color-text-light)', fontSize:'0.85rem' }}>
+            발송 이력이 없습니다.
+          </div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {broadcasts.map(b => (
+              <div key={b.id} style={{
+                border:'1px solid var(--color-border)', borderRadius:10, overflow:'hidden',
+              }}>
+                {/* 요약 행 */}
+                <div
+                  onClick={() => setExpandedId(prev => prev === b.id ? null : b.id)}
+                  style={{
+                    display:'flex', alignItems:'center', gap:10,
+                    padding:'10px 14px', cursor:'pointer',
+                    background: expandedId === b.id ? 'var(--color-nav-active-bg)' : 'transparent',
+                    transition:'background 0.15s',
+                  }}>
+                  <Mi size="sm" style={{ color:'var(--color-primary)', flexShrink:0 }}>notifications</Mi>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:'0.85rem', fontWeight:600,
+                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {b.message}
+                    </div>
+                    <div style={{ fontSize:'0.75rem', color:'var(--color-text-light)', marginTop:2, display:'flex', gap:8 }}>
+                      <span>{fmtKST(b.created_at)}</span>
+                      <span>·</span>
+                      <span style={{ color:'var(--color-primary)', fontWeight:600 }}>{b.target_count}명</span>
+                      {b.condition_label && <><span>·</span><span>{b.condition_label}</span></>}
+                    </div>
+                  </div>
+                  <Mi size="sm" style={{ color:'var(--color-text-light)', flexShrink:0 }}>
+                    {expandedId === b.id ? 'expand_less' : 'expand_more'}
+                  </Mi>
+                </div>
+
+                {/* 상세 펼침 */}
+                {expandedId === b.id && (
+                  <div style={{
+                    padding:'12px 14px', borderTop:'1px solid var(--color-border)',
+                    background:'var(--color-nav-active-bg)',
+                  }}>
+                    <div style={{ fontSize:'0.75rem', color:'var(--color-text-light)', marginBottom:4, fontWeight:600 }}>메시지 전문</div>
+                    <div style={{
+                      fontSize:'0.85rem', lineHeight:1.7, whiteSpace:'pre-wrap', wordBreak:'break-word',
+                      padding:'10px 12px', borderRadius:8, background:'var(--color-surface)',
+                      border:'1px solid var(--color-border)',
+                    }}>
+                      {b.message}
+                    </div>
+                    {b.ref_url && (
+                      <div style={{ marginTop:8, fontSize:'0.78rem', color:'var(--color-text-light)' }}>
+                        링크: <code style={{ background:'var(--color-surface)', padding:'1px 6px', borderRadius:4 }}>{b.ref_url}</code>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </>
   )
 }
