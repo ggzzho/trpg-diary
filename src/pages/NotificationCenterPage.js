@@ -12,6 +12,7 @@ const NOTIF_ICON = {
   guestbook_reply:   'subdirectory_arrow_right',
   feedback_comment:  'support_agent',
   feedback_reply:    'mark_email_read',
+  admin_notice:      'campaign',
 }
 
 const NOTIF_LABEL = {
@@ -19,6 +20,7 @@ const NOTIF_LABEL = {
   guestbook_reply:   '방명록 답글',
   feedback_comment:  '문의함 댓글',
   feedback_reply:    '문의 답변',
+  admin_notice:      '시스템 알림',
 }
 
 const PER_PAGE = 30
@@ -30,6 +32,7 @@ export default function NotificationCenterPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [filter, setFilter] = useState('all') // all | unread
+  const [notifModal, setNotifModal] = useState(null) // admin_notice 팝업용
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -50,6 +53,10 @@ export default function NotificationCenterPage() {
       await notificationsApi.markReadById(n.id)
       setList(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x))
       refreshNotifs()
+    }
+    if (n.type === 'admin_notice') {
+      setNotifModal(n)
+      return
     }
     const path = n.ref_url || (
       n.type === 'feedback_comment' || n.type === 'feedback_reply'
@@ -193,6 +200,41 @@ export default function NotificationCenterPage() {
             </div>
           )}
         </>
+      )}
+      {/* 시스템 알림(admin_notice) 팝업 모달 */}
+      {notifModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999,
+          display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={() => setNotifModal(null)}>
+          <div style={{ background:'var(--color-surface)', borderRadius:16, padding:'28px 24px',
+            maxWidth:440, width:'100%', border:'1px solid var(--color-border)',
+            boxShadow:'0 8px 32px rgba(0,0,0,0.22)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
+              <Mi style={{ fontSize:22, color:'var(--color-primary)' }}>campaign</Mi>
+              <span style={{ fontWeight:700, fontSize:'0.95rem' }}>시스템 알림</span>
+              <span style={{ marginLeft:'auto', fontSize:'0.72rem', color:'var(--color-text-light)' }}>
+                {fmtDT(notifModal.created_at)}
+              </span>
+            </div>
+            <div style={{ fontSize:'0.9rem', lineHeight:1.75, whiteSpace:'pre-wrap', wordBreak:'break-word',
+              padding:'14px 16px', borderRadius:10, background:'var(--color-nav-active-bg)',
+              border:'1px solid var(--color-border)', marginBottom:16 }}>
+              {notifModal.message}
+            </div>
+            {notifModal.ref_url && (
+              <button className="btn btn-outline btn-sm" style={{ marginBottom:12, width:'100%', justifyContent:'center' }}
+                onClick={() => { setNotifModal(null); navigate(notifModal.ref_url) }}>
+                <Mi size="sm">open_in_new</Mi>
+                자세히 보기
+              </button>
+            )}
+            <button className="btn btn-primary btn-sm" style={{ width:'100%', justifyContent:'center' }}
+              onClick={() => setNotifModal(null)}>
+              확인
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
