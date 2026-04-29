@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext'
 import { signOut, notificationsApi, supabase } from '../lib/supabase'
 import { fmtAgo } from '../lib/dateFormatters'
 import CursorEffect from './CursorEffect'
-import { TIER_LIMITS } from '../lib/tierLimits'
 
 const NOTICE_VIEWED_KEY = 'noticeLastViewed'
 
@@ -33,6 +32,7 @@ const NOTIF_ICON = {
   feedback_reply:    'mark_email_read',
   inquiry_reply:     'mark_email_read',
   inquiry_new:       'support_agent',
+  admin_notice:      'campaign',
 }
 
 const NAV_GROUPS = [
@@ -147,6 +147,7 @@ export function Layout({ children }) {
   const [notifList, setNotifList] = useState([])
   const [notifLoading, setNotifLoading] = useState(false)
   const bellRef = useRef(null)
+  const [notifModal, setNotifModal] = useState(null) // admin_notice 팝업용
 
   const loadNotifs = useCallback(async () => {
     setNotifLoading(true)
@@ -174,9 +175,8 @@ export function Layout({ children }) {
       await notificationsApi.markReadById(n.id)
       refreshNotifs()
     }
-    // 운영자 메시지 → 알림 센터에서 모달로 확인
     if (n.type === 'admin_notice') {
-      navigate('/notifications')
+      setNotifModal(n)
       return
     }
     const path = n.ref_url || (
@@ -184,8 +184,6 @@ export function Layout({ children }) {
         ? '/admin/feedback'
         : n.type === 'inquiry_reply'
         ? '/support?tab=history'
-        : n.type === 'storage_warning' || n.type === 'backup_ready'
-        ? '/storage'
         : '/guestbook'
     )
     navigate(path)
@@ -252,9 +250,6 @@ export function Layout({ children }) {
           <div style={{borderTop:'1px solid var(--color-border)',margin:'12px 0'}} />
           <NavLink to="/settings" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
             <span className="nav-icon"><span className="ms">settings</span></span>환경설정
-          </NavLink>
-          <NavLink to="/storage" className={({isActive})=>`nav-item ${isActive?'active':''}`}>
-            <span className="nav-icon"><span className="ms">storage</span></span>데이터 관리
           </NavLink>
           {profile&&(
             <a href={`/u/${profile.username}`} target="_blank" rel="noreferrer" className="nav-item">
@@ -469,41 +464,6 @@ export function Layout({ children }) {
         </div>
       </aside>
       <main className="main-content">
-        {/* 데이터 한도 배너 — 70% 이상 시 표시 */}
-        {(() => {
-          const tier  = profile?.membership_tier || 'free'
-          const limit = TIER_LIMITS[tier]
-          if (!limit) return null
-          const count = profile?.data_count || 0
-          const pct   = Math.min((count / limit) * 100, 100)
-          if (pct < 70) return null
-          const isAt   = pct >= 100
-          const isCrit = pct >= 90
-          return (
-            <div
-              onClick={() => navigate('/storage')}
-              style={{
-                marginBottom: 20, padding: '10px 16px', borderRadius: 10, cursor: 'pointer',
-                background: isAt ? '#fdecea' : isCrit ? '#fff3e0' : '#fffde7',
-                border: `1px solid ${isAt ? '#ef9a9a' : isCrit ? '#ffcc80' : '#fff176'}`,
-                display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.82rem',
-                color: isAt ? '#c62828' : isCrit ? '#e65100' : '#f57f17',
-              }}>
-              <span style={{ fontSize: '1rem', flexShrink: 0 }}>
-                {isAt ? '🔴' : isCrit ? '🟠' : '🟡'}
-              </span>
-              <span style={{ flex: 1, fontWeight: isAt ? 700 : 500 }}>
-                {isAt
-                  ? `저장 공간이 꽉 찼어요! 새 데이터를 추가하려면 정리가 필요해요.`
-                  : `저장 공간이 ${pct.toFixed(0)}% 찼어요.`}
-                <span style={{ fontWeight: 400, marginLeft: 6, opacity: 0.75 }}>
-                  ({count.toLocaleString()} / {limit.toLocaleString()}개)
-                </span>
-              </span>
-              <span style={{ fontSize: '0.75rem', opacity: 0.65, flexShrink: 0 }}>데이터 관리 →</span>
-            </div>
-          )
-        })()}
         <div className="fade-in">{children}</div>
         <footer style={{marginTop:60,paddingTop:20,borderTop:'1px solid var(--color-border)',textAlign:'center',color:'var(--color-text-light)',fontSize:'0.72rem'}}>
           <div style={{marginBottom:10, display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap'}}>
@@ -525,6 +485,42 @@ export function Layout({ children }) {
               📖 사용설명서 바로가기
             </a>
           </div>
+
+          {/* 시스템 알림(admin_notice) 팝업 모달 */}
+          {notifModal && (
+            <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999,
+              display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+              onClick={() => setNotifModal(null)}>
+              <div style={{ background:'var(--color-surface)', borderRadius:16, padding:'28px 24px',
+                maxWidth:440, width:'100%', border:'1px solid var(--color-border)',
+                boxShadow:'0 8px 32px rgba(0,0,0,0.22)' }}
+                onClick={e => e.stopPropagation()}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
+                  <span className="ms" style={{ fontSize:22, color:'var(--color-primary)' }}>campaign</span>
+                  <span style={{ fontWeight:700, fontSize:'0.95rem' }}>시스템 알림</span>
+                  <span style={{ marginLeft:'auto', fontSize:'0.72rem', color:'var(--color-text-light)' }}>
+                    {notifModal.created_at && new Date(notifModal.created_at).toLocaleString('ko-KR', { timeZone:'Asia/Seoul', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false })}
+                  </span>
+                </div>
+                <div style={{ fontSize:'0.9rem', lineHeight:1.75, whiteSpace:'pre-wrap', wordBreak:'break-word',
+                  padding:'14px 16px', borderRadius:10, background:'var(--color-nav-active-bg)',
+                  border:'1px solid var(--color-border)', marginBottom:16 }}>
+                  {notifModal.message}
+                </div>
+                {notifModal.ref_url && (
+                  <button className="btn btn-outline btn-sm" style={{ marginBottom:12, width:'100%', justifyContent:'center' }}
+                    onClick={() => { setNotifModal(null); navigate(notifModal.ref_url) }}>
+                    <span className="ms" style={{ fontSize:16 }}>open_in_new</span>
+                    자세히 보기
+                  </button>
+                )}
+                <button className="btn btn-primary btn-sm" style={{ width:'100%', justifyContent:'center' }}
+                  onClick={() => setNotifModal(null)}>
+                  확인
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* 카카오페이 PC 안내 팝업 */}
           {kakaoPopup && (
