@@ -225,7 +225,7 @@ function SearchTab() {
           <input
             className="form-input"
             type="text"
-            placeholder="이메일 일부 또는 전체 입력 (최대 10명 표시)"
+            placeholder="이메일 / 닉네임 / 아이디 검색 (최대 10명 표시)"
             value={searchEmail}
             onChange={e => setSearchEmail(e.target.value)}
             style={{ flex: 1 }}
@@ -740,7 +740,7 @@ function NotifyTab() {
           <>
             <form onSubmit={handleManualSearch} style={{ display:'flex', gap:8, marginBottom:12 }}>
               <input className="form-input"
-                placeholder="이메일 일부 입력"
+                placeholder="이메일 / 닉네임 / 아이디 검색"
                 value={manualInput}
                 onChange={e => setManualInput(e.target.value)}
                 style={{ flex:1 }}

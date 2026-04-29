@@ -66,7 +66,7 @@ const makeTableApi = (table) => ({
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(10000)
+      .limit(2500)
     return { data, error }
   },
   create: async (payload) => {
@@ -96,9 +96,9 @@ export const dotoriApi = makeTableApi('dotori')
 
 // ── 멤버십 관리 API (관리자 전용) ─────────────────────────────
 export const membershipApi = {
-  // 이메일로 유저 검색 (SECURITY DEFINER 함수 호출)
-  searchUser: async (email) => {
-    const { data, error } = await supabase.rpc('admin_search_user', { p_email: email })
+  // 이메일·닉네임·아이디로 유저 검색 (SECURITY DEFINER 함수 호출)
+  searchUser: async (query) => {
+    const { data, error } = await supabase.rpc('admin_search_user', { p_query: query })
     return { data, error }
   },
   // 등급 설정 (SECURITY DEFINER 함수 호출)
