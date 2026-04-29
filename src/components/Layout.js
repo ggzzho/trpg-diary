@@ -147,7 +147,6 @@ export function Layout({ children }) {
   const [notifList, setNotifList] = useState([])
   const [notifLoading, setNotifLoading] = useState(false)
   const bellRef = useRef(null)
-  const [notifModal, setNotifModal] = useState(null) // admin_notice 팝업용
 
   const loadNotifs = useCallback(async () => {
     setNotifLoading(true)
@@ -175,8 +174,9 @@ export function Layout({ children }) {
       await notificationsApi.markReadById(n.id)
       refreshNotifs()
     }
+    // 운영자 메시지 → 알림 센터에서 모달로 확인
     if (n.type === 'admin_notice') {
-      setNotifModal(n)
+      navigate('/notifications')
       return
     }
     const path = n.ref_url || (
@@ -184,6 +184,8 @@ export function Layout({ children }) {
         ? '/admin/feedback'
         : n.type === 'inquiry_reply'
         ? '/support?tab=history'
+        : n.type === 'storage_warning' || n.type === 'backup_ready'
+        ? '/storage'
         : '/guestbook'
     )
     navigate(path)
@@ -485,42 +487,6 @@ export function Layout({ children }) {
               📖 사용설명서 바로가기
             </a>
           </div>
-
-          {/* 시스템 알림(admin_notice) 팝업 모달 */}
-          {notifModal && (
-            <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999,
-              display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
-              onClick={() => setNotifModal(null)}>
-              <div style={{ background:'var(--color-surface)', borderRadius:16, padding:'28px 24px',
-                maxWidth:440, width:'100%', border:'1px solid var(--color-border)',
-                boxShadow:'0 8px 32px rgba(0,0,0,0.22)' }}
-                onClick={e => e.stopPropagation()}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
-                  <span className="ms" style={{ fontSize:22, color:'var(--color-primary)' }}>campaign</span>
-                  <span style={{ fontWeight:700, fontSize:'0.95rem' }}>시스템 알림</span>
-                  <span style={{ marginLeft:'auto', fontSize:'0.72rem', color:'var(--color-text-light)' }}>
-                    {notifModal.created_at && new Date(notifModal.created_at).toLocaleString('ko-KR', { timeZone:'Asia/Seoul', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false })}
-                  </span>
-                </div>
-                <div style={{ fontSize:'0.9rem', lineHeight:1.75, whiteSpace:'pre-wrap', wordBreak:'break-word',
-                  padding:'14px 16px', borderRadius:10, background:'var(--color-nav-active-bg)',
-                  border:'1px solid var(--color-border)', marginBottom:16 }}>
-                  {notifModal.message}
-                </div>
-                {notifModal.ref_url && (
-                  <button className="btn btn-outline btn-sm" style={{ marginBottom:12, width:'100%', justifyContent:'center' }}
-                    onClick={() => { setNotifModal(null); navigate(notifModal.ref_url) }}>
-                    <span className="ms" style={{ fontSize:16 }}>open_in_new</span>
-                    자세히 보기
-                  </button>
-                )}
-                <button className="btn btn-primary btn-sm" style={{ width:'100%', justifyContent:'center' }}
-                  onClick={() => setNotifModal(null)}>
-                  확인
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* 카카오페이 PC 안내 팝업 */}
           {kakaoPopup && (
