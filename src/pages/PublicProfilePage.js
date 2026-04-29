@@ -27,9 +27,9 @@ const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', 
 // ── 회원 등급 뱃지 ──
 const TIER_BADGE = {
   master: { label: '마스터', bg: '#7c5cbf', color: '#fff' },
-  lv3:    { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
-  lv2:    { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
-  lv1:    { label: '♥',     bg: '#b87333', color: '#fff' },
+  '3ht':  { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
+  '2ht':  { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
+  '1ht':  { label: '♥',     bg: '#b87333', color: '#fff' },
 }
 function MembershipBadge({ tier }) {
   const badge = TIER_BADGE[tier]
@@ -260,7 +260,7 @@ export default function PublicProfilePage() {
       (l.together_with||'').toLowerCase().includes(s)
     )
   }, [publicLogs, tabSearch])
-  const logsPagination = usePagination(filteredLogs, 20)
+  const logsPagination = usePagination(filteredLogs, 10)
 
   const scenarioParents = [...(data.scenarios||[]).filter(s => !s.parent_id)].sort((a,b) => {
     const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
@@ -283,7 +283,7 @@ export default function PublicProfilePage() {
       )
     )
   }, [scenarioParents, scenarioChildMap, tabSearch])
-  const scenariosPagination = usePagination(filteredScenarioParents, 20)
+  const scenariosPagination = usePagination(filteredScenarioParents, 10)
 
   const sortedAvailability = [...(data.availability||[])].sort((a,b) => {
     const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
@@ -299,7 +299,7 @@ export default function PublicProfilePage() {
       (a.together_with||'').toLowerCase().includes(s)
     )
   }, [sortedAvailability, tabSearch])
-  const availabilityPagination = usePagination(filteredAvailability, 20)
+  const availabilityPagination = usePagination(filteredAvailability, 10)
 
   const sortedBookmarks = [...(data.bookmarks||[])].sort((a,b) => {
     const ta=(a.title||'').toLowerCase(), tb=(b.title||'').toLowerCase()
@@ -314,7 +314,7 @@ export default function PublicProfilePage() {
       b.tags?.some(t => t.toLowerCase().includes(s))
     )
   }, [sortedBookmarks, tabSearch])
-  const bookmarksPagination = usePagination(filteredBookmarks, 20)
+  const bookmarksPagination = usePagination(filteredBookmarks, 10)
 
   const sortedFilteredPairs = useMemo(() => {
     const sorted = [...(data.pairs||[])].sort((a,b) => {
@@ -332,7 +332,7 @@ export default function PublicProfilePage() {
       (p.relations||[]).some(r => r.toLowerCase().includes(s))
     )
   }, [data.pairs, pairSort, tabSearch])
-  const pairsPagination = usePagination(sortedFilteredPairs, 20)
+  const pairsPagination = usePagination(sortedFilteredPairs, 10)
 
   // PC 탭 필터링
   const filteredCharacters = useMemo(() => {
@@ -350,7 +350,7 @@ export default function PublicProfilePage() {
       (c.rules||[]).some(r=>r.toLowerCase().includes(s))
     )
   }, [data.characters, tabSearch])
-  const charactersPagination = usePagination(filteredCharacters, 20)
+  const charactersPagination = usePagination(filteredCharacters, 10)
 
   const pubCharHistoryViewLogs = useMemo(() => {
     if (!pubCharHistoryViewChar) return []
@@ -402,7 +402,7 @@ export default function PublicProfilePage() {
       )
     )
   }, [wishScenarioParents, wishScenarioChildMap, tabSearch])
-  const wishScenariosPagination = usePagination(filteredWishScenarioParents, 20)
+  const wishScenariosPagination = usePagination(filteredWishScenarioParents, 10)
 
   const sortedDotori = [...(data.dotori||[])].sort((a,b) =>
     (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase(),'ko')
@@ -417,7 +417,7 @@ export default function PublicProfilePage() {
       d.tags?.some(t => t.toLowerCase().includes(s))
     )
   }, [sortedDotori, tabSearch])
-  const dotoriPagination = usePagination(filteredDotori, 20)
+  const dotoriPagination = usePagination(filteredDotori, 10)
 
   // 공개 캘린더용 colorMap: 해당 유저의 룰북 title → color
   // ⚠️ Hook이므로 early return 전에 선언 필수
@@ -437,24 +437,24 @@ export default function PublicProfilePage() {
     if (tab === 'schedules') {
       const today = getTodayKST()
       const [schedsAll, rbooks] = await Promise.all([
-        safeQ(supabase.from('schedules').select('*').eq('user_id',profileId).order('scheduled_date').limit(2500)),
+        safeQ(supabase.from('schedules').select('*').eq('user_id',profileId).order('scheduled_date').limit(10000)),
         loadedRef.current.has('rulebooks')
           ? Promise.resolve(null)
-          : safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(2500))
+          : safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(10000))
       ])
       updates.schedules = schedsAll.filter(s => s.entry_type !== 'blocked' && s.status !== 'cancelled' && s.status !== 'completed' && s.scheduled_date >= today)
       updates.blocked = schedsAll.filter(s => s.entry_type === 'blocked')
       if (rbooks !== null) { updates.rulebooks = rbooks; loadedRef.current.add('rulebooks') }
     } else if (tab === 'logs') {
-      updates.logs = await safeQ(supabase.from('play_logs').select('*').eq('user_id',profileId).order('played_date',{ascending:false,nullsFirst:false}).limit(2500))
+      updates.logs = await safeQ(supabase.from('play_logs').select('*').eq('user_id',profileId).order('played_date',{ascending:false,nullsFirst:false}).limit(10000))
     } else if (tab === 'rulebooks') {
-      updates.rulebooks = await safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(2500))
+      updates.rulebooks = await safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(10000))
     } else if (tab === 'scenarios') {
-      updates.scenarios = await safeQ(supabase.from('scenarios').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:true}).limit(2500))
+      updates.scenarios = await safeQ(supabase.from('scenarios').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:true}).limit(10000))
     } else if (tab === 'wish_scenarios') {
-      updates.wish_scenarios = await safeQ(supabase.from('wish_scenarios').select('*').eq('user_id',profileId).order('created_at',{ascending:true}).limit(2500))
+      updates.wish_scenarios = await safeQ(supabase.from('wish_scenarios').select('*').eq('user_id',profileId).order('created_at',{ascending:true}).limit(10000))
     } else if (tab === 'dotori') {
-      updates.dotori = await safeQ(supabase.from('dotori').select('*').eq('user_id',profileId).order('title').limit(2500))
+      updates.dotori = await safeQ(supabase.from('dotori').select('*').eq('user_id',profileId).order('title').limit(10000))
     } else if (tab === 'pairs') {
       const pairs = await safeQ(pairsApi.getAll(profileId))
       updates.pairs = pairs
@@ -471,7 +471,7 @@ export default function PublicProfilePage() {
       })
       setPairHistoriesMap(hMap)
     } else if (tab === 'characters') {
-      const chars = await safeQ(supabase.from('characters').select('*').eq('user_id',profileId).order('created_at',{ascending:false}).limit(2500))
+      const chars = await safeQ(supabase.from('characters').select('*').eq('user_id',profileId).order('created_at',{ascending:false}).limit(10000))
       updates.characters = chars
       // 히스토리 pre-load
       const { data: hData } = await supabase.from('character_histories')
@@ -486,9 +486,9 @@ export default function PublicProfilePage() {
       })
       setCharHistoriesMap(hMap)
     } else if (tab === 'availability') {
-      updates.availability = await safeQ(supabase.from('availability').select('*').eq('user_id',profileId).eq('is_active',true).limit(2500))
+      updates.availability = await safeQ(supabase.from('availability').select('*').eq('user_id',profileId).eq('is_active',true).limit(10000))
     } else if (tab === 'bookmarks') {
-      updates.bookmarks = await safeQ(supabase.from('bookmarks').select('*').eq('user_id',profileId).order('title').limit(2500))
+      updates.bookmarks = await safeQ(supabase.from('bookmarks').select('*').eq('user_id',profileId).order('title').limit(10000))
     }
     setData(d => ({...d, ...updates}))
     setTabLoading(t => ({...t, [tab]: false}))
@@ -570,7 +570,7 @@ export default function PublicProfilePage() {
 
   // ── 후원자 전용 기능 저장 ──
   const isOwnPage   = !!(user && profile && user.id === profile.id)
-  const isSupporter = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
+  const isSupporter = ['1ht','2ht','3ht','master'].includes(profile?.membership_tier)
 
   const handleSupporterSave = async (updates) => {
     if (!profile) return
@@ -645,7 +645,7 @@ export default function PublicProfilePage() {
     <div style={{ maxWidth:860, margin:'0 auto', padding:'20px 20px 0', position:'relative' }}>
 
       {/* ── 후원자 전용: 커서 효과 (lv1+, 공개 설정된 경우) ── */}
-      {['lv1','lv2','lv3','master'].includes(profile?.membership_tier) &&
+      {['1ht','2ht','3ht','master'].includes(profile?.membership_tier) &&
         profile?.cursor_effect?.enabled_public !== false && (
         <CursorEffect settings={profile.cursor_effect} />
       )}
@@ -659,8 +659,8 @@ export default function PublicProfilePage() {
         />
       )}
 
-      {/* ── 후원자 전용: BGM 플레이어 ── */}
-      {isSupporter && (
+      {/* ── 투하트 이상 전용: BGM 플레이어 ── */}
+      {['2ht','3ht','master'].includes(profile?.membership_tier) && (
         <BgmPlayer
           profile={profile}
           isOwner={isOwnPage}

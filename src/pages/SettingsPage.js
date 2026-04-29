@@ -38,8 +38,8 @@ const DEFAULT_SECTIONS = [
   {id:'extra_info', label:'기타 사항', value:''},
 ]
 
-const DONATION_TIER_LABEL = { master:'마스터', lv3:'♥♥♥', lv2:'♥♥', lv1:'♥' }
-const DONATION_TIER_COLOR = { master:'#7c5cbf', lv3:'#d4a017', lv2:'#9e9e9e', lv1:'#b87333' }
+const DONATION_TIER_LABEL = { master:'마스터', '3ht':'♥♥♥', '2ht':'♥♥', '1ht':'♥' }
+const DONATION_TIER_COLOR = { master:'#7c5cbf', '3ht':'#d4a017', '2ht':'#9e9e9e', '1ht':'#b87333' }
 
 const fmtDateShort = (iso) => {
   if (!iso) return '-'
@@ -202,8 +202,8 @@ export default function SettingsPage() {
     }
   }
 
-  const isLv2Plus   = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
-  const isSupporter = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
+  const isLv2Plus   = ['1ht','2ht','3ht','master'].includes(profile?.membership_tier)
+  const isSupporter = ['1ht','2ht','3ht','master'].includes(profile?.membership_tier)
   // cursor_effect 중첩 업데이트 헬퍼
   const setCE = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, [key]: val } }))
   const setCECursor = (key, val) => setForm(f => ({ ...f, cursor_effect: { ...f.cursor_effect, cursor: { ...f.cursor_effect.cursor, [key]: val } } }))
@@ -217,8 +217,7 @@ export default function SettingsPage() {
     {key:'privacy',  label:'공개 설정', icon:'lock'},
     ...(isSupporter ? [{key:'donation',  label:'후원 정보',  icon:'favorite'}] : []),
     ...(isLv2Plus   ? [{key:'supporter', label:'커서 효과', icon:'auto_awesome'}] : []),
-    {key:'password', label:'비밀번호',  icon:'key'},
-    {key:'withdraw', label:'회원 탈퇴', icon:'person_remove'},
+    {key:'security', label:'보안 설정', icon:'security'},
   ]
 
   const handleWithdraw = async () => {
@@ -507,18 +506,58 @@ export default function SettingsPage() {
           </>
         )}
 
-        {/* ── 비밀번호 변경 ── */}
-        {tab==='password'&&(
-          <>
-            <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem'}}><Mi size='sm' color='white'>lock_reset</Mi> 비밀번호 변경</h2>
+        {/* ── 보안 설정 (비밀번호 변경 + 회원 탈퇴) ── */}
+        {tab==='security'&&(
+          <div>
+            {/* 비밀번호 변경 */}
+            <h2 style={{fontWeight:700,color:'var(--color-accent)',marginBottom:20,fontSize:'1rem',display:'flex',alignItems:'center',gap:6}}>
+              <Mi size='sm' color='accent'>lock_reset</Mi> 비밀번호 변경
+            </h2>
             {pwErr&&<div style={{padding:'10px 14px',borderRadius:8,background:'rgba(229,115,115,0.1)',border:'1px solid rgba(229,115,115,0.3)',color:'#c62828',fontSize:'0.82rem',marginBottom:14}}>{pwErr}</div>}
             {pwMsg&&<div style={{padding:'10px 14px',borderRadius:8,background:'rgba(104,159,56,0.1)',border:'1px solid rgba(104,159,56,0.3)',color:'#33691e',fontSize:'0.82rem',marginBottom:14}}>{pwMsg}</div>}
-            <form onSubmit={handlePwChange}>
+            <form onSubmit={handlePwChange} style={{marginBottom:36}}>
               <div className="form-group"><label className="form-label">새 비밀번호</label><input className="form-input" type="password" placeholder="6자 이상" value={pwForm.next} onChange={e=>setPwForm(f=>({...f,next:e.target.value}))} disabled={pwLoading} required /></div>
               <div className="form-group"><label className="form-label">새 비밀번호 확인</label><input className="form-input" type="password" placeholder="동일하게 입력" value={pwForm.confirm} onChange={e=>setPwForm(f=>({...f,confirm:e.target.value}))} disabled={pwLoading} required /></div>
               <button className="btn btn-primary btn-sm" type="submit" disabled={pwLoading}><Mi size='sm' color='white'>lock_reset</Mi> {pwLoading ? '변경 중...' : '비밀번호 변경'}</button>
             </form>
-          </>
+
+            {/* 구분선 */}
+            <hr style={{border:'none',borderTop:'1px solid var(--color-border)',marginBottom:28}}/>
+
+            {/* 회원 탈퇴 */}
+            <h2 style={{fontWeight:700,color:'#e57373',marginBottom:8,fontSize:'1rem',display:'flex',alignItems:'center',gap:6}}>
+              <Mi size='sm' color='danger'>person_remove</Mi> 회원 탈퇴
+            </h2>
+            <div style={{padding:'14px 16px',borderRadius:10,background:'rgba(229,115,115,0.07)',border:'1px solid rgba(229,115,115,0.25)',marginBottom:20,fontSize:'0.84rem',color:'var(--color-text-light)',lineHeight:1.8}}>
+              탈퇴 시 모든 데이터(일정, 기록, 룰북, 페어 등)가 <strong>영구적으로 삭제</strong>되며 복구할 수 없어요.<br/>
+              신중하게 결정해주세요.
+            </div>
+            {!withdrawConfirm ? (
+              <button className="btn btn-sm" style={{background:'rgba(229,115,115,0.1)',color:'#e57373',border:'1px solid rgba(229,115,115,0.3)'}}
+                onClick={() => setWithdrawConfirm(true)}>
+                <Mi size='sm' color='danger'>person_remove</Mi> 탈퇴 진행하기
+              </button>
+            ) : (
+              <div>
+                <p style={{fontSize:'0.84rem',marginBottom:10,color:'var(--color-text-light)'}}>
+                  정말 탈퇴하시겠어요? 아래 칸에 <strong style={{color:'#e57373'}}>탈퇴합니다</strong> 를 입력해주세요.
+                </p>
+                <input className="form-input" placeholder="탈퇴합니다" value={withdrawInput}
+                  onChange={e => setWithdrawInput(e.target.value)}
+                  style={{marginBottom:10,borderColor:withdrawInput==='탈퇴합니다'?'#e57373':undefined}}/>
+                <div style={{display:'flex',gap:8}}>
+                  <button className="btn btn-outline btn-sm" onClick={() => {setWithdrawConfirm(false);setWithdrawInput('')}}>
+                    취소
+                  </button>
+                  <button className="btn btn-sm" style={{background:'#e57373',color:'white',border:'none'}}
+                    onClick={handleWithdraw}
+                    disabled={withdrawInput !== '탈퇴합니다' || withdrawing}>
+                    {withdrawing ? '처리 중...' : '최종 탈퇴'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* ── 후원 정보 탭 ── */}
@@ -697,46 +736,8 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* ── 회원 탈퇴 ── */}
-        {tab==='withdraw'&&(
-          <div style={{maxWidth:480}}>
-            <h2 style={{fontWeight:700,color:'#e57373',marginBottom:8,fontSize:'1rem',display:'flex',alignItems:'center',gap:6}}>
-              <Mi size='sm' color='danger'>person_remove</Mi> 회원 탈퇴
-            </h2>
-            <div style={{padding:'14px 16px',borderRadius:10,background:'rgba(229,115,115,0.07)',border:'1px solid rgba(229,115,115,0.25)',marginBottom:20,fontSize:'0.84rem',color:'var(--color-text-light)',lineHeight:1.8}}>
-              탈퇴 시 모든 데이터(일정, 기록, 룰북, 페어 등)가 <strong>영구적으로 삭제</strong>되며 복구할 수 없어요.<br/>
-              신중하게 결정해주세요.
-            </div>
-            {!withdrawConfirm ? (
-              <button className="btn btn-sm" style={{background:'rgba(229,115,115,0.1)',color:'#e57373',border:'1px solid rgba(229,115,115,0.3)'}}
-                onClick={() => setWithdrawConfirm(true)}>
-                <Mi size='sm' color='danger'>person_remove</Mi> 탈퇴 진행하기
-              </button>
-            ) : (
-              <div>
-                <p style={{fontSize:'0.84rem',marginBottom:10,color:'var(--color-text-light)'}}>
-                  정말 탈퇴하시겠어요? 아래 칸에 <strong style={{color:'#e57373'}}>탈퇴합니다</strong> 를 입력해주세요.
-                </p>
-                <input className="form-input" placeholder="탈퇴합니다" value={withdrawInput}
-                  onChange={e => setWithdrawInput(e.target.value)}
-                  style={{marginBottom:10,borderColor:withdrawInput==='탈퇴합니다'?'#e57373':undefined}}/>
-                <div style={{display:'flex',gap:8}}>
-                  <button className="btn btn-outline btn-sm" onClick={() => {setWithdrawConfirm(false);setWithdrawInput('')}}>
-                    취소
-                  </button>
-                  <button className="btn btn-sm" style={{background:'#e57373',color:'white',border:'none'}}
-                    onClick={handleWithdraw}
-                    disabled={withdrawInput !== '탈퇴합니다' || withdrawing}>
-                    {withdrawing ? '처리 중...' : '최종 탈퇴'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 저장 버튼 (비밀번호/탈퇴 탭 제외) */}
-        {tab!=='password' && tab!=='withdraw' && tab!=='donation' &&(
+        {/* 저장 버튼 (보안 설정/후원 탭 제외) */}
+        {tab!=='security' && tab!=='donation' &&(
           <div style={{marginTop:20,paddingTop:16,borderTop:'1px solid var(--color-border)',display:'flex',justifyContent:'flex-end',alignItems:'center',gap:10}}>
             {saved&&<span className="text-sm" style={{color:'#558b2f'}}>✅ 저장됐어요!</span>}
             <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?'저장 중...':'설정 저장'}</button>

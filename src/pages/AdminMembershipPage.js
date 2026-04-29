@@ -2,18 +2,18 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { membershipApi } from '../lib/supabase'
+import { membershipApi, supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 
 // ── 등급 메타 ─────────────────────────────────────────────────
 const TIER_META = {
   master: { label: '마스터',    color: '#9c27b0', bg: 'rgba(156,39,176,0.10)', icon: 'shield_person' },
   free:   { label: '일반',      color: '#7a6050', bg: 'rgba(122,96,80,0.10)',  icon: 'person' },
-  lv1:    { label: '♥',   color: '#43a047', bg: 'rgba(67,160,71,0.10)', icon: 'favorite' },
-  lv2:    { label: '♥♥',  color: '#1976d2', bg: 'rgba(25,118,210,0.10)',icon: 'stars' },
-  lv3:    { label: '♥♥♥', color: '#c8a96e', bg: 'rgba(200,169,110,0.12)',icon: 'workspace_premium' },
+  '1ht':  { label: '♥',   color: '#43a047', bg: 'rgba(67,160,71,0.10)', icon: 'favorite' },
+  '2ht':  { label: '♥♥',  color: '#1976d2', bg: 'rgba(25,118,210,0.10)',icon: 'stars' },
+  '3ht':  { label: '♥♥♥', color: '#c8a96e', bg: 'rgba(200,169,110,0.12)',icon: 'workspace_premium' },
 }
-const ASSIGNABLE_TIERS = ['free', 'lv1', 'lv2', 'lv3'] // master는 DB 직접 설정만 가능
+const ASSIGNABLE_TIERS = ['free', '1ht', '2ht', '3ht'] // master는 DB 직접 설정만 가능
 
 const fmtKST = (iso) => {
   if (!iso) return '-'
@@ -63,7 +63,7 @@ function ExpiryCell({ tier, expiresAt }) {
 export default function AdminMembershipPage() {
   const { profile, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState('search') // 'search' | 'list'
+  const [tab, setTab] = useState('search') // 'search' | 'list' | 'notify'
 
   // 이중 보안 검증
   useEffect(() => {
@@ -85,8 +85,12 @@ export default function AdminMembershipPage() {
       </div>
 
       {/* 탭 */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-        {[['search','search','유저 검색·등급 변경'], ['list','group','전체 회원 목록']].map(([v, icon, label]) => (
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+        {[
+          ['search', 'search',           '유저 검색·등급 변경'],
+          ['list',   'group',            '전체 회원 목록'],
+          ['notify', 'notifications',    '알림 발송'],
+        ].map(([v, icon, label]) => (
           <button key={v}
             className={`btn btn-sm ${tab === v ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setTab(v)}>
@@ -95,7 +99,7 @@ export default function AdminMembershipPage() {
         ))}
       </div>
 
-      {tab === 'search' ? <SearchTab /> : <ListTab />}
+      {tab === 'search' ? <SearchTab /> : tab === 'list' ? <ListTab /> : <NotifyTab />}
     </div>
   )
 }
@@ -496,14 +500,462 @@ function SearchTab() {
 }
 
 // ══════════════════════════════════════════════════════════════
+// Tab 3: 알림 발송
+// ══════════════════════════════════════════════════════════════
+const CONDITION_OPTIONS = [
+  { value: 'all',          label: '전체 유저',         icon: 'groups',      warn: true },
+  { value: 'free',         label: '일반',              icon: 'person' },
+  { value: '1ht',          label: '♥ 원하트',          icon: 'favorite' },
+  { value: '2ht',          label: '♥♥ 투하트',         icon: 'stars' },
+  { value: '3ht',          label: '♥♥♥ 풀하트',        icon: 'workspace_premium' },
+  { value: 'master',       label: '마스터',             icon: 'shield_person' },
+  { value: 'storage_over', label: '데이터 한도 초과',   icon: 'error_outline' },
+  { value: 'storage_80',   label: '데이터 80% 이상',    icon: 'data_usage' },
+]
+
+function NotifyTab() {
+  const [mode, setMode]               = useState('condition') // 'condition' | 'manual'
+
+  // ── A. 조건 선택 ──
+  const [condition, setCondition]       = useState(null)
+  const [condUsers, setCondUsers]       = useState(null)    // { users:[{id,username,display_name}], total }
+  const [condSelected, setCondSelected] = useState(new Set()) // 체크된 uid Set
+  const [condLoading, setCondLoading]   = useState(false)
+  const [condError, setCondError]       = useState('')
+
+  // ── B. 직접 선택 ──
+  const [manualInput, setManualInput]   = useState('')
+  const [manualResults, setManualResults] = useState([])
+  const [manualSearching, setManualSearching] = useState(false)
+  const [selectedUsers, setSelectedUsers] = useState([]) // [{id,username,display_name}]
+
+  // ── 메시지 ──
+  const [message, setMessage]   = useState('')
+  const [refUrl, setRefUrl]     = useState('')
+
+  // ── 발송 ──
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [sending, setSending]         = useState(false)
+  const [sendResult, setSendResult]   = useState(null) // null | {ok, count} | {error}
+
+  const targets = mode === 'condition'
+    ? [...condSelected]
+    : selectedUsers.map(u => u.id)
+
+  // ── 조건 조회 ──
+  const handleConditionQuery = async () => {
+    if (!condition) return
+    setCondLoading(true); setCondError(''); setCondUsers(null); setCondSelected(new Set())
+    const { data, error } = await supabase.rpc('admin_get_condition_users', { p_condition: condition })
+    setCondLoading(false)
+    if (error) { setCondError(error.message || '조회 실패'); return }
+    const rows = (data || []).map(r => ({ id: r.uid, username: r.uname, display_name: r.udname }))
+    setCondUsers({ users: rows, total: rows.length })
+    setCondSelected(new Set(rows.map(r => r.id))) // 기본: 전체 선택
+  }
+
+  const toggleCondUser = (id) => {
+    setCondSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  // ── 수동 검색 ──
+  const handleManualSearch = async (e) => {
+    e.preventDefault()
+    if (!manualInput.trim()) return
+    setManualSearching(true)
+    const { data, error } = await membershipApi.searchUser(manualInput.trim())
+    setManualSearching(false)
+    if (error) { setManualResults([]); return }
+    const list = Array.isArray(data) ? data : (data ? [data] : [])
+    setManualResults(list)
+  }
+
+  const toggleSelect = (user) => {
+    setSelectedUsers(prev => {
+      const exists = prev.find(u => u.id === user.id)
+      if (exists) return prev.filter(u => u.id !== user.id)
+      return [...prev, { id: user.id, username: user.username, display_name: user.display_name }]
+    })
+  }
+
+  const isSelected = (id) => selectedUsers.some(u => u.id === id)
+
+  // ── 발송 ──
+  const handleSend = async () => {
+    if (!targets.length || !message.trim()) return
+    setSending(true); setSendResult(null)
+    const { data, error } = await supabase.rpc('admin_send_notifications', {
+      target_ids: targets,
+      p_message:  message.trim(),
+      p_type:     'admin_notice',
+      p_ref_url:  refUrl.trim() || null,
+    })
+    setSending(false)
+    if (error) {
+      setSendResult({ error: error.message || '발송 실패' })
+    } else {
+      setSendResult({ ok: true, count: data })
+      setPreviewOpen(false)
+      setMessage(''); setRefUrl('')
+      if (mode === 'condition') { setCondUsers(null); setCondition(null); setCondSelected(new Set()) }
+      else { setSelectedUsers([]); setManualResults([]) }
+    }
+  }
+
+  const condMeta = condition ? CONDITION_OPTIONS.find(o => o.value === condition) : null
+
+  return (
+    <>
+      {/* 발송 결과 */}
+      {sendResult && (
+        <div style={{
+          padding:'12px 16px', borderRadius:10, marginBottom:16,
+          background: sendResult.ok ? 'rgba(67,160,71,0.08)' : 'rgba(229,115,115,0.08)',
+          border: `1px solid ${sendResult.ok ? '#43a04755' : '#ef9a9a'}`,
+          fontSize:'0.88rem', fontWeight:600,
+          color: sendResult.ok ? '#2e7d32' : '#c62828',
+          display:'flex', alignItems:'center', gap:8,
+        }}>
+          <Mi size="sm">{sendResult.ok ? 'check_circle' : 'error'}</Mi>
+          {sendResult.ok ? `${sendResult.count}명에게 알림을 발송했습니다.` : `발송 실패: ${sendResult.error}`}
+          <button style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', color:'inherit', opacity:0.6, fontSize:'1rem' }}
+            onClick={() => setSendResult(null)}>✕</button>
+        </div>
+      )}
+
+      {/* ── 대상 선택 모드 토글 ── */}
+      <div className="card" style={{ marginBottom:16 }}>
+        <div style={{ display:'flex', gap:6, marginBottom:20 }}>
+          {[['condition','tune','조건으로 선택'], ['manual','person_search','직접 선택']].map(([v,icon,label]) => (
+            <button key={v}
+              className={`btn btn-sm ${mode===v?'btn-primary':'btn-outline'}`}
+              onClick={() => { setMode(v); setCondUsers(null); setCondition(null); setManualResults([]) }}>
+              <Mi size="sm">{icon}</Mi>{label}
+            </button>
+          ))}
+        </div>
+
+        {/* ─ A. 조건 선택 ─ */}
+        {mode === 'condition' && (
+          <>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
+              {CONDITION_OPTIONS.map(opt => {
+                const m = TIER_META[opt.value]
+                const isActive = condition === opt.value
+                return (
+                  <button key={opt.value}
+                    onClick={() => { setCondition(opt.value); setCondUsers(null); setCondError('') }}
+                    style={{
+                      display:'flex', alignItems:'center', gap:5,
+                      padding:'7px 14px', borderRadius:8, cursor:'pointer', fontSize:'0.83rem',
+                      border: isActive
+                        ? `2px solid ${m?.color || 'var(--color-primary)'}`
+                        : '2px solid var(--color-border)',
+                      background: isActive ? (m?.bg || 'rgba(var(--color-primary-rgb),0.08)') : 'transparent',
+                      color: isActive ? (m?.color || 'var(--color-primary)') : 'var(--color-text)',
+                      fontWeight: isActive ? 700 : 400,
+                      transition:'all 0.15s',
+                    }}>
+                    <Mi size="sm">{opt.icon}</Mi>{opt.label}
+                    {opt.warn && <Mi size="sm" style={{ color:'#f57c00', marginLeft:2 }}>warning</Mi>}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <button className="btn btn-sm btn-outline" onClick={handleConditionQuery}
+                disabled={!condition || condLoading}>
+                <Mi size="sm">search</Mi>{condLoading ? '조회 중...' : '대상 조회'}
+              </button>
+              {condError && <span style={{ fontSize:'0.82rem', color:'#e57373' }}>{condError}</span>}
+            </div>
+
+            {condUsers && (
+              <div style={{ marginTop:14, border:'1px solid var(--color-border)', borderRadius:10, overflow:'hidden' }}>
+                {/* 헤더: 전체 선택/해제 */}
+                <div style={{
+                  display:'flex', alignItems:'center', justifyContent:'space-between',
+                  padding:'10px 14px', background:'var(--color-nav-active-bg)',
+                  borderBottom:'1px solid var(--color-border)',
+                }}>
+                  <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:'0.85rem', fontWeight:700 }}>
+                    <input type="checkbox"
+                      checked={condSelected.size === condUsers.total && condUsers.total > 0}
+                      onChange={e => setCondSelected(e.target.checked ? new Set(condUsers.users.map(u => u.id)) : new Set())}
+                      style={{ width:15, height:15, accentColor:'var(--color-primary)', cursor:'pointer' }}
+                    />
+                    총 {condUsers.total}명
+                    <span style={{ fontWeight:400, color:'var(--color-text-light)', fontSize:'0.78rem' }}>
+                      ({condSelected.size}명 선택)
+                    </span>
+                    {condMeta?.warn && condUsers.total > 100 && (
+                      <span style={{ fontSize:'0.75rem', color:'#f57c00', fontWeight:600 }}>
+                        ⚠️ 대량 발송
+                      </span>
+                    )}
+                  </label>
+                  {condSelected.size !== condUsers.total && condSelected.size > 0 && (
+                    <span style={{ fontSize:'0.75rem', color:'var(--color-text-light)' }}>
+                      {condUsers.total - condSelected.size}명 제외됨
+                    </span>
+                  )}
+                </div>
+
+                {/* 유저 리스트 */}
+                <div style={{ maxHeight:260, overflowY:'auto' }}>
+                  {condUsers.users.map((u, i) => (
+                    <label key={u.id} style={{
+                      display:'flex', alignItems:'center', gap:10,
+                      padding:'9px 14px', cursor:'pointer',
+                      borderTop: i === 0 ? 'none' : '1px solid var(--color-border)',
+                      background: condSelected.has(u.id) ? 'rgba(var(--color-primary-rgb),0.04)' : 'transparent',
+                      transition:'background 0.1s',
+                    }}>
+                      <input type="checkbox"
+                        checked={condSelected.has(u.id)}
+                        onChange={() => toggleCondUser(u.id)}
+                        style={{ width:15, height:15, accentColor:'var(--color-primary)', cursor:'pointer', flexShrink:0 }}
+                      />
+                      <span style={{ fontSize:'0.85rem', fontWeight: condSelected.has(u.id) ? 600 : 400, flex:1 }}>
+                        {u.display_name || u.username || '(이름 없음)'}
+                      </span>
+                      {u.username && (
+                        <span style={{ fontSize:'0.75rem', color:'var(--color-text-light)' }}>@{u.username}</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ─ B. 직접 선택 ─ */}
+        {mode === 'manual' && (
+          <>
+            <form onSubmit={handleManualSearch} style={{ display:'flex', gap:8, marginBottom:12 }}>
+              <input className="form-input"
+                placeholder="이메일 일부 입력"
+                value={manualInput}
+                onChange={e => setManualInput(e.target.value)}
+                style={{ flex:1 }}
+                autoComplete="off"
+              />
+              <button className="btn btn-sm btn-outline" type="submit" disabled={manualSearching}>
+                {manualSearching ? '...' : '검색'}
+              </button>
+            </form>
+
+            {manualResults.length > 0 && (
+              <div style={{ border:'1px solid var(--color-border)', borderRadius:8, overflow:'hidden', marginBottom:12 }}>
+                {manualResults.map((u, i) => (
+                  <label key={u.id} style={{
+                    display:'flex', alignItems:'center', gap:10,
+                    padding:'10px 14px', cursor:'pointer',
+                    borderTop: i === 0 ? 'none' : '1px solid var(--color-border)',
+                    background: isSelected(u.id) ? 'rgba(var(--color-primary-rgb),0.06)' : 'transparent',
+                    transition:'background 0.1s',
+                  }}>
+                    <input type="checkbox" checked={isSelected(u.id)}
+                      onChange={() => toggleSelect(u)}
+                      style={{ width:16, height:16, accentColor:'var(--color-primary)', cursor:'pointer' }} />
+                    <TierBadge tier={u.membership_tier || 'free'} />
+                    <span style={{ fontWeight:600, fontSize:'0.85rem', flex:1 }}>
+                      {u.display_name || u.username || '-'}
+                      {u.username && <span style={{ fontSize:'0.75rem', opacity:0.6, marginLeft:5 }}>@{u.username}</span>}
+                    </span>
+                    <span style={{ fontSize:'0.75rem', color:'var(--color-text-light)' }}>{u.email}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {selectedUsers.length > 0 && (
+              <div style={{
+                padding:'10px 14px', borderRadius:10,
+                background:'var(--color-nav-active-bg)', border:'1px solid var(--color-border)',
+              }}>
+                <div style={{ fontSize:'0.82rem', fontWeight:700, marginBottom:8, color:'var(--color-primary)' }}>
+                  선택된 유저 {selectedUsers.length}명
+                </div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                  {selectedUsers.map(u => (
+                    <span key={u.id} style={{
+                      display:'flex', alignItems:'center', gap:4,
+                      fontSize:'0.78rem', padding:'3px 10px', borderRadius:100,
+                      background:'var(--color-surface)', border:'1px solid var(--color-border)',
+                    }}>
+                      {u.display_name || u.username || '(이름 없음)'}
+                      <button onClick={() => setSelectedUsers(p => p.filter(x => x.id !== u.id))}
+                        style={{ background:'none', border:'none', cursor:'pointer', padding:0, lineHeight:1, color:'var(--color-text-light)', fontSize:'0.9rem' }}>
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── 메시지 작성 ── */}
+      <div className="card" style={{ marginBottom:16 }}>
+        <h3 style={{ fontSize:'0.9rem', fontWeight:700, marginBottom:14 }}>
+          <Mi size="sm" style={{ marginRight:6, verticalAlign:'middle' }}>edit_note</Mi>메시지 작성
+        </h3>
+        <textarea
+          className="form-input"
+          rows={4}
+          placeholder="알림 메시지 내용을 입력하세요"
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          style={{ width:'100%', resize:'vertical', fontFamily:'inherit' }}
+        />
+        <div style={{ marginTop:10 }}>
+          <label style={{ fontSize:'0.8rem', color:'var(--color-text-light)', display:'block', marginBottom:5 }}>
+            연결 URL (선택)
+          </label>
+          <input className="form-input"
+            placeholder="예: /notices/... 또는 /storage"
+            value={refUrl}
+            onChange={e => setRefUrl(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* ── 미리보기 버튼 ── */}
+      <button
+        className="btn btn-primary"
+        disabled={!targets.length || !message.trim()}
+        onClick={() => { setSendResult(null); setPreviewOpen(true) }}>
+        <Mi size="sm">visibility</Mi>
+        미리보기 확인
+        {targets.length > 0 && (
+          <span style={{
+            marginLeft:6, background:'rgba(255,255,255,0.25)',
+            padding:'1px 8px', borderRadius:100, fontSize:'0.78rem',
+          }}>
+            {targets.length}명
+          </span>
+        )}
+      </button>
+      {!targets.length && (
+        <p style={{ marginTop:8, fontSize:'0.8rem', color:'var(--color-text-light)' }}>
+          대상 유저를 먼저 선택해 주세요.
+        </p>
+      )}
+
+      {/* ── 미리보기 모달 ── */}
+      {previewOpen && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999,
+          display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={() => !sending && setPreviewOpen(false)}>
+          <div style={{
+            background:'var(--color-surface)', borderRadius:16, padding:'28px 24px',
+            maxWidth:460, width:'100%', border:'1px solid var(--color-border)',
+            boxShadow:'0 8px 32px rgba(0,0,0,0.22)',
+          }} onClick={e => e.stopPropagation()}>
+
+            <h3 style={{ fontWeight:700, marginBottom:18, display:'flex', alignItems:'center', gap:8 }}>
+              <Mi style={{ color:'var(--color-primary)' }}>notifications</Mi>
+              발송 전 최종 확인
+            </h3>
+
+            {/* 수신자 */}
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:'0.75rem', color:'var(--color-text-light)', marginBottom:5, fontWeight:600 }}>
+                수신자
+              </div>
+              <div style={{
+                padding:'10px 14px', borderRadius:8,
+                background:'var(--color-nav-active-bg)', border:'1px solid var(--color-border)',
+              }}>
+                <span style={{ fontWeight:700, color:'var(--color-primary)', fontSize:'0.95rem' }}>
+                  {targets.length}명
+                </span>
+                <span style={{ fontSize:'0.82rem', color:'var(--color-text-light)', marginLeft:8 }}>
+                  {mode === 'condition' && condMeta ? `(조건: ${condMeta.label})` : '(직접 선택)'}
+                </span>
+                {(() => {
+                  const previewList = mode === 'condition'
+                    ? (condUsers?.users || []).filter(u => condSelected.has(u.id))
+                    : selectedUsers
+                  if (!previewList.length) return null
+                  return (
+                    <div style={{ marginTop:6, display:'flex', flexWrap:'wrap', gap:4 }}>
+                      {previewList.slice(0, 5).map(u => (
+                        <span key={u.id} style={{ fontSize:'0.75rem', padding:'2px 8px', borderRadius:100,
+                          background:'var(--color-surface)', border:'1px solid var(--color-border)' }}>
+                          {u.display_name || u.username}
+                        </span>
+                      ))}
+                      {previewList.length > 5 && (
+                        <span style={{ fontSize:'0.75rem', color:'var(--color-text-light)', padding:'2px 4px' }}>
+                          외 {previewList.length - 5}명
+                        </span>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* 메시지 */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:'0.75rem', color:'var(--color-text-light)', marginBottom:5, fontWeight:600 }}>
+                메시지
+              </div>
+              <div style={{
+                padding:'12px 14px', borderRadius:8, fontSize:'0.88rem', lineHeight:1.6,
+                background:'var(--color-nav-active-bg)', border:'1px solid var(--color-border)',
+                whiteSpace:'pre-wrap', wordBreak:'break-word',
+              }}>
+                {message}
+              </div>
+              {refUrl && (
+                <div style={{ marginTop:6, fontSize:'0.78rem', color:'var(--color-text-light)' }}>
+                  링크: <code style={{ background:'var(--color-nav-active-bg)', padding:'1px 6px', borderRadius:4 }}>{refUrl}</code>
+                </div>
+              )}
+            </div>
+
+            {sendResult?.error && (
+              <p style={{ fontSize:'0.83rem', color:'#e57373', marginBottom:12 }}>
+                ❌ {sendResult.error}
+              </p>
+            )}
+
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setPreviewOpen(false)} disabled={sending}>
+                취소
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={handleSend} disabled={sending}>
+                <Mi size="sm">send</Mi>
+                {sending ? '발송 중...' : `${targets.length}명에게 발송`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
 // Tab 2: 전체 회원 목록
 // ══════════════════════════════════════════════════════════════
 const TIER_FILTER_OPTIONS = [
   { value: null,     label: '전체' },
   { value: 'master', label: '마스터' },
-  { value: 'lv3',    label: '♥♥♥' },
-  { value: 'lv2',    label: '♥♥' },
-  { value: 'lv1',    label: '♥' },
+  { value: '3ht',    label: '♥♥♥' },
+  { value: '2ht',    label: '♥♥' },
+  { value: '1ht',    label: '♥' },
   { value: 'free',   label: '일반' },
 ]
 const PER_PAGE = 30
@@ -534,11 +986,11 @@ function ListTab() {
   // 등급별 통계 (최초 1회)
   const loadStats = useCallback(async () => {
     const results = await Promise.all(
-      ['master','lv3','lv2','lv1','free'].map(t =>
+      ['master','3ht','2ht','1ht','free'].map(t =>
         membershipApi.listUsers({ tier: t, page: 1, perPage: 1 })
       )
     )
-    const keys = ['master','lv3','lv2','lv1','free']
+    const keys = ['master','3ht','2ht','1ht','free']
     const s = {}
     results.forEach(({ data }, i) => { s[keys[i]] = data?.total || 0 })
     setStats(s)
@@ -570,7 +1022,7 @@ function ListTab() {
       {/* 등급별 통계 카드 */}
       {stats && (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
-          {['master','lv3','lv2','lv1','free'].map(t => {
+          {['master','3ht','2ht','1ht','free'].map(t => {
             const m = TIER_META[t]
             return (
               <div key={t} style={{

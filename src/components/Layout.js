@@ -10,9 +10,9 @@ const NOTICE_VIEWED_KEY = 'noticeLastViewed'
 
 const TIER_BADGE = {
   master: { label: '마스터', bg: '#7c5cbf', color: '#fff' },
-  lv3:    { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
-  lv2:    { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
-  lv1:    { label: '♥',     bg: '#b87333', color: '#fff' },
+  '3ht':  { label: '♥♥♥',   bg: '#d4a017', color: '#fff' },
+  '2ht':  { label: '♥♥',    bg: '#9e9e9e', color: '#fff' },
+  '1ht':  { label: '♥',     bg: '#b87333', color: '#fff' },
 }
 
 const daysUntil = (iso) => {
@@ -215,7 +215,7 @@ export function Layout({ children }) {
     }
   }, [location.pathname])
 
-  const isLv2Plus = ['lv1','lv2','lv3','master'].includes(profile?.membership_tier)
+  const isLv2Plus = ['1ht','2ht','3ht','master'].includes(profile?.membership_tier)
 
   return (
     <div className="app-layout">
@@ -412,7 +412,7 @@ export function Layout({ children }) {
             </div>
           </div>
           {/* 멤버십 정보 박스 (lv1~lv3) */}
-          {['lv1','lv2','lv3'].includes(profile?.membership_tier) && (() => {
+          {['1ht','2ht','3ht'].includes(profile?.membership_tier) && (() => {
             const badge   = TIER_BADGE[profile.membership_tier]
             const days    = daysUntil(profile.membership_expires_at)
             const expired = days !== null && days < 0
