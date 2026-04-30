@@ -32,7 +32,7 @@ export default function PrivacyPage() {
                 <li><strong>선택:</strong> 닉네임, 프로필 이미지, 자기소개, 헤더 이미지</li>
                 <li><strong>서비스 이용 중 생성:</strong> 일정, 룰북, 다녀온 기록, 시나리오, 페어, 방명록 등 이용자가 직접 입력한 콘텐츠</li>
                 <li><strong>서비스 이용 중 생성 (후원 관련):</strong> 후원 등급, 등급 변경 이력, 최초 유료 서비스 이용 시작일</li>
-                <li><strong>문의/피드백 시:</strong> 이메일 주소 (선택 입력)</li>
+                <li><strong>문의하기 게시판 이용 시:</strong> 이메일 주소 (선택 입력)</li>
                 <li><strong>후원 신청 시 (구글폼):</strong> 가입 이메일, 사용자 이름 URL, 후원 등급 선택, 포스타입 닉네임, 동의 여부</li>
               </ul>
             </>
@@ -92,7 +92,7 @@ export default function PrivacyPage() {
               <li>개인정보 열람, 수정, 삭제 요청 가능</li>
               <li>환경설정 페이지에서 직접 수정 가능</li>
               <li>탈퇴 요청 시 모든 개인정보 삭제 처리</li>
-              <li>문의: 사이트 내 문의/피드백 탭 또는 관리자에게 직접 연락</li>
+              <li>문의: 사이트 내 '문의하기' 게시판 또는 관리자에게 직접 연락</li>
             </ul>
           )
         },
@@ -108,7 +108,7 @@ export default function PrivacyPage() {
           content: (
             <ul>
               <li><strong>운영자:</strong> 젯 관장 (trpg00_Z)</li>
-              <li><strong>문의:</strong> 사이트 내 문의/피드백 탭</li>
+              <li><strong>문의:</strong> 사이트 내 '문의하기' 게시판</li>
             </ul>
           )
         },
@@ -137,7 +137,7 @@ export default function PrivacyPage() {
                 <li>후원 후 7일 이내, 등급 혜택을 사용하지 않은 경우 전액 환불이 가능합니다.</li>
                 <li>등급 혜택(추가 저장 공간 등)을 사용한 경우 환불이 불가합니다.</li>
                 <li>중도 해지 시 잔여 기간에 대한 일할 환불은 제공되지 않습니다.</li>
-                <li>환불 요청: 사이트 내 문의/피드백 탭으로 연락해 주세요.</li>
+                <li>환불 요청: 사이트 내 '문의하기' 게시판으로 연락해 주세요.</li>
               </ul>
               <p style={{ fontWeight:600, marginBottom:4 }}>④ 후원 만료 시 데이터 처리</p>
               <ul>
@@ -168,9 +168,9 @@ export default function PrivacyPage() {
         문의사항은 사이트 내{' '}
         <a href="/u/trpg00_Z?tab=feedback"
           style={{ color:'var(--color-accent)', textDecoration:'none', fontWeight:600 }}>
-          문의/피드백
+          문의하기
         </a>
-        {' '}탭을 이용해주세요.
+        {' '}게시판을 이용해주세요.
       </div>
     </div>
   )
