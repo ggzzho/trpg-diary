@@ -108,7 +108,7 @@ export default function NoticePage() {
         <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
           {notice.is_popup && (
             <span className="badge badge-primary" style={{fontSize:'0.65rem'}}>
-              <Mi size="sm" color="white">notifications</Mi> 공지
+              <Mi size="sm">notifications</Mi> 공지
             </span>
           )}
         </div>

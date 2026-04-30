@@ -63,7 +63,7 @@ export default function NoticeListPage() {
                       <div style={{display:'flex', alignItems:'center', gap:10}}>
                         {n.is_popup && (
                           <span className="badge badge-primary" style={{fontSize:'0.62rem', flexShrink:0}}>
-                            <Mi size="sm" color="white">notifications</Mi> 공지
+                            <Mi size="sm">notifications</Mi> 공지
                           </span>
                         )}
                         <span style={{flex:1, fontWeight:600, fontSize:'0.9rem',

@@ -857,8 +857,8 @@ export default function SchedulePage() {
           <div className="text-xs text-light">{copyTarget?.scheduled_date}</div>
         </div>
         <div className="flex gap-8" style={{marginBottom:16}}>
-          <button className={`btn btn-sm ${copyMode==='copy'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('copy')}><Mi size='sm' color='white'>content_copy</Mi> 복사</button>
-          <button className={`btn btn-sm ${copyMode==='move'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('move')}><Mi size='sm' color='white'>cut</Mi> 이동</button>
+          <button className={`btn btn-sm ${copyMode==='copy'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('copy')}><Mi size='sm' color={copyMode==='copy'?'white':undefined}>content_copy</Mi> 복사</button>
+          <button className={`btn btn-sm ${copyMode==='move'?'btn-primary':'btn-outline'}`} onClick={()=>setCopyMode('move')}><Mi size='sm' color={copyMode==='move'?'white':undefined}>cut</Mi> 이동</button>
         </div>
         <div className="form-group">
           <label className="form-label">{copyMode==='copy'?'복사할 날짜':'이동할 날짜'}</label>
