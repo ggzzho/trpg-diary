@@ -28,11 +28,11 @@ export function MarkdownRenderer({ content, style }) {
     // 기울임
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     // h1
-    .replace(/^# (.+)$/gm, '<h1 style="font-size:1.3rem;font-weight:700;margin:8px 0 3px;">$1</h1>')
+    .replace(/^# (.+)$/gm, '<h1 style="font-size:1.3rem;font-weight:700;margin:8px 0;">$1</h1>')
     // h2
-    .replace(/^## (.+)$/gm, '<h2 style="font-size:1.1rem;font-weight:700;margin:6px 0 2px;">$1</h2>')
+    .replace(/^## (.+)$/gm, '<h2 style="font-size:1.1rem;font-weight:700;margin:6px 0;">$1</h2>')
     // h3
-    .replace(/^### (.+)$/gm, '<h3 style="font-size:1rem;font-weight:700;margin:5px 0 2px;">$1</h3>')
+    .replace(/^### (.+)$/gm, '<h3 style="font-size:1rem;font-weight:700;margin:5px 0;">$1</h3>')
     // 가로줄
     .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--color-border);margin:12px 0;"/>')
     // 목록
@@ -40,11 +40,11 @@ export function MarkdownRenderer({ content, style }) {
     .replace(/(<li[^>]*>.*<\/li>\n?)+/g, '<ul style="padding-left:20px;margin:4px 0;">$&</ul>')
     // 링크
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer noopener" style="color:var(--color-primary);text-decoration:underline;">$1</a>')
-    // 줄바꿈: li 사이 \n 제거 → ul 주변/제목 주변 이중 \n 단일화 → 나머지 <br/>
+    // 줄바꿈: li 사이 \n 제거 → ul/제목 뒤 \n 제거(margin이 담당) → ul 앞 이중 \n 단일화 → 나머지 <br/>
     .replace(/(<\/li>)\n(<li)/g, '$1$2')
     .replace(/\n(<\/ul>)/g, '$1')
+    .replace(/(<\/h[1-3]>)\n/g, '$1')
     .replace(/\n\n(<(?:h[1-3]|ul)[^>]*>)/g, '\n$1')
-    .replace(/(<\/(?:h[1-3]|ul)>)\n\n/g, '$1\n')
     .replace(/\n/g, '<br/>')
 
   return (
