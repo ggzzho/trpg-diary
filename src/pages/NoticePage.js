@@ -1,5 +1,5 @@
 // src/pages/NoticePage.js
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { supabase } from '../lib/supabase'
@@ -18,6 +18,16 @@ export default function NoticePage() {
   const [likeCount, setLikeCount] = useState(0)
   const [liked, setLiked] = useState(false)
   const [liking, setLiking] = useState(false)
+  const [showTop, setShowTop] = useState(false)
+
+  const handleScroll = useCallback(() => {
+    setShowTop(window.scrollY > 300)
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [handleScroll])
 
   useEffect(() => {
     const load = async () => {
@@ -153,6 +163,27 @@ export default function NoticePage() {
           </button>
         </div>
       </div>
+
+      {/* TOP 플로팅 버튼 */}
+      {showTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{
+            position:'fixed', bottom:32, right:28, zIndex:200,
+            width:42, height:42, borderRadius:'50%',
+            background:'var(--color-primary)', color:'white',
+            border:'none', cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            boxShadow:'0 4px 16px var(--color-btn-shadow)',
+            transition:'opacity 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity='0.8'}
+          onMouseLeave={e => e.currentTarget.style.opacity='1'}
+          title="맨 위로"
+        >
+          <Mi style={{fontSize:20, color:'white'}}>keyboard_arrow_up</Mi>
+        </button>
+      )}
     </div>
   )
 }
