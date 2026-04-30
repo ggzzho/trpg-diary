@@ -271,10 +271,25 @@ function InquiryBoard({ adminId, refreshNotifs }) {
                 관리자 답변 {selected.replied_at && <span style={{ fontWeight:400 }}>({fmtDT(selected.replied_at)})</span>}
               </div>
               <textarea className="form-textarea"
-                placeholder="답변을 입력하세요 (비워두면 답변 없음으로 저장)"
+                placeholder="답변을 입력하세요 (비워두면 자동 안내 문구가 전송됩니다)"
                 value={replyText}
                 onChange={e => setReplyText(e.target.value)}
-                style={{ minHeight:120, fontSize:'0.88rem', marginBottom:10 }}/>
+                style={{ minHeight:120, fontSize:'0.88rem', marginBottom:8 }}/>
+              {/* 자동 안내 미리보기: 답변 비움 + 답변완료 상태일 때 */}
+              {!replyText.trim() && replyStatus === 'resolved' && (
+                <div style={{
+                  marginBottom:10, padding:'10px 14px', borderRadius:8,
+                  background:'rgba(200,169,110,0.07)', border:'1px dashed var(--color-accent)',
+                  fontSize:'0.80rem',
+                }}>
+                  <div style={{ fontWeight:700, color:'var(--color-accent)', marginBottom:4, display:'flex', alignItems:'center', gap:5 }}>
+                    <Mi size="sm">auto_awesome</Mi>자동 안내 미리보기
+                  </div>
+                  <div style={{ color:'var(--color-text-light)' }}>
+                    확인되었습니다. 향후 서비스 개선에 참고하겠습니다. 감사합니다.
+                  </div>
+                </div>
+              )}
               <div style={{ display:'flex', alignItems:'center', gap:10, justifyContent:'space-between' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                   <span style={{ fontSize:'0.80rem', color:'var(--color-text-light)' }}>상태 변경</span>
