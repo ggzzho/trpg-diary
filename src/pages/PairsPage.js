@@ -226,7 +226,6 @@ export function PairsPage() {
                   {item.pair_image_url?<img src={item.pair_image_url} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'4rem',opacity:0.25}}>👤</span>}
                   {dday!==null&&(
                     <div style={{position:'absolute',top:10,right:10,background:'var(--color-primary)',color:'white',borderRadius:8,padding:'4px 10px',textAlign:'center',boxShadow:'0 2px 8px rgba(0,0,0,0.2)'}}>
-                      <div style={{fontSize:'0.6rem',opacity:0.85}}>함께한 지</div>
                       <div style={{fontSize:'1.1rem',fontWeight:700,lineHeight:1.2}}>D+{dday}</div>
                     </div>
                   )}
