@@ -141,7 +141,7 @@ function InquiryCard({ item, onDelete, isUnread, onMarkRead }) {
     // 답변완료 상태
     const replyText = hasReply
       ? item.admin_reply
-      : '확인되었습니다. 향후 서비스 개선 시 참고하겠습니다. 감사합니다.'
+      : '확인되었습니다. 향후 서비스 개선에 참고하겠습니다. 감사합니다.'
 
     if (!replyText) return null
 
