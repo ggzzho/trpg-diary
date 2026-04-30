@@ -140,7 +140,7 @@ export default function AdminNoticePage() {
                     <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}}>
                       {n.is_popup && (
                         <span className="badge badge-primary" style={{fontSize:'0.65rem',flexShrink:0}}>
-                          <Mi size="sm" color="white">notifications</Mi> 팝업
+                          <Mi size="sm">notifications</Mi> 팝업
                         </span>
                       )}
                       <span style={{fontWeight:600,fontSize:'0.9rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
