@@ -121,8 +121,8 @@ function NavGroup({ group, pathname, badgeCounts = {} }) {
   )
 }
 
-export const FOOTER_TEXT = '© 2026 TRPG Diary v2.0.1 · Made with Claude (AI). All rights reserved.'
-export const SITE_VERSION = 'v2.0.1'
+export const FOOTER_TEXT = '© 2026 TRPG Diary v3.0.1 · Made with Claude (AI). All rights reserved.'
+export const SITE_VERSION = 'v3.0.1'
 
 export function Layout({ children }) {
   const { user, profile, notifCounts, refreshNotifs } = useAuth()
