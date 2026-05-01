@@ -33,7 +33,8 @@ const AvailabilityPage = React.lazy(() => import('./pages/AvailabilityPage').the
 const PlayLogPage      = React.lazy(() => import('./pages/PlayLogPage').then(m => ({ default: m.PlayLogPage })))
 const RulebookPage     = React.lazy(() => import('./pages/RulebookPage').then(m => ({ default: m.RulebookPage })))
 const ScenarioPage     = React.lazy(() => import('./pages/ScenarioPage').then(m => ({ default: m.ScenarioPage })))
-const WishScenarioPage = React.lazy(() => import('./pages/WishScenarioPage').then(m => ({ default: m.WishScenarioPage })))
+// WishScenarioPage: DB 데이터 보존, 라우트·메뉴만 비활성화
+// const WishScenarioPage = React.lazy(() => import('./pages/WishScenarioPage').then(m => ({ default: m.WishScenarioPage })))
 const DotoriPage       = React.lazy(() => import('./pages/DotoriPage').then(m => ({ default: m.DotoriPage })))
 const PairsPage        = React.lazy(() => import('./pages/PairsPage').then(m => ({ default: m.PairsPage })))
 const CharactersPage   = React.lazy(() => import('./pages/CharactersPage').then(m => ({ default: m.CharactersPage })))
@@ -122,7 +123,7 @@ function AppRoutes() {
         <Route path="/logs" element={<PrivateLayout><PlayLogPage/></PrivateLayout>}/>
         <Route path="/rulebooks" element={<PrivateLayout><RulebookPage/></PrivateLayout>}/>
         <Route path="/scenarios" element={<PrivateLayout><ScenarioPage/></PrivateLayout>}/>
-        <Route path="/wish-scenarios" element={<PrivateLayout><WishScenarioPage/></PrivateLayout>}/>
+        {/* /wish-scenarios: DB 데이터 보존, 라우트만 비활성화 */}
         <Route path="/dotori" element={<PrivateLayout><DotoriPage/></PrivateLayout>}/>
         <Route path="/pairs" element={<PrivateLayout><PairsPage/></PrivateLayout>}/>
         <Route path="/characters" element={<PrivateLayout><CharactersPage/></PrivateLayout>}/>

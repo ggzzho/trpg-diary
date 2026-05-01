@@ -43,7 +43,6 @@ const NAV_GROUPS = [
   ]},
   { type:'group', key:'scenario', label:'Scenario', items:[
     { to:'/scenarios', icon:'description', label:'보유 시나리오' },
-    { to:'/wish-scenarios', icon:'favorite', label:'위시 시나리오' },
     { to:'/dotori', icon:'forest', label:'도토리' },
   ]},
   { type:'group', key:'sessions', label:'Sessions', items:[

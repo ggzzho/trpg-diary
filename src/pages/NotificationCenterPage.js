@@ -13,6 +13,8 @@ const NOTIF_ICON = {
   feedback_comment:  'support_agent',
   feedback_reply:    'mark_email_read',
   admin_notice:      'campaign',
+  backup_ready:      'cloud_done',
+  storage_warning:   'data_usage',
 }
 
 const NOTIF_LABEL = {
@@ -21,6 +23,8 @@ const NOTIF_LABEL = {
   feedback_comment:  '문의함 댓글',
   feedback_reply:    '문의 답변',
   admin_notice:      '시스템 알림',
+  backup_ready:      '자동 백업 완료',
+  storage_warning:   '데이터 한도 안내',
 }
 
 const PER_PAGE = 30
@@ -60,7 +64,10 @@ export default function NotificationCenterPage() {
     }
     const path = n.ref_url || (
       n.type === 'feedback_comment' || n.type === 'feedback_reply'
-        ? '/admin/feedback' : '/guestbook'
+        ? '/admin/feedback'
+        : n.type === 'storage_warning' || n.type === 'backup_ready'
+        ? '/storage'
+        : '/guestbook'
     )
     navigate(path)
   }
