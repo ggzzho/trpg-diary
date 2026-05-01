@@ -102,11 +102,12 @@ export const membershipApi = {
     return { data, error }
   },
   // 등급 설정 (SECURITY DEFINER 함수 호출)
-  setMembership: async (email, tier, note = null) => {
+  setMembership: async (email, tier, note = null, renew = true) => {
     const { data, error } = await supabase.rpc('admin_set_membership', {
       p_target_email: email,
       p_new_tier: tier,
       p_note: note,
+      p_renew: renew,
     })
     return { data, error }
   },

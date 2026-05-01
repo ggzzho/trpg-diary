@@ -115,12 +115,11 @@ function SearchTab() {
   const [searchError, setSearchError]       = useState('')
 
   const [selectedTier, setSelectedTier] = useState('free')
+  const [withRenew, setWithRenew]       = useState(true)
   const [note, setNote]                 = useState('')
   const [saving, setSaving]             = useState(false)
   const [saveMsg, setSaveMsg]           = useState('')
   const [confirmOpen, setConfirmOpen]   = useState(false)
-
-  const [extendConfirmOpen, setExtendConfirmOpen] = useState(false)
 
   const [logs, setLogs]               = useState([])
   const [logsLoading, setLogsLoading] = useState(false)
@@ -153,6 +152,7 @@ function SearchTab() {
       // 결과가 1명이면 바로 선택
       setSearchResult(list[0])
       setSelectedTier(list[0].membership_tier || 'free')
+      setWithRenew(true)
       setNote('')
     } else {
       // 여러 명이면 목록 표시
@@ -164,6 +164,7 @@ function SearchTab() {
     setSearchCandidates([])
     setSearchResult(user)
     setSelectedTier(user.membership_tier || 'free')
+    setWithRenew(true)
     setNote('')
     setSaveMsg('')
   }
@@ -171,29 +172,20 @@ function SearchTab() {
   const handleSave = async () => {
     if (!searchResult) return
     setSaving(true); setSaveMsg('')
+    const tierChanged = selectedTier !== currentTier
+    const noteVal = note.trim() || null
     const { data, error } = await membershipApi.setMembership(
-      searchResult.email, selectedTier, note.trim() || null
+      searchResult.email, selectedTier, noteVal, withRenew
     )
     setSaving(false); setConfirmOpen(false)
     if (error) { setSaveMsg('❌ ' + (error.message || '저장 실패')); return }
     setSearchResult(data)
     setSelectedTier(data.membership_tier || 'free')
+    setWithRenew(true)
     setNote('')
-    setSaveMsg('✅ 등급이 변경되었어요')
-    loadLogs()
-  }
-
-  const handleExtend = async () => {
-    if (!searchResult) return
-    setSaving(true); setSaveMsg('')
-    const { data, error } = await membershipApi.setMembership(
-      searchResult.email, currentTier, '[연장] +31일'
-    )
-    setSaving(false); setExtendConfirmOpen(false)
-    if (error) { setSaveMsg('❌ ' + (error.message || '연장 실패')); return }
-    setSearchResult(data)
-    setSelectedTier(data.membership_tier || 'free')
-    setSaveMsg('✅ 31일 연장 완료')
+    if (tierChanged && withRenew) setSaveMsg('✅ 등급 변경 + 만료일 갱신 완료')
+    else if (tierChanged)         setSaveMsg('✅ 등급이 변경되었어요')
+    else                          setSaveMsg('✅ 만료일 +31일 연장 완료')
     loadLogs()
   }
 
@@ -299,16 +291,6 @@ function SearchTab() {
               <div style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', marginBottom: 2 }}>만료일 (KST)</div>
               <ExpiryCell tier={currentTier} expiresAt={searchResult.membership_expires_at} />
             </div>
-            {/* 만료일 연장 버튼 */}
-            {!isMaster && currentTier !== 'free' && (
-              <div style={{ gridColumn: '1 / -1', marginTop: 2 }}>
-                <button className="btn btn-sm btn-outline"
-                  onClick={() => setExtendConfirmOpen(true)}
-                  style={{ fontSize: '0.78rem', color: '#1976d2', borderColor: '#1976d2aa' }}>
-                  <Mi size="sm">add_circle</Mi>만료일 +31일 연장
-                </button>
-              </div>
-            )}
 
             <div style={{ gridColumn: '1 / -1' }}>
               <div style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', marginBottom: 2 }}>혜택 최초 사용일</div>
@@ -349,15 +331,46 @@ function SearchTab() {
                   })}
                 </div>
 
-                {/* 연장 예상 안내 */}
+                {/* 갱신 포함 체크박스 */}
+                {selectedTier !== 'free' && (
+                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', userSelect: 'none', fontSize: '0.83rem', fontWeight: 600 }}>
+                      <input
+                        type="checkbox"
+                        checked={withRenew}
+                        onChange={e => setWithRenew(e.target.checked)}
+                        style={{ width: 15, height: 15, accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+                      />
+                      만료일 +31일 갱신 포함
+                    </label>
+                  </div>
+                )}
+
+                {/* 만료일 변경 미리보기 */}
                 {selectedTier !== 'free' && (() => {
                   const exp = searchResult.membership_expires_at
-                  const dl  = exp ? daysLeft(exp) : null
-                  if (currentTier === 'free' || !exp || dl <= 0) {
-                    return <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 6, background: 'rgba(200,169,110,0.08)', border: '1px solid rgba(200,169,110,0.2)', fontSize: '0.78rem', color: 'var(--color-text-light)' }}>오늘부터 31일 후 만료됩니다.</div>
+                  const hasValidExp = exp && daysLeft(exp) > 0
+                  const tierChanged = selectedTier !== currentTier
+
+                  // 갱신 없이 등급만 변경 (유효한 만료일 있을 때만 가능)
+                  if (!withRenew && hasValidExp) {
+                    return (
+                      <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 6, background: 'rgba(25,118,210,0.06)', border: '1px solid rgba(25,118,210,0.2)', fontSize: '0.78rem', color: '#1976d2' }}>
+                        {tierChanged
+                          ? `등급만 변경됩니다. 만료일 ${fmtKST(exp)} 유지`
+                          : '변경 사항이 없습니다.'}
+                      </div>
+                    )
+                  }
+
+                  // 갱신 포함 (또는 renew=false이지만 만료일 없음 → 강제 갱신)
+                  if (!hasValidExp || currentTier === 'free') {
+                    return <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 6, background: 'rgba(200,169,110,0.08)', border: '1px solid rgba(200,169,110,0.2)', fontSize: '0.78rem', color: 'var(--color-text-light)' }}>
+                      오늘부터 31일 후 만료됩니다.
+                    </div>
                   }
                   const newExp = new Date(exp); newExp.setDate(newExp.getDate() + 31)
-                  return <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 6, background: 'rgba(200,169,110,0.08)', border: '1px solid rgba(200,169,110,0.2)', fontSize: '0.78rem', color: 'var(--color-text-light)' }}>
+                  return <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 6, background: 'rgba(200,169,110,0.08)', border: '1px solid rgba(200,169,110,0.2)', fontSize: '0.78rem', color: 'var(--color-text-light)' }}>
                     기존 만료일({fmtKST(exp)})에서 31일 연장 → {fmtKST(newExp.toISOString())}
                   </div>
                 })()}
@@ -375,11 +388,18 @@ function SearchTab() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button className="btn btn-primary"
-                  disabled={saving || selectedTier === currentTier}
-                  onClick={() => setConfirmOpen(true)}>
-                  <Mi size="sm">save</Mi>등급 저장
-                </button>
+                {/* 저장 버튼: 등급 변경 또는 갱신 중 하나라도 있어야 활성화 */}
+                {(() => {
+                  const tierChanged    = selectedTier !== currentTier
+                  const effectiveRenew = withRenew && selectedTier !== 'free'
+                  const isDisabled     = saving || (!tierChanged && !effectiveRenew)
+                  return (
+                    <button className="btn btn-primary" disabled={isDisabled}
+                      onClick={() => setConfirmOpen(true)}>
+                      <Mi size="sm">save</Mi>저장
+                    </button>
+                  )
+                })()}
                 {saveMsg && (
                   <span style={{ fontSize: '0.83rem', color: saveMsg.startsWith('✅') ? '#43a047' : '#e57373' }}>
                     {saveMsg}
@@ -392,54 +412,63 @@ function SearchTab() {
       )}
 
       {/* 확인 다이얼로그 */}
-      {confirmOpen && searchResult && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-          onClick={() => setConfirmOpen(false)}>
-          <div style={{ background: 'var(--color-surface)', borderRadius: 14, padding: '28px 24px', maxWidth: 380, width: '100%', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
-            onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontWeight: 700, marginBottom: 12 }}>등급 변경 확인</h3>
-            <p style={{ fontSize: '0.88rem', color: 'var(--color-text-light)', lineHeight: 1.7, marginBottom: 20 }}>
-              <strong style={{ color: 'var(--color-text)' }}>{searchResult.email}</strong><br />
-              <TierBadge tier={currentTier} />
-              <Mi size="sm" style={{ margin: '0 8px', verticalAlign: 'middle' }}>arrow_forward</Mi>
-              <TierBadge tier={selectedTier} />
-            </p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn btn-outline btn-sm" onClick={() => setConfirmOpen(false)}>취소</button>
-              <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
-                {saving ? '처리 중...' : '확인'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {confirmOpen && searchResult && (() => {
+        const tierChanged    = selectedTier !== currentTier
+        const effectiveRenew = withRenew && selectedTier !== 'free'
+        const exp            = searchResult.membership_expires_at
+        const hasValidExp    = exp && daysLeft(exp) > 0
+        const newExpDate     = hasValidExp ? (() => { const d = new Date(exp); d.setDate(d.getDate() + 31); return d })() : null
 
-      {/* 연장 확인 다이얼로그 */}
-      {extendConfirmOpen && searchResult && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-          onClick={() => setExtendConfirmOpen(false)}>
-          <div style={{ background: 'var(--color-surface)', borderRadius: 14, padding: '28px 24px', maxWidth: 380, width: '100%', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
-            onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontWeight: 700, marginBottom: 12 }}>만료일 +31일 연장</h3>
-            <div style={{ fontSize: '0.88rem', color: 'var(--color-text-light)', lineHeight: 1.8, marginBottom: 20 }}>
-              <strong style={{ color: 'var(--color-text)' }}>{searchResult.email}</strong><br />
-              <span>현재 만료일: {fmtKST(searchResult.membership_expires_at) || '없음'}</span><br />
-              <span style={{ color: '#1976d2', fontWeight: 600 }}>연장 후: {(() => {
-                const exp = searchResult.membership_expires_at
-                const base = exp && daysLeft(exp) > 0 ? new Date(exp) : new Date()
-                base.setDate(base.getDate() + 31)
-                return fmtKST(base.toISOString())
-              })()}</span>
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn btn-outline btn-sm" onClick={() => setExtendConfirmOpen(false)}>취소</button>
-              <button className="btn btn-primary btn-sm" onClick={handleExtend} disabled={saving}>
-                {saving ? '처리 중...' : '+31일 연장'}
-              </button>
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+            onClick={() => setConfirmOpen(false)}>
+            <div style={{ background: 'var(--color-surface)', borderRadius: 14, padding: '28px 24px', maxWidth: 400, width: '100%', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
+              onClick={e => e.stopPropagation()}>
+              <h3 style={{ fontWeight: 700, marginBottom: 16 }}>변경 확인</h3>
+
+              <div style={{ fontSize: '0.88rem', lineHeight: 1.85, marginBottom: 20 }}>
+                <div style={{ marginBottom: 8 }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', display: 'block', marginBottom: 2 }}>대상</span>
+                  <strong>{searchResult.email}</strong>
+                </div>
+
+                {/* 등급 변경 */}
+                {tierChanged && (
+                  <div style={{ marginBottom: 8 }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', display: 'block', marginBottom: 4 }}>등급</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <TierBadge tier={currentTier} />
+                      <Mi size="sm" style={{ color: 'var(--color-text-light)' }}>arrow_forward</Mi>
+                      <TierBadge tier={selectedTier} />
+                    </span>
+                  </div>
+                )}
+
+                {/* 만료일 변경 */}
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', display: 'block', marginBottom: 2 }}>만료일</span>
+                  {selectedTier === 'free'
+                    ? <span style={{ color: '#e57373' }}>제거됨</span>
+                    : effectiveRenew
+                      ? hasValidExp
+                        ? <span style={{ color: '#1976d2' }}>{fmtKST(exp)} → {fmtKST(newExpDate.toISOString())} <span style={{ color: '#43a047', fontWeight: 600 }}>(+31일)</span></span>
+                        : <span style={{ color: '#1976d2' }}>오늘부터 31일 후 만료</span>
+                      : <span>{fmtKST(exp)} 유지</span>
+                  }
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button className="btn btn-outline btn-sm" onClick={() => setConfirmOpen(false)}>취소</button>
+                <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
+                  {saving ? '처리 중...' : '확인'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
+
 
       {/* 최근 수정 내역 */}
       <div className="card">
