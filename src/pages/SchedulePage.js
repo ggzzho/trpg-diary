@@ -11,6 +11,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, isSameMonth, isToday, addMonths, subMonths, getYear, getMonth } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { getTodayKST } from '../lib/dateFormatters'
+import { handleStorageLimitError } from '../lib/storageError'
 
 const STATUS_MAP = {
   planned:{label:'예정',badge:'badge-blue'},
@@ -150,6 +151,7 @@ export default function SchedulePage() {
       const res = await schedulesApi.create({...payload, user_id:user.id})
       error = res.error
     }
+    if (handleStorageLimitError(error)) return
     if (error) { alert('저장 실패: ' + error.message); return }
     setModal(false); load()
   }
@@ -232,7 +234,6 @@ export default function SchedulePage() {
 
   const save = async () => {
     if (!form.title||!form.scheduled_date) return
-    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 일정 관리를 정리해주세요.'); return }
     const { id, user_id, created_at, ...formFields } = form
     const payload = {...formFields, scheduled_time:form.scheduled_time||null, end_time:form.end_time||null}
     let error
@@ -255,6 +256,7 @@ export default function SchedulePage() {
     } else {
       ;({ error } = await schedulesApi.create({...payload, user_id:user.id}))
     }
+    if (handleStorageLimitError(error)) return
     if (error) { alert('저장 실패: ' + error.message); return }
     setModal(false); load()
   }
@@ -274,7 +276,8 @@ export default function SchedulePage() {
     if (!copyDate||!copyTarget) return
     if (copyMode==='copy') {
       const {id,created_at,_sortTime,_type,_kind,_time,...rest}=copyTarget
-      await schedulesApi.create({...rest,scheduled_date:copyDate,user_id:user.id})
+      const { error } = await schedulesApi.create({...rest,scheduled_date:copyDate,user_id:user.id})
+      if (handleStorageLimitError(error)) return
     } else {
       const {_sortTime,_type,_kind,_time,...cleanTarget}=copyTarget; await schedulesApi.update(cleanTarget.id,{...cleanTarget,scheduled_date:copyDate})
     }

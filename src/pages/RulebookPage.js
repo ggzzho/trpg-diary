@@ -9,6 +9,7 @@ import { useRules } from '../context/RuleContext'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { handleStorageLimitError } from '../lib/storageError'
 
 const BLANK = { title:'', publisher:'', system_name:'', cover_image_url:'', memo:'', tags:[], parent_id:null, color:'' }
 const COLOR_PALETTE = ['#e74c3c','#e67e22','#f1c40f','#27ae60','#1abc9c','#3498db','#2980b9','#9b59b6','#e91e63','#795548','#607d8b','#95a5a6']
@@ -175,7 +176,6 @@ export function RulebookPage() {
 
   const save = async () => {
     if (!form.title) return
-    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 보유 룰북을 정리해주세요.'); return }
     const { id, user_id, created_at, ...formFields } = form
     const payload = { ...formFields, parent_id: isSuppl ? (form.parent_id || null) : null }
     if (editing) {
@@ -191,7 +191,8 @@ export function RulebookPage() {
         ])
       }
     } else {
-      await supabase.from('rulebooks').insert({ ...payload, user_id:user.id })
+      const { error } = await supabase.from('rulebooks').insert({ ...payload, user_id:user.id })
+      if (handleStorageLimitError(error)) return
     }
     setModal(false)
     load()

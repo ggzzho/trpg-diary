@@ -8,10 +8,11 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { MarkdownRenderer } from './AdminNoticePage'
 import { getTodayKST } from '../lib/dateFormatters'
+import { TIER_LIMITS } from '../lib/tierLimits'
 
 export default function Dashboard() {
   const { user, profile } = useAuth()
-  const [stats, setStats] = useState({ logs:0, rulebooks:0, scenarios:0, wish_scenarios:0, dotori:0, pairs:0, schedule:0, availability:0, guestbook:0, bookmarks:0 })
+  const [stats, setStats] = useState({ logs:0, rulebooks:0, scenarios:0, wish_scenarios:0, dotori:0, pairs:0, schedule:0, scheduleTotal:0, availability:0, guestbook:0, bookmarks:0 })
   const [upcoming, setUpcoming] = useState([])
   const [recentLogs, setRecentLogs] = useState([])
   const [favorites, setFavorites] = useState([])
@@ -29,7 +30,7 @@ export default function Dashboard() {
       const [
         logsCount, recentLogsRes,
         rbCount, scCount, wishCount, dotCount, pairsCount, charsCount,
-        schedRes, fav, noticeRes, faqRes, avail, guest, book
+        schedRes, schedTotal, fav, noticeRes, faqRes, avail, guest, book
       ] = await Promise.all([
         // 카운트만 필요한 테이블: head:true로 행 전송 없이 카운트만
         supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',user.id),
@@ -49,6 +50,7 @@ export default function Dashboard() {
           .neq('entry_type','blocked').neq('status','cancelled').neq('status','completed')
           .gte('scheduled_date',todayStr)
           .order('scheduled_date').limit(10),
+        supabase.from('schedules').select('id',{count:'exact',head:true}).eq('user_id',user.id),
         supabase.from('favorites').select('*').eq('user_id',user.id).order('created_at',{ascending:false}),
         supabase.from('notices').select('*').eq('is_active',true).order('created_at',{ascending:false}),
         supabase.from('faqs').select('id,category,question').eq('is_active',true).order('sort_order',{ascending:true}).order('created_at',{ascending:true}).limit(5),
@@ -66,6 +68,7 @@ export default function Dashboard() {
         pairs: pairsCount.count||0,
         characters: charsCount.count||0,
         schedule: upcomingData.length,
+        scheduleTotal: schedTotal.count||0,
         availability: avail.count||0,
         guestbook: guest.count||0,
         bookmarks: book.count||0,
@@ -140,6 +143,59 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* 데이터 사용량 위젯 — 항상 표시 */}
+      {(()=>{
+        const tier  = profile?.membership_tier || 'free'
+        const limit = TIER_LIMITS[tier]
+        if (!limit) return null  // 마스터는 무제한이므로 숨김
+        const total = (stats.scheduleTotal||0) + (stats.rulebooks||0) + (stats.scenarios||0) +
+          (stats.wish_scenarios||0) + (stats.dotori||0) + (stats.availability||0) +
+          (stats.logs||0) + (stats.pairs||0) + (stats.characters||0) + (stats.bookmarks||0)
+        const pct      = Math.min((total / limit) * 100, 100)
+        const isCrit   = pct >= 90
+        const isWarn   = pct >= 70 && pct < 90
+        const barColor = isCrit ? '#e53935' : isWarn ? '#fb8c00' : 'var(--color-primary)'
+        return (
+          <Link to="/storage" style={{textDecoration:'none',display:'block',marginBottom:20}}>
+            <div className="card" style={{
+              padding:'16px 18px',
+              border: isCrit ? '1.5px solid #ef9a9a' : isWarn ? '1.5px solid #ffcc80' : '1px solid var(--color-border)',
+              background: isCrit ? '#fdecea' : isWarn ? '#fff8f0' : 'var(--color-card-bg)',
+              transition:'border-color 0.3s',
+            }}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <Mi size="sm" style={{color:barColor}}>storage</Mi>
+                  <span style={{fontSize:'0.85rem',fontWeight:700,color:barColor}}>
+                    {isCrit ? '⚠️ 저장 공간이 거의 찼어요!' : '데이터 사용량'}
+                  </span>
+                </div>
+                <span style={{fontSize:'0.72rem',color:'var(--color-text-light)'}}>
+                  관리하기 →
+                </span>
+              </div>
+              {/* 프로그레스 바 */}
+              <div style={{background:'var(--color-border)',borderRadius:99,height:8,overflow:'hidden',marginBottom:8}}>
+                <div style={{width:`${pct}%`,height:'100%',borderRadius:99,background:barColor,transition:'width 0.5s'}}/>
+              </div>
+              {/* 수치 + 경고 메시지 */}
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:'0.78rem',color: isCrit||isWarn ? barColor : 'var(--color-text-light)'}}>
+                  {isCrit
+                    ? '데이터를 정리하거나 후원으로 용량을 늘려보세요.'
+                    : isWarn
+                    ? '용량의 70% 이상을 사용 중이에요.'
+                    : '여유 있어요 👍'}
+                </span>
+                <span style={{fontSize:'0.8rem',fontWeight:600,color:barColor}}>
+                  {total.toLocaleString()} <span style={{fontWeight:400,color:'var(--color-text-light)'}}>/ {limit.toLocaleString()}개</span>
+                </span>
+              </div>
+            </div>
+          </Link>
+        )
+      })()}
 
       <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12,marginBottom:24}}>
         {STAT_CARDS.map(c=>(
@@ -291,7 +347,7 @@ export default function Dashboard() {
                       {n.title}
                     </span>
                     <span style={{fontSize:'0.72rem',color:'var(--color-text-light)',flexShrink:0}}>
-                      {new Date(n.created_at).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})} {new Date(n.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}
+                      {new Date(n.created_at).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})}
                     </span>
                     <Mi size="sm" color="light">chevron_right</Mi>
                   </div>
@@ -324,8 +380,8 @@ export default function Dashboard() {
                     <span style={{
                       fontSize:'0.65rem', fontWeight:700, padding:'1px 7px', borderRadius:100, flexShrink:0,
                       background:'var(--color-primary)', color:'white',
-                    }}>{f.category}</span>
-                    <span style={{flex:1,fontSize:'0.85rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    }}>Q</span>
+                    <span style={{flex:1,fontSize:'0.88rem',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                       {f.question}
                     </span>
                     <Mi size="sm" color="light">chevron_right</Mi>
@@ -334,6 +390,7 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+
         </div>
       )}
 

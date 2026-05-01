@@ -16,7 +16,9 @@ const SettingsPage      = React.lazy(() => import('./pages/SettingsPage'))
 const PublicProfilePage = React.lazy(() => import('./pages/PublicProfilePage'))
 const PrivacyPage       = React.lazy(() => import('./pages/PrivacyPage'))
 const AdminFeedbackPage      = React.lazy(() => import('./pages/AdminFeedbackPage'))
+const AdminFAQPage           = React.lazy(() => import('./pages/AdminFAQPage'))
 const SupportPage            = React.lazy(() => import('./pages/SupportPage'))
+const FAQPage                = React.lazy(() => import('./pages/FAQPage'))
 const AdminNoticePage        = React.lazy(() => import('./pages/AdminNoticePage'))
 const AdminMembershipPage    = React.lazy(() => import('./pages/AdminMembershipPage'))
 const AdminDataStatsPage     = React.lazy(() => import('./pages/AdminDataStatsPage'))
@@ -24,15 +26,15 @@ const NoticePage             = React.lazy(() => import('./pages/NoticePage'))
 const NoticeListPage         = React.lazy(() => import('./pages/NoticeListPage'))
 const NotificationCenterPage = React.lazy(() => import('./pages/NotificationCenterPage'))
 const ResetPasswordPage      = React.lazy(() => import('./pages/ResetPasswordPage'))
-const FAQPage                = React.lazy(() => import('./pages/FAQPage'))
-const AdminFAQPage           = React.lazy(() => import('./pages/AdminFAQPage'))
+const StoragePage            = React.lazy(() => import('./pages/StoragePage'))
 
 // 페이지 lazy load (named export)
 const AvailabilityPage = React.lazy(() => import('./pages/AvailabilityPage').then(m => ({ default: m.AvailabilityPage })))
 const PlayLogPage      = React.lazy(() => import('./pages/PlayLogPage').then(m => ({ default: m.PlayLogPage })))
 const RulebookPage     = React.lazy(() => import('./pages/RulebookPage').then(m => ({ default: m.RulebookPage })))
 const ScenarioPage     = React.lazy(() => import('./pages/ScenarioPage').then(m => ({ default: m.ScenarioPage })))
-const WishScenarioPage = React.lazy(() => import('./pages/WishScenarioPage').then(m => ({ default: m.WishScenarioPage })))
+// WishScenarioPage: DB 데이터 보존, 라우트·메뉴만 비활성화
+// const WishScenarioPage = React.lazy(() => import('./pages/WishScenarioPage').then(m => ({ default: m.WishScenarioPage })))
 const DotoriPage       = React.lazy(() => import('./pages/DotoriPage').then(m => ({ default: m.DotoriPage })))
 const PairsPage        = React.lazy(() => import('./pages/PairsPage').then(m => ({ default: m.PairsPage })))
 const CharactersPage   = React.lazy(() => import('./pages/CharactersPage').then(m => ({ default: m.CharactersPage })))
@@ -121,7 +123,7 @@ function AppRoutes() {
         <Route path="/logs" element={<PrivateLayout><PlayLogPage/></PrivateLayout>}/>
         <Route path="/rulebooks" element={<PrivateLayout><RulebookPage/></PrivateLayout>}/>
         <Route path="/scenarios" element={<PrivateLayout><ScenarioPage/></PrivateLayout>}/>
-        <Route path="/wish-scenarios" element={<PrivateLayout><WishScenarioPage/></PrivateLayout>}/>
+        {/* /wish-scenarios: DB 데이터 보존, 라우트만 비활성화 */}
         <Route path="/dotori" element={<PrivateLayout><DotoriPage/></PrivateLayout>}/>
         <Route path="/pairs" element={<PrivateLayout><PairsPage/></PrivateLayout>}/>
         <Route path="/characters" element={<PrivateLayout><CharactersPage/></PrivateLayout>}/>
@@ -129,15 +131,16 @@ function AppRoutes() {
         <Route path="/guestbook" element={<PrivateLayout><GuestbookPage/></PrivateLayout>}/>
         <Route path="/settings" element={<PrivateLayout><SettingsPage/></PrivateLayout>}/>
         <Route path="/admin/feedback" element={<PrivateLayout><AdminFeedbackPage/></PrivateLayout>}/>
+        <Route path="/admin/faq" element={<PrivateLayout><AdminFAQPage/></PrivateLayout>}/>
         <Route path="/admin/notices" element={<PrivateLayout><AdminNoticePage/></PrivateLayout>}/>
         <Route path="/admin/membership" element={<PrivateLayout><AdminMembershipPage/></PrivateLayout>}/>
         <Route path="/admin/data-stats" element={<PrivateLayout><AdminDataStatsPage/></PrivateLayout>}/>
         <Route path="/notices" element={<PrivateLayout><NoticeListPage/></PrivateLayout>}/>
         <Route path="/notices/:id" element={<PrivateLayout><NoticePage/></PrivateLayout>}/>
         <Route path="/notifications" element={<PrivateLayout><NotificationCenterPage/></PrivateLayout>}/>
+        <Route path="/storage" element={<PrivateLayout><StoragePage/></PrivateLayout>}/>
         <Route path="/support" element={<PrivateLayout><SupportPage/></PrivateLayout>}/>
         <Route path="/faq" element={<PrivateLayout><FAQPage/></PrivateLayout>}/>
-        <Route path="/admin/faq" element={<PrivateLayout><AdminFAQPage/></PrivateLayout>}/>
         <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
         <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
       </Routes>

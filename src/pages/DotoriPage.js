@@ -7,6 +7,7 @@ import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
 import { fetchOgMeta } from '../lib/fetchOgMeta'
+import { handleStorageLimitError } from '../lib/storageError'
 
 const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[], system_name:'' }
 
@@ -59,12 +60,14 @@ export function DotoriPage() {
 
   const save = async () => {
     if (!form.url) return
-    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 도토리를 정리해주세요.'); return }
     const validTagNames = tags.map(t=>t.name)
     const { id, user_id, created_at, ...formFields } = form
     const payload = {...formFields, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
     if (editing) await dotoriApi.update(editing.id, payload)
-    else await dotoriApi.create({...payload,user_id:user.id})
+    else {
+      const { error } = await dotoriApi.create({...payload,user_id:user.id})
+      if (handleStorageLimitError(error)) return
+    }
     setModal(false); load()
   }
 

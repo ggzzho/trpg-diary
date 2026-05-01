@@ -6,6 +6,8 @@ import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Paginatio
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { format } from 'date-fns'
+import { handleStorageLimitError } from '../lib/storageError'
+import { TIER_LIMITS } from '../lib/tierLimits'
 
 // PlayLogPage와 동일한 TagChip
 const TAG_COLORS = {
@@ -29,7 +31,8 @@ function calcDday(dateStr) {
 const SORT_KEY = 'trpg_pair_sort_order'
 
 export function PairsPage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const readLimit = TIER_LIMITS[profile?.membership_tier] ?? 10000
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -89,7 +92,7 @@ export function PairsPage() {
   }
   const loadAllLogs = async () => {
     if (logsLoaded) return
-    const {data}=await supabase.from('play_logs').select(LOG_SELECT).eq('user_id',user.id).order('played_date',{ascending:false}).limit(2500)
+    const {data}=await supabase.from('play_logs').select(LOG_SELECT).eq('user_id',user.id).order('played_date',{ascending:false}).limit(readLimit)
     setAllLogs(data||[])
     setLogsLoaded(true)
   }
@@ -120,12 +123,14 @@ export function PairsPage() {
   const openEdit = item => { setEditing(item); setForm({...item,relations:item.relations||[]}); setModal(true) }
   const save = async () => {
     if (!form.name) return
-    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 페어/팀 목록을 정리해주세요.'); return }
     const validTagNames = relationTags.map(t=>t.name)
     const cleanedRelations = (form.relations||[]).filter(r=>validTagNames.includes(r))
     const payload = cleanPayload({...form,relations:cleanedRelations})
     if (editing) await pairsApi.update(editing.id,payload)
-    else await pairsApi.create({...payload,user_id:user.id})
+    else {
+      const { error } = await pairsApi.create({...payload,user_id:user.id})
+      if (handleStorageLimitError(error)) return
+    }
     setModal(false); load()
   }
   const remove = async id => { await pairsApi.remove(id); load() }

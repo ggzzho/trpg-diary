@@ -8,6 +8,7 @@ import { RuleSelect } from '../components/RuleSelect'
 import { format } from 'date-fns'
 import { usePagination } from '../hooks/usePagination'
 import { getTodayKST } from '../lib/dateFormatters'
+import { handleStorageLimitError } from '../lib/storageError'
 
 const BLANK = {
   title:'', start_date:'', played_date:'', system_name:'', role:'PL',
@@ -145,9 +146,11 @@ export function PlayLogPage() {
 
   const save = async () => {
     if (!form.title||!form.played_date) return
-    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. 다녀온 기록을 정리해주세요.'); return }
     if (editing) await playLogsApi.update(editing.id,cleanPayload(form))
-    else await playLogsApi.create({...cleanPayload(form),user_id:user.id})
+    else {
+      const { error } = await playLogsApi.create({...cleanPayload(form),user_id:user.id})
+      if (handleStorageLimitError(error)) return
+    }
     setModal(false); load()
     if (detail&&editing&&detail.id===editing.id) setDetail({...cleanPayload(form),id:editing.id})
   }

@@ -6,6 +6,8 @@ import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Paginatio
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { format } from 'date-fns'
+import { handleStorageLimitError } from '../lib/storageError'
+import { TIER_LIMITS } from '../lib/tierLimits'
 
 // 다녀온 기록 칩 (PairsPage 동일)
 const TAG_COLORS = {
@@ -55,7 +57,8 @@ const LOG_SELECT = 'id,title,played_date,start_date,system_name,role,series_tag,
 const HIST_SELECT = `id, play_log_id, character_id, play_logs(${LOG_SELECT})`
 
 export function CharactersPage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const readLimit = TIER_LIMITS[profile?.membership_tier] ?? 10000
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -82,7 +85,7 @@ export function CharactersPage() {
 
   const load = async () => {
     const { data } = await supabase.from('characters').select('*')
-      .eq('user_id', user.id).order('created_at', {ascending:false}).limit(2500)
+      .eq('user_id', user.id).order('created_at', {ascending:false}).limit(readLimit)
     const chars = data || []
     setItems(chars)
     setLoading(false)
@@ -109,7 +112,7 @@ export function CharactersPage() {
   const loadAllLogs = async () => {
     if (logsLoaded) return
     const { data } = await supabase.from('play_logs').select(LOG_SELECT)
-      .eq('user_id', user.id).order('played_date', {ascending:false}).limit(2500)
+      .eq('user_id', user.id).order('played_date', {ascending:false}).limit(readLimit)
     setAllLogs(data||[])
     setLogsLoaded(true)
   }
@@ -125,12 +128,14 @@ export function CharactersPage() {
 
   const save = async () => {
     if (!form.name) return
-    if (!editing && items.length >= 2500) { alert('게시판의 최대 등록 갯수를 초과하여 저장할 수 없습니다. PC 목록을 정리해주세요.'); return }
     const validTagNames = ruleTags.map(t=>t.name)
     const cleanedRules = (form.rules||[]).filter(r=>validTagNames.includes(r))
     const payload = cleanPayload({...form, rules:cleanedRules})
     if (editing) await supabase.from('characters').update(payload).eq('id', editing.id)
-    else await supabase.from('characters').insert({...payload, user_id:user.id})
+    else {
+      const { error } = await supabase.from('characters').insert({...payload, user_id:user.id})
+      if (handleStorageLimitError(error)) return
+    }
     setModal(false); load()
   }
   const remove = async id => { await supabase.from('characters').delete().eq('id', id); load() }

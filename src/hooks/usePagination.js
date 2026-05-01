@@ -1,7 +1,7 @@
 // src/hooks/usePagination.js
 import { useState, useMemo, useEffect, useRef } from 'react'
 
-export function usePagination(items, defaultPerPage = 20) {
+export function usePagination(items, defaultPerPage = 10) {
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(defaultPerPage)
   const prevLengthRef = useRef(items.length)
