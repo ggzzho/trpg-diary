@@ -22,7 +22,6 @@ function hexToRgb(hex) {
 const WIDGET_OPTIONS = [
   {key:'rulebooks', label:'보유 룰북', icon:'menu_book'},
   {key:'scenarios', label:'보유 시나리오', icon:'description'},
-  {key:'wish_scenarios', label:'위시 시나리오', icon:'favorite'},
   {key:'dotori', label:'도토리', icon:'forest'},
   {key:'availability', label:'공수표', icon:'event_available'},
   {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
@@ -476,7 +475,6 @@ export default function SettingsPage() {
                 {key:'schedules', label:'일정 관리', icon:'calendar_month'},
                 {key:'rulebooks', label:'보유 룰북', icon:'menu_book'},
                 {key:'scenarios', label:'보유 시나리오', icon:'description'},
-                {key:'wish_scenarios', label:'위시 시나리오', icon:'favorite'},
                 {key:'dotori', label:'도토리', icon:'forest'},
                 {key:'availability', label:'공수표', icon:'event_available'},
                 {key:'logs', label:'다녀온 기록', icon:'auto_stories'},

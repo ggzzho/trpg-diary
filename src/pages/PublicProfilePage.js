@@ -227,7 +227,6 @@ export default function PublicProfilePage() {
   const [pairSort, setPairSort] = useState('asc')
   const [rulebookExpanded, setRulebookExpanded] = useState({})
   const [scenarioExpanded, setScenarioExpanded] = useState({})
-  const [wishScenarioExpanded, setWishScenarioExpanded] = useState({})
   const [kakaoPopup, setKakaoPopup] = useState(false)
   const [viewDark, setViewDark] = useState(false)
   const [tabSearch, setTabSearch] = useState('')
@@ -382,28 +381,6 @@ export default function PublicProfilePage() {
   const phvTotalPages = Math.ceil(pubHistoryViewLogs.length / PHV_PER_PAGE) || 1
   const phvPaged = pubHistoryViewLogs.slice((pubHistoryViewPage-1)*PHV_PER_PAGE, pubHistoryViewPage*PHV_PER_PAGE)
 
-  const wishScenarioParents = [...(data.wish_scenarios||[]).filter(s => !s.parent_id)].sort((a,b) =>
-    (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase(),'ko')
-  )
-  const wishScenarioChildMap = (data.wish_scenarios||[]).filter(s => !!s.parent_id).reduce((m,s) => {
-    if (!m[s.parent_id]) m[s.parent_id] = []
-    m[s.parent_id].push(s)
-    return m
-  }, {})
-  const filteredWishScenarioParents = useMemo(() => {
-    if (!tabSearch) return wishScenarioParents
-    const s = tabSearch.toLowerCase()
-    return wishScenarioParents.filter(p =>
-      (p.title||'').toLowerCase().includes(s) ||
-      (p.system_name||'').toLowerCase().includes(s) ||
-      (p.author||'').toLowerCase().includes(s) ||
-      (wishScenarioChildMap[p.id]||[]).some(c =>
-        (c.title||'').toLowerCase().includes(s) || (c.system_name||'').toLowerCase().includes(s)
-      )
-    )
-  }, [wishScenarioParents, wishScenarioChildMap, tabSearch])
-  const wishScenariosPagination = usePagination(filteredWishScenarioParents, 10)
-
   const sortedDotori = [...(data.dotori||[])].sort((a,b) =>
     (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase(),'ko')
   )
@@ -451,8 +428,6 @@ export default function PublicProfilePage() {
       updates.rulebooks = await safeQ(supabase.from('rulebooks').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).limit(10000))
     } else if (tab === 'scenarios') {
       updates.scenarios = await safeQ(supabase.from('scenarios').select('*').eq('user_id',profileId).order('sort_order',{ascending:true,nullsFirst:false}).order('created_at',{ascending:true}).limit(10000))
-    } else if (tab === 'wish_scenarios') {
-      updates.wish_scenarios = await safeQ(supabase.from('wish_scenarios').select('*').eq('user_id',profileId).order('created_at',{ascending:true}).limit(10000))
     } else if (tab === 'dotori') {
       updates.dotori = await safeQ(supabase.from('dotori').select('*').eq('user_id',profileId).order('title').limit(10000))
     } else if (tab === 'pairs') {
@@ -515,11 +490,10 @@ export default function PublicProfilePage() {
       // 탭 카운트 + 통계용 경량 head 쿼리
       const today = getTodayKST()
       const safeC = async pr => { try { const r = await pr; return r.count || 0 } catch { return 0 } }
-      const [logsCount, rulebooksCount, scenariosCount, wishCount, dotoriCount, pairsCount, charsCount, schedsCount, availCount, guestbookCount, bookmarksCount] = await Promise.all([
+      const [logsCount, rulebooksCount, scenariosCount, dotoriCount, pairsCount, charsCount, schedsCount, availCount, guestbookCount, bookmarksCount] = await Promise.all([
         safeC(supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',p.id).eq('is_private',false)),
         safeC(supabase.from('rulebooks').select('id',{count:'exact',head:true}).eq('user_id',p.id).is('parent_id',null)),
         safeC(supabase.from('scenarios').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
-        safeC(supabase.from('wish_scenarios').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('dotori').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('pairs').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('characters').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
@@ -528,10 +502,10 @@ export default function PublicProfilePage() {
         safeC(supabase.from('guestbook').select('id',{count:'exact',head:true}).eq('owner_id',p.id).eq('type','message').is('parent_id',null)),
         safeC(supabase.from('bookmarks').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
       ])
-      setCounts({ logs:logsCount, rulebooks:rulebooksCount, scenarios:scenariosCount, wish_scenarios:wishCount, dotori:dotoriCount, pairs:pairsCount, characters:charsCount, schedule:schedsCount, availability:availCount, guestbook:guestbookCount, bookmarks:bookmarksCount })
+      setCounts({ logs:logsCount, rulebooks:rulebooksCount, scenarios:scenariosCount, dotori:dotoriCount, pairs:pairsCount, characters:charsCount, schedule:schedsCount, availability:availCount, guestbook:guestbookCount, bookmarks:bookmarksCount })
 
       const hidden = p.hidden_tabs || []
-      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','wish_scenarios','dotori','pairs','characters','bookmarks','guestbook']
+      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','dotori','pairs','characters','bookmarks','guestbook']
       const requestedTab = searchParams.get('tab') || 'schedules'
       let initialTab = requestedTab
       if (hidden.includes(requestedTab)) {
@@ -626,7 +600,6 @@ export default function PublicProfilePage() {
     { key:'logs', label:'기록', icon:'auto_stories', count: data.logs !== undefined ? publicLogs.length : counts.logs },
     { key:'availability', label:'공수표', icon:'event_available', count: data.availability?.length ?? counts.availability },
     { key:'scenarios', label:'보유 시나리오', icon:'description', count: data.scenarios !== undefined ? data.scenarios.length : counts.scenarios },
-    { key:'wish_scenarios', label:'위시 시나리오', icon:'favorite', count: data.wish_scenarios !== undefined ? data.wish_scenarios.length : counts.wish_scenarios },
     { key:'dotori', label:'도토리', icon:'forest', count: data.dotori?.length ?? counts.dotori },
     { key:'pairs', label:'페어/팀', icon:'people', count: data.pairs?.length ?? counts.pairs },
     { key:'characters', label:'PC 목록', icon:'person', count: data.characters?.length ?? counts.characters },
@@ -789,7 +762,6 @@ export default function PublicProfilePage() {
               {key:'logs', label:'기록', v: data.logs !== undefined ? publicLogs.length : (counts.logs||0)},
               {key:'rulebooks', label:'룰북', v: data.rulebooks !== undefined ? (data.rulebooks||[]).filter(r=>!r.parent_id).length : (counts.rulebooks||0)},
               {key:'scenarios', label:'보유 시나리오', v: data.scenarios?.length || (counts.scenarios||0)},
-              {key:'wish_scenarios', label:'위시 시나리오', v: data.wish_scenarios?.length || (counts.wish_scenarios||0)},
               {key:'dotori', label:'도토리', v: data.dotori?.length || (counts.dotori||0)},
               {key:'pairs', label:'페어/팀', v: data.pairs?.length || (counts.pairs||0)},
               {key:'characters', label:'PC 목록', v: data.characters?.length || (counts.characters||0)},
@@ -1098,76 +1070,6 @@ export default function PublicProfilePage() {
           <Pagination total={filteredScenarioParents.length} perPage={scenariosPagination.perPage} page={scenariosPagination.page} onPage={scenariosPagination.setPage} onPerPage={scenariosPagination.setPerPage}/>
         </>
       )}
-
-      {/* ── 위시 시나리오 ── */}
-      {!tabLoading[activeTab] && activeTab==='wish_scenarios' && (() => {
-        const renderWishItem = (item, isChild=false) => (
-          <div key={item.id}
-            style={{ display:'flex', alignItems:'center', gap:14, padding:'10px 14px',
-              background: isChild ? 'var(--color-nav-active-bg)' : undefined,
-              borderTop: isChild ? '1px solid var(--color-border)' : undefined }}>
-            <div style={{ width:40, height:40, borderRadius:7, overflow:'hidden', flexShrink:0,
-              background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center',
-              justifyContent:'center', border:'1px solid var(--color-border)' }}>
-              {item.cover_image_url
-                ? <img src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                : <span style={{ fontSize:'1.1rem', opacity:0.35 }}><Mi size='lg' color='light'>favorite</Mi></span>}
-            </div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontWeight: isChild ? 500 : 700, fontSize:isChild?'0.85rem':'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-                {item.title}
-                {(item.status_tags||[]).map(t => (
-                  <span key={t} style={{padding:'1px 7px',borderRadius:100,fontSize:'0.65rem',fontWeight:600,
-                    background:'var(--color-nav-active-bg)',color:'var(--color-accent)',border:'1px solid var(--color-border)',whiteSpace:'nowrap'}}>
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-                {item.system_name && <span className="text-xs text-light"><Mi size='sm' color='light'>sports_esports</Mi> {item.system_name}</span>}
-                {item.author && <span className="text-xs text-light"><Mi size='sm' color='light'>edit</Mi> {item.author}</span>}
-                {item.player_count && <span className="text-xs text-light"><Mi size="sm" color="light">group</Mi> {item.player_count}</span>}
-                {item.format && <span className="text-xs text-light"><Mi size='sm' color='light'>inventory_2</Mi> {FORMAT_MAP[item.format]||item.format}</span>}
-              </div>
-              {item.scenario_url && <a href={item.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:2, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
-            </div>
-          </div>
-        )
-        return (
-          <>
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              {!wishScenarioParents.length
-                ? <div className="card" style={{ textAlign:'center', padding:36, color:'var(--color-text-light)', fontSize:'0.85rem' }}>위시 시나리오가 없어요</div>
-                : wishScenariosPagination.paged.map(s => {
-                    const children = wishScenarioChildMap[s.id] || []
-                    const isOpen = !!wishScenarioExpanded[s.id]
-                    return (
-                      <div key={s.id} className="card" style={{padding:0,overflow:'hidden'}}>
-                        {renderWishItem(s)}
-                        {children.length > 0 && (
-                          <button style={{width:'100%',background:'none',border:'none',
-                            borderTop:'1px solid var(--color-border)',
-                            padding:'5px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:4,
-                            color:'var(--color-text-light)',fontSize:'0.78rem'}}
-                            onClick={() => setWishScenarioExpanded(e => ({...e, [s.id]:!e[s.id]}))}>
-                            <Mi size='sm' color='light'>{isOpen?'expand_less':'expand_more'}</Mi>
-                            {isOpen ? '접기' : `시나리오 ${children.length}개 보기`}
-                          </button>
-                        )}
-                        {isOpen && (
-                          <div style={{borderTop:'1px solid var(--color-border)'}}>
-                            {children.map(c => renderWishItem(c, true))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })
-              }
-            </div>
-            <Pagination total={filteredWishScenarioParents.length} perPage={wishScenariosPagination.perPage} page={wishScenariosPagination.page} onPage={wishScenariosPagination.setPage} onPerPage={wishScenariosPagination.setPerPage}/>
-          </>
-        )
-      })()}
 
       {/* ── 도토리 ── */}
       {!tabLoading[activeTab] && activeTab==='dotori' && (
