@@ -119,7 +119,7 @@ export function LogDetailContent({ detail, isOwner }) {
 }
 
 export function PlayLogPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, updateProfileField } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -146,7 +146,7 @@ export function PlayLogPage() {
   const toggleSortDir = async () => {
     const next = sortDir === 'desc' ? 'asc' : 'desc'
     setSortDir(next)
-    await supabase.from('profiles').update({ play_log_sort_order: next }).eq('id', user.id)
+    await updateProfileField({ play_log_sort_order: next })
   }
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))

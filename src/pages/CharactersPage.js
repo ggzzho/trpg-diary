@@ -57,7 +57,7 @@ const LOG_SELECT = 'id,title,played_date,start_date,system_name,role,series_tag,
 const HIST_SELECT = `id, play_log_id, character_id, play_logs(${LOG_SELECT})`
 
 export function CharactersPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, updateProfileField } = useAuth()
   const readLimit = TIER_LIMITS[profile?.membership_tier] ?? 10000
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -275,9 +275,9 @@ export function CharactersPage() {
         )}
         {/* 정렬 */}
         <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:'auto',flexShrink:0}}>
-          <button className={`btn btn-sm ${sortField==='name'?'btn-primary':'btn-outline'}`} onClick={async()=>{ setSortField('name'); await supabase.from('profiles').update({character_sort_field:'name'}).eq('id',user.id) }}>가나다순</button>
-          <button className={`btn btn-sm ${sortField==='created_at'?'btn-primary':'btn-outline'}`} onClick={async()=>{ setSortField('created_at'); await supabase.from('profiles').update({character_sort_field:'created_at'}).eq('id',user.id) }}>등록순</button>
-          <button className="btn btn-sm btn-outline" onClick={async()=>{ const next=sortDir==='asc'?'desc':'asc'; setSortDir(next); await supabase.from('profiles').update({character_sort_dir:next}).eq('id',user.id) }} title={sortDir==='asc'?'오름차순':'내림차순'}>
+          <button className={`btn btn-sm ${sortField==='name'?'btn-primary':'btn-outline'}`} onClick={async()=>{ setSortField('name'); await updateProfileField({character_sort_field:'name'}) }}>가나다순</button>
+          <button className={`btn btn-sm ${sortField==='created_at'?'btn-primary':'btn-outline'}`} onClick={async()=>{ setSortField('created_at'); await updateProfileField({character_sort_field:'created_at'}) }}>등록순</button>
+          <button className="btn btn-sm btn-outline" onClick={async()=>{ const next=sortDir==='asc'?'desc':'asc'; setSortDir(next); await updateProfileField({character_sort_dir:next}) }} title={sortDir==='asc'?'오름차순':'내림차순'}>
             <Mi size='sm'>{sortDir==='asc'?'arrow_upward':'arrow_downward'}</Mi>
           </button>
         </div>

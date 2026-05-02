@@ -1,7 +1,7 @@
 // src/pages/AvailabilityPage.js
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { availabilityApi, supabase } from '../lib/supabase'
+import { availabilityApi } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
@@ -11,7 +11,7 @@ import { handleStorageLimitError } from '../lib/storageError'
 const BLANK = { title:'', role:'PL', system_name:'', description:'', together_with:'', scenario_link:'', is_active:true }
 
 export function AvailabilityPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, updateProfileField } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -64,7 +64,7 @@ export function AvailabilityPage() {
         <input className="form-input" placeholder="🔍 제목, 룰, 받는 사람 검색..." value={search}
           onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
         <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
-          onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await supabase.from('profiles').update({availability_sort_order:next}).eq('id',user.id) }}>
+          onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await updateProfileField({availability_sort_order:next}) }}>
           가나다순 {sortOrder==='asc'?'↑':'↓'}
         </button>
       </div>

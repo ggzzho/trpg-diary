@@ -12,7 +12,7 @@ import { handleStorageLimitError } from '../lib/storageError'
 const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[], system_name:'' }
 
 export function DotoriPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, updateProfileField } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -115,7 +115,7 @@ export function DotoriPage() {
             <RuleSelect value={ruleFilter} onChange={v=>setRuleFilter(v)} placeholder="룰 전체"/>
           </div>
           <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
-            onClick={()=>setSortOrder(o=>o==='asc'?'desc':'asc')}>
+            onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await updateProfileField({dotori_sort_order:next}) }}>
             <Mi size='sm' color={sortOrder==='asc'?'white':'accent'}>{sortOrder==='asc'?'sort':'sort'}</Mi>
             가나다순 {sortOrder==='asc'?'↑':'↓'}
           </button>

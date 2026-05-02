@@ -36,8 +36,8 @@ const cleanPayload = f => {
 }
 
 export function BaseScenarioPage({ config }) {
-  const { table, tagsTable, api, defaultTags, profileSortKey, title, subtitle, icon, emptyTitle, alertLabel, tagModalTitle, tagPlaceholder } = config
-  const { user, profile } = useAuth()
+  const { table, tagsTable, api, defaultTags, profileSortKey, profileSortFieldKey, title, subtitle, icon, emptyTitle, alertLabel, tagModalTitle, tagPlaceholder } = config
+  const { user, profile, updateProfileField } = useAuth()
   const readLimit = TIER_LIMITS[profile?.membership_tier] ?? 10000
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -83,7 +83,10 @@ export function BaseScenarioPage({ config }) {
     }
     init()
   }, [user])
-  useEffect(() => { if (profile?.[profileSortKey]) setSortOrder(profile[profileSortKey]) }, [profile])
+  useEffect(() => {
+    if (profile?.[profileSortKey]) setSortOrder(profile[profileSortKey])
+    if (profileSortFieldKey && profile?.[profileSortFieldKey]) setSortField(profile[profileSortFieldKey])
+  }, [profile]) // eslint-disable-line
 
   const addStatusTag    = async (name) => { await supabase.from(tagsTable).insert({ user_id:user.id, name }); loadStatusTags() }
   const editStatusTag   = async (id, name) => {
@@ -300,10 +303,10 @@ export function BaseScenarioPage({ config }) {
         <input className="form-input" placeholder="🔍 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
         {search && <span className="text-xs text-light">({filteredParents.length}건)</span>}
         <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:'auto',flexShrink:0}}>
-          <button className={`btn btn-sm ${sortField==='name'?'btn-primary':'btn-outline'}`} onClick={()=>setSortField('name')}>가나다순</button>
-          <button className={`btn btn-sm ${sortField==='created_at'?'btn-primary':'btn-outline'}`} onClick={()=>setSortField('created_at')}>등록순</button>
+          <button className={`btn btn-sm ${sortField==='name'?'btn-primary':'btn-outline'}`} onClick={async()=>{ setSortField('name'); if(profileSortFieldKey) await updateProfileField({[profileSortFieldKey]:'name'}) }}>가나다순</button>
+          <button className={`btn btn-sm ${sortField==='created_at'?'btn-primary':'btn-outline'}`} onClick={async()=>{ setSortField('created_at'); if(profileSortFieldKey) await updateProfileField({[profileSortFieldKey]:'created_at'}) }}>등록순</button>
           <button className="btn btn-sm btn-outline"
-            onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await supabase.from('profiles').update({[profileSortKey]:next}).eq('id',user.id) }}
+            onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await updateProfileField({[profileSortKey]:next}) }}
             title={sortOrder==='asc'?'오름차순':'내림차순'}>
             <Mi size='sm'>{sortOrder==='asc'?'arrow_upward':'arrow_downward'}</Mi>
           </button>
@@ -460,6 +463,7 @@ export function ScenarioPage() {
     api: scenariosApi,
     defaultTags: ['미플', 'PL 완료', 'GM 완료', '위시리스트'],
     profileSortKey: 'scenario_sort_order',
+    profileSortFieldKey: 'scenario_sort_field',
     title: '보유 시나리오',
     subtitle: '보유한 TRPG 시나리오 목록이예요',
     icon: 'description',
