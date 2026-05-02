@@ -129,6 +129,7 @@ function AppRoutes() {
         <Route path="/characters" element={<PrivateLayout><CharactersPage/></PrivateLayout>}/>
         <Route path="/bookmarks" element={<PrivateLayout><BookmarkPage/></PrivateLayout>}/>
         <Route path="/guestbook" element={<PrivateLayout><GuestbookPage/></PrivateLayout>}/>
+        <Route path="/friend-pages" element={<PrivateLayout><GuestbookPage mode="mypage"/></PrivateLayout>}/>
         <Route path="/settings" element={<PrivateLayout><SettingsPage/></PrivateLayout>}/>
         <Route path="/admin/feedback" element={<PrivateLayout><AdminFeedbackPage/></PrivateLayout>}/>
         <Route path="/admin/faq" element={<PrivateLayout><AdminFAQPage/></PrivateLayout>}/>

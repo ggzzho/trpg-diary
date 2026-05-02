@@ -505,9 +505,9 @@ function FeedbackReplySection({ replies, getSubReplies, isOwner, userId, ownerId
 }
 
 // ── 공개 페이지용 ──
-export function GuestbookPublicView({ ownerId, postId }) {
+export function GuestbookPublicView({ ownerId, postId, mode }) {
   const { user, profile, loading: authLoading } = useAuth()
-  const [tab, setTab] = useState('message')
+  const [tab, setTab] = useState(mode || 'message')
   const [messages, setMessages] = useState([])
   const [allReplies, setAllReplies] = useState([])
   const [allSubReplies, setAllSubReplies] = useState([])
@@ -691,18 +691,20 @@ export function GuestbookPublicView({ ownerId, postId }) {
 
   return (
     <div>
-      <div className="flex gap-8" style={{ marginBottom:20 }}>
-        <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}
-          style={{ display:'flex', alignItems:'center', gap:4 }}>
-          <Mi size="sm" color={tab==='message'?'white':'accent'}>mail</Mi>
-          방명록 ({messages.length})
-        </button>
-        <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={() => setTab('mypage')}
-          style={{ display:'flex', alignItems:'center', gap:4 }}>
-          <Mi size="sm" color={tab==='mypage'?'white':'accent'}>link</Mi>
-          친구 페이지 목록 ({mypages.length})
-        </button>
-      </div>
+      {!mode && (
+        <div className="flex gap-8" style={{ marginBottom:20 }}>
+          <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}
+            style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <Mi size="sm" color={tab==='message'?'white':'accent'}>mail</Mi>
+            방명록 ({messages.length})
+          </button>
+          <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={() => setTab('mypage')}
+            style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <Mi size="sm" color={tab==='mypage'?'white':'accent'}>link</Mi>
+            친구 페이지 ({mypages.length})
+          </button>
+        </div>
+      )}
 
       {tab === 'message' && (
         <div>
@@ -903,7 +905,7 @@ export function GuestbookPublicView({ ownerId, postId }) {
 }
 
 // ── 내 홈 방명록 관리 ──
-function GuestbookOwnerView({ user }) {
+function GuestbookOwnerView({ user, mode }) {
   const { refreshNotifs } = useAuth()
   const location = useLocation()
   const postIdParam = new URLSearchParams(location.search).get('post')
@@ -913,7 +915,7 @@ function GuestbookOwnerView({ user }) {
   const [allSubReplies, setAllSubReplies] = useState([])
   const [mypages, setMypages] = useState([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('message')
+  const [tab, setTab] = useState(mode || 'message')
   const [search, setSearch] = useState('')
   const [editingItem, setEditingItem] = useState(null)
   const [editForm, setEditForm] = useState({ nickname:'', memo:'', url:'', avatar_url:'', editAs:'' })
@@ -1052,22 +1054,29 @@ function GuestbookOwnerView({ user }) {
   return (
     <div className="fade-in">
       <div className="page-header">
-        <h1 className="page-title"><Mi style={{ marginRight:8, verticalAlign:'middle' }}>mail</Mi>방명록</h1>
-        <p className="page-subtitle">내 공개 페이지에 남겨진 방명록을 관리해요</p>
+        <h1 className="page-title">
+          <Mi style={{ marginRight:8, verticalAlign:'middle' }}>{mode==='mypage' ? 'link' : 'mail'}</Mi>
+          {mode==='mypage' ? '친구 페이지' : '방명록'}
+        </h1>
+        <p className="page-subtitle">
+          {mode==='mypage' ? '내 공개 페이지에 등록된 친구 페이지를 관리해요' : '내 공개 페이지에 남겨진 방명록을 관리해요'}
+        </p>
       </div>
 
-      <div className="flex gap-8" style={{ marginBottom:20 }}>
-        <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}
-          style={{ display:'flex', alignItems:'center', gap:4 }}>
-          <Mi size="sm" color={tab==='message'?'white':'accent'}>mail</Mi>
-          방명록 ({messages.length})
-        </button>
-        <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={() => setTab('mypage')}
-          style={{ display:'flex', alignItems:'center', gap:4 }}>
-          <Mi size="sm" color={tab==='mypage'?'white':'accent'}>link</Mi>
-          친구 페이지 목록 ({mypages.length})
-        </button>
-      </div>
+      {!mode && (
+        <div className="flex gap-8" style={{ marginBottom:20 }}>
+          <button className={`btn btn-sm ${tab==='message'?'btn-primary':'btn-outline'}`} onClick={() => setTab('message')}
+            style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <Mi size="sm" color={tab==='message'?'white':'accent'}>mail</Mi>
+            방명록 ({messages.length})
+          </button>
+          <button className={`btn btn-sm ${tab==='mypage'?'btn-primary':'btn-outline'}`} onClick={() => setTab('mypage')}
+            style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <Mi size="sm" color={tab==='mypage'?'white':'accent'}>link</Mi>
+            친구 페이지 ({mypages.length})
+          </button>
+        </div>
+      )}
 
       {tab === 'message' && (<>
         <div style={{ marginBottom:12 }}>
@@ -1188,10 +1197,10 @@ function GuestbookOwnerView({ user }) {
   )
 }
 
-export function GuestbookPage({ ownerId }) {
+export function GuestbookPage({ ownerId, mode }) {
   const { user } = useAuth()
-  if (ownerId) return <GuestbookPublicView ownerId={ownerId}/>
-  return <GuestbookOwnerView user={user}/>
+  if (ownerId) return <GuestbookPublicView ownerId={ownerId} mode={mode}/>
+  return <GuestbookOwnerView user={user} mode={mode}/>
 }
 
 // ── 문의/피드백 (관리자 전용) ──
