@@ -31,7 +31,7 @@ function calcDday(dateStr) {
 const SORT_KEY = 'trpg_pair_sort_order'
 
 export function PairsPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, updateProfileField } = useAuth()
   const readLimit = TIER_LIMITS[profile?.membership_tier] ?? 10000
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -54,13 +54,13 @@ export function PairsPage() {
   const [historyViewSearch, setHistoryViewSearch] = useState('')
   const [historyViewPage, setHistoryViewPage] = useState(1)
 
-  // 정렬 변경 시 localStorage + Supabase 동시 저장
+  useEffect(() => { if (profile?.pair_sort_order) setSortOrderState(profile.pair_sort_order) }, [profile])
+
+  // 정렬 변경 시 localStorage + profile 동시 저장
   const setSortOrder = async (order) => {
     setSortOrderState(order)
     localStorage.setItem(SORT_KEY, order)
-    if (user?.id) {
-      await supabase.from('profiles').update({ pair_sort_order: order }).eq('id', user.id)
-    }
+    await updateProfileField({ pair_sort_order: order })
   }
 
   const LOG_SELECT = 'id,title,played_date,start_date,system_name,role,series_tag,session_image_url,together_with,character_name'

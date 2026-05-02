@@ -45,8 +45,15 @@ export function AuthProvider({ children }) {
 
   const refreshProfile = () => user && loadProfile(user.id)
 
+  // DB 저장 + 로컬 profile 상태 즉시 반영 (페이지 이동 후 돌아와도 설정 유지)
+  const updateProfileField = useCallback(async (updates) => {
+    if (!user) return
+    await supabase.from('profiles').update(updates).eq('id', user.id)
+    setProfile(prev => prev ? { ...prev, ...updates } : prev)
+  }, [user])
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, refreshProfile, notifCounts, refreshNotifs }}>
+    <AuthContext.Provider value={{ user, profile, loading, refreshProfile, updateProfileField, notifCounts, refreshNotifs }}>
       {children}
     </AuthContext.Provider>
   )

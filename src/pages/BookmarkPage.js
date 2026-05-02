@@ -11,7 +11,7 @@ import { handleStorageLimitError } from '../lib/storageError'
 const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[] }
 
 export function BookmarkPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, updateProfileField } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -106,7 +106,7 @@ export function BookmarkPage() {
         <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:tags.length>0?10:0,flexWrap:'wrap'}}>
           <input className="form-input" placeholder="🔍 제목, URL, 메모, 태그로 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:280}}/>
           <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
-            onClick={()=>setSortOrder(o=>o==='asc'?'desc':'asc')}>
+            onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await updateProfileField({bookmark_sort_order:next}) }}>
             <Mi size='sm' color={sortOrder==='asc'?'white':'accent'}>{sortOrder==='asc'?'sort':'sort'}</Mi>
             가나다순 {sortOrder==='asc'?'↑':'↓'}
           </button>
