@@ -247,7 +247,14 @@ export default function PublicProfilePage() {
   const loadedRef = useRef(new Set())
 
   // 페이지네이션 - Hook이므로 early return 전에 선언 필수
-  const publicLogs = (data.logs||[]).filter(l => !l.is_private)
+  const publicLogs = useMemo(() => {
+    const dir = profile?.play_log_sort_order || 'desc'
+    return [...(data.logs||[])].filter(l => !l.is_private).sort((a,b) => {
+      const va=a.played_date||'', vb=b.played_date||''
+      const cmp = va < vb ? -1 : va > vb ? 1 : 0
+      return dir==='asc' ? cmp : -cmp
+    })
+  }, [data.logs, profile?.play_log_sort_order])
   const filteredLogs = useMemo(() => {
     if (!tabSearch) return publicLogs
     const s = tabSearch.toLowerCase()
@@ -335,9 +342,17 @@ export default function PublicProfilePage() {
 
   // PC 탭 필터링
   const filteredCharacters = useMemo(() => {
-    if (!tabSearch) return data.characters||[]
+    const field = profile?.character_sort_field || 'created_at'
+    const dir   = profile?.character_sort_dir   || 'desc'
+    const sorted = [...(data.characters||[])].sort((a,b) => {
+      const va = field==='name' ? (a.name||'').toLowerCase() : (a.created_at||'')
+      const vb = field==='name' ? (b.name||'').toLowerCase() : (b.created_at||'')
+      const cmp = field==='name' ? va.localeCompare(vb,'ko') : va < vb ? -1 : va > vb ? 1 : 0
+      return dir==='asc' ? cmp : -cmp
+    })
+    if (!tabSearch) return sorted
     const s = tabSearch.toLowerCase()
-    return (data.characters||[]).filter(c =>
+    return sorted.filter(c =>
       (c.name||'').toLowerCase().includes(s) ||
       (c.age||'').toLowerCase().includes(s) ||
       (c.gender||'').toLowerCase().includes(s) ||
@@ -348,7 +363,7 @@ export default function PublicProfilePage() {
       (c.memo||'').toLowerCase().includes(s) ||
       (c.rules||[]).some(r=>r.toLowerCase().includes(s))
     )
-  }, [data.characters, tabSearch])
+  }, [data.characters, tabSearch, profile?.character_sort_field, profile?.character_sort_dir])
   const charactersPagination = usePagination(filteredCharacters, 10)
 
   const pubCharHistoryViewLogs = useMemo(() => {

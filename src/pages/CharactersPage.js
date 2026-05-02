@@ -73,6 +73,11 @@ export function CharactersPage() {
   const [sortField, setSortField] = useState('created_at')  // 'name' | 'created_at'
   const [sortDir,   setSortDir]   = useState('desc')        // 'asc' | 'desc'
 
+  useEffect(() => {
+    if (profile?.character_sort_field) setSortField(profile.character_sort_field)
+    if (profile?.character_sort_dir)   setSortDir(profile.character_sort_dir)
+  }, [profile])
+
   // 히스토리
   const [historiesMap, setHistoriesMap] = useState({})
   const [historyModal, setHistoryModal] = useState(null)   // character_id
@@ -270,9 +275,9 @@ export function CharactersPage() {
         )}
         {/* 정렬 */}
         <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:'auto',flexShrink:0}}>
-          <button className={`btn btn-sm ${sortField==='name'?'btn-primary':'btn-outline'}`} onClick={()=>setSortField('name')}>가나다순</button>
-          <button className={`btn btn-sm ${sortField==='created_at'?'btn-primary':'btn-outline'}`} onClick={()=>setSortField('created_at')}>등록순</button>
-          <button className="btn btn-sm btn-outline" onClick={()=>setSortDir(d=>d==='asc'?'desc':'asc')} title={sortDir==='asc'?'오름차순':'내림차순'}>
+          <button className={`btn btn-sm ${sortField==='name'?'btn-primary':'btn-outline'}`} onClick={async()=>{ setSortField('name'); await supabase.from('profiles').update({character_sort_field:'name'}).eq('id',user.id) }}>가나다순</button>
+          <button className={`btn btn-sm ${sortField==='created_at'?'btn-primary':'btn-outline'}`} onClick={async()=>{ setSortField('created_at'); await supabase.from('profiles').update({character_sort_field:'created_at'}).eq('id',user.id) }}>등록순</button>
+          <button className="btn btn-sm btn-outline" onClick={async()=>{ const next=sortDir==='asc'?'desc':'asc'; setSortDir(next); await supabase.from('profiles').update({character_sort_dir:next}).eq('id',user.id) }} title={sortDir==='asc'?'오름차순':'내림차순'}>
             <Mi size='sm'>{sortDir==='asc'?'arrow_upward':'arrow_downward'}</Mi>
           </button>
         </div>
