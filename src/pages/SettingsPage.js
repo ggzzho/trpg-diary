@@ -29,6 +29,7 @@ const WIDGET_OPTIONS = [
   {key:'characters', label:'PC 목록', icon:'person'},
   {key:'bookmarks', label:'북마크', icon:'bookmark'},
   {key:'guestbook', label:'방명록', icon:'mail'},
+  {key:'mypages', label:'친구 페이지', icon:'link'},
 ]
 
 const DEFAULT_SECTIONS = [
@@ -482,6 +483,7 @@ export default function SettingsPage() {
                 {key:'characters', label:'PC 목록', icon:'person'},
                 {key:'bookmarks', label:'북마크', icon:'bookmark'},
                 {key:'guestbook', label:'방명록', icon:'mail'},
+                {key:'mypages', label:'친구 페이지', icon:'link'},
               ].map(t => {
                 const isHidden = (form.hidden_tabs||[]).includes(t.key)
                 return (

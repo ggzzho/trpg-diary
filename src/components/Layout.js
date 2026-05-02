@@ -54,6 +54,7 @@ const NAV_GROUPS = [
   { type:'group', key:'etc', label:'ETC.', items:[
     { to:'/bookmarks', icon:'bookmark', label:'북마크' },
     { to:'/guestbook', icon:'mail', label:'방명록' },
+    { to:'/friend-pages', icon:'link', label:'친구 페이지' },
   ]},
 ]
 

@@ -406,7 +406,7 @@ export default function PublicProfilePage() {
 
   const loadTabData = async (tab, profileId) => {
     if (loadedRef.current.has(tab)) return
-    if (tab === 'guestbook') { loadedRef.current.add(tab); return }
+    if (tab === 'guestbook' || tab === 'mypages') { loadedRef.current.add(tab); return }
     loadedRef.current.add(tab)
     setTabLoading(t => ({...t, [tab]: true}))
     const safeQ = async p => { try { const r = await p; return r.data || [] } catch { return [] } }
@@ -490,7 +490,7 @@ export default function PublicProfilePage() {
       // 탭 카운트 + 통계용 경량 head 쿼리
       const today = getTodayKST()
       const safeC = async pr => { try { const r = await pr; return r.count || 0 } catch { return 0 } }
-      const [logsCount, rulebooksCount, scenariosCount, dotoriCount, pairsCount, charsCount, schedsCount, availCount, guestbookCount, bookmarksCount] = await Promise.all([
+      const [logsCount, rulebooksCount, scenariosCount, dotoriCount, pairsCount, charsCount, schedsCount, availCount, guestbookCount, bookmarksCount, mypagesCount] = await Promise.all([
         safeC(supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',p.id).eq('is_private',false)),
         safeC(supabase.from('rulebooks').select('id',{count:'exact',head:true}).eq('user_id',p.id).is('parent_id',null)),
         safeC(supabase.from('scenarios').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
@@ -501,11 +501,12 @@ export default function PublicProfilePage() {
         safeC(supabase.from('availability').select('id',{count:'exact',head:true}).eq('user_id',p.id).eq('is_active',true)),
         safeC(supabase.from('guestbook').select('id',{count:'exact',head:true}).eq('owner_id',p.id).eq('type','message').is('parent_id',null)),
         safeC(supabase.from('bookmarks').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
+        safeC(supabase.from('guestbook').select('id',{count:'exact',head:true}).eq('owner_id',p.id).eq('type','mypage')),
       ])
-      setCounts({ logs:logsCount, rulebooks:rulebooksCount, scenarios:scenariosCount, dotori:dotoriCount, pairs:pairsCount, characters:charsCount, schedule:schedsCount, availability:availCount, guestbook:guestbookCount, bookmarks:bookmarksCount })
+      setCounts({ logs:logsCount, rulebooks:rulebooksCount, scenarios:scenariosCount, dotori:dotoriCount, pairs:pairsCount, characters:charsCount, schedule:schedsCount, availability:availCount, guestbook:guestbookCount, bookmarks:bookmarksCount, mypages:mypagesCount })
 
       const hidden = p.hidden_tabs || []
-      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','dotori','pairs','characters','bookmarks','guestbook']
+      const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','dotori','pairs','characters','bookmarks','guestbook','mypages']
       const requestedTab = searchParams.get('tab') || 'schedules'
       let initialTab = requestedTab
       if (hidden.includes(requestedTab)) {
@@ -605,6 +606,7 @@ export default function PublicProfilePage() {
     { key:'characters', label:'PC 목록', icon:'person', count: data.characters?.length ?? counts.characters },
     { key:'bookmarks', label:'북마크', icon:'bookmark', count: data.bookmarks?.length ?? counts.bookmarks },
     { key:'guestbook', label:'방명록', icon:'mail', count: counts.guestbook },
+    { key:'mypages', label:'친구 페이지', icon:'link', count: counts.mypages },
   ].filter(t => !hiddenTabs.includes(t.key))
 
   const pagedPairs = pairsPagination.paged
@@ -769,6 +771,7 @@ export default function PublicProfilePage() {
               {key:'availability', label:'공수표', v: data.availability?.length || (counts.availability||0)},
               {key:'guestbook', label:'방명록', v: counts.guestbook||0},
               {key:'bookmarks', label:'북마크', v: data.bookmarks?.length || (counts.bookmarks||0)},
+              {key:'mypages', label:'친구 페이지', v: counts.mypages||0},
             ]
             const dashCards = profile?.dashboard_cards || ['logs','rulebooks','scenarios','pairs']
             const publicStats = ALL_PUBLIC_STATS.filter(s=>dashCards.includes(s.key))
@@ -1254,7 +1257,10 @@ export default function PublicProfilePage() {
       )}
 
       {/* ── 방명록 ── */}
-      {!tabLoading[activeTab] && activeTab==='guestbook' && <GuestbookPublicView ownerId={profile.id} postId={searchParams.get('post')}/>}
+      {!tabLoading[activeTab] && activeTab==='guestbook' && <GuestbookPublicView ownerId={profile.id} postId={searchParams.get('post')} mode="message"/>}
+
+      {/* ── 친구 페이지 ── */}
+      {!tabLoading[activeTab] && activeTab==='mypages' && <GuestbookPublicView ownerId={profile.id} mode="mypage"/>}
 
 
       {/* 푸터 */}
