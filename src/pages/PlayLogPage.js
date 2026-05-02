@@ -119,7 +119,7 @@ export function LogDetailContent({ detail, isOwner }) {
 }
 
 export function PlayLogPage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -130,6 +130,9 @@ export function PlayLogPage() {
   const [search, setSearch] = useState('')
   const [ruleFilter, setRuleFilter] = useState('all')
   const [showSpoilerPw, setShowSpoilerPw] = useState(false)
+  const [sortDir, setSortDir] = useState('desc')
+
+  useEffect(() => { if (profile?.play_log_sort_order) setSortDir(profile.play_log_sort_order) }, [profile])
 
   const load = async () => {
     const {data} = await supabase
@@ -139,6 +142,12 @@ export function PlayLogPage() {
     setLoading(false)
   }
   useEffect(() => { load() }, [user])
+
+  const toggleSortDir = async () => {
+    const next = sortDir === 'desc' ? 'asc' : 'desc'
+    setSortDir(next)
+    await supabase.from('profiles').update({ play_log_sort_order: next }).eq('id', user.id)
+  }
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const openNew = () => { setEditing(null); setForm({...BLANK,played_date:getTodayKST()}); setModal(true) }
@@ -164,6 +173,10 @@ export function PlayLogPage() {
     const ms=!search||i.title.includes(search)||i.system_name?.includes(search)||i.together_with?.includes(search)||i.series_tag?.includes(search)||i.memo?.includes(search)
     const mr=ruleFilter==='all'||i.system_name===ruleFilter
     return ms&&mr
+  }).sort((a,b)=>{
+    const va=a.played_date||'', vb=b.played_date||''
+    const cmp = va < vb ? -1 : va > vb ? 1 : 0
+    return sortDir==='asc' ? cmp : -cmp
   })
 
   const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 10)
@@ -180,9 +193,14 @@ export function PlayLogPage() {
       </div>
 
       <div style={{marginBottom:20}}>
-        <input className="form-input" placeholder="🔍 제목, 룰, 시리즈로 검색..." value={search}
-          onChange={e=>setSearch(e.target.value)} autoComplete="off"
-          style={{maxWidth:320,marginBottom:ruleList.length>0?10:0}}/>
+        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:ruleList.length>0?10:0}}>
+          <input className="form-input" placeholder="🔍 제목, 룰, 시리즈로 검색..." value={search}
+            onChange={e=>setSearch(e.target.value)} autoComplete="off"
+            style={{maxWidth:320}}/>
+          <button className="btn btn-sm btn-outline" onClick={toggleSortDir} title={sortDir==='desc'?'최신순':'오래된순'}>
+            엔딩 날짜 <Mi size='sm'>{sortDir==='desc'?'arrow_downward':'arrow_upward'}</Mi>
+          </button>
+        </div>
         {ruleList.length>0&&(
           <div className="flex gap-8" style={{flexWrap:'wrap',marginTop:8}}>
             <button className={`btn btn-sm ${ruleFilter==='all'?'btn-primary':'btn-outline'}`} onClick={()=>setRuleFilter('all')}>전체</button>
