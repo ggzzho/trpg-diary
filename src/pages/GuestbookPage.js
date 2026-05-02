@@ -508,6 +508,7 @@ function FeedbackReplySection({ replies, getSubReplies, isOwner, userId, ownerId
 export function GuestbookPublicView({ ownerId, postId, mode }) {
   const { user, profile, loading: authLoading } = useAuth()
   const [tab, setTab] = useState(mode || 'message')
+  useEffect(() => { if (mode) setTab(mode) }, [mode])
   const [messages, setMessages] = useState([])
   const [allReplies, setAllReplies] = useState([])
   const [allSubReplies, setAllSubReplies] = useState([])
@@ -916,6 +917,7 @@ function GuestbookOwnerView({ user, mode }) {
   const [mypages, setMypages] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState(mode || 'message')
+  useEffect(() => { if (mode) setTab(mode) }, [mode])
   const [search, setSearch] = useState('')
   const [editingItem, setEditingItem] = useState(null)
   const [editForm, setEditForm] = useState({ nickname:'', memo:'', url:'', avatar_url:'', editAs:'' })
