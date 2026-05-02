@@ -59,10 +59,10 @@ export function DotoriPage() {
   }
 
   const save = async () => {
-    if (!form.url) return
+    if (!form.title?.trim()) return
     const validTagNames = tags.map(t=>t.name)
     const { id, user_id, created_at, ...formFields } = form
-    const payload = {...formFields, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
+    const payload = {...formFields, url: form.url?.trim() || null, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
     if (editing) await dotoriApi.update(editing.id, payload)
     else {
       const { error } = await dotoriApi.create({...payload,user_id:user.id})
@@ -138,8 +138,8 @@ export function DotoriPage() {
               onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow='0 6px 24px rgba(0,0,0,0.12)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 2px 12px var(--color-shadow)'}}
             >
-              <div style={{height:130,background:'var(--color-nav-active-bg)',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:'pointer'}}
-                onClick={()=>window.open(item.url,'_blank','noopener,noreferrer')}
+              <div style={{height:130,background:'var(--color-nav-active-bg)',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:item.url?'pointer':'default'}}
+                onClick={()=>item.url&&window.open(item.url,'_blank','noopener,noreferrer')}
               >
                 {item.thumbnail_url?<img src={item.thumbnail_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}><Mi size="lg" color="light">link</Mi></span>}
                 {item.tags?.length>0&&(
@@ -150,13 +150,13 @@ export function DotoriPage() {
                   </div>
                 )}
               </div>
-              <div style={{padding:'12px 14px',flex:1,display:'flex',flexDirection:'column',gap:4,cursor:'pointer'}}
-                onClick={()=>window.open(item.url,'_blank','noopener,noreferrer')}
+              <div style={{padding:'12px 14px',flex:1,display:'flex',flexDirection:'column',gap:4,cursor:item.url?'pointer':'default'}}
+                onClick={()=>item.url&&window.open(item.url,'_blank','noopener,noreferrer')}
               >
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.title||item.url}</div>
                 {item.system_name&&<div style={{fontSize:'0.7rem',color:'var(--color-accent)',fontWeight:600}}><Mi size='sm' color='accent'>menu_book</Mi> {item.system_name}</div>}
                 {item.description&&<div style={{fontSize:'0.72rem',color:'var(--color-text-light)',lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.description}</div>}
-                <div style={{fontSize:'0.65rem',color:'var(--color-text-light)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'auto',paddingTop:4}}><><Mi size='sm' color='light'>link</Mi> {item.url}</></div>
+                {item.url&&<div style={{fontSize:'0.65rem',color:'var(--color-text-light)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'auto',paddingTop:4}}><Mi size='sm' color='light'>link</Mi> {item.url}</div>}
                 {item.memo&&<div style={{fontSize:'0.72rem',color:'var(--color-accent)',padding:'5px 8px',borderRadius:6,background:'var(--color-nav-active-bg)',marginTop:4,wordBreak:'break-all',overflowWrap:'break-word',whiteSpace:'pre-wrap'}}><><Mi size='sm' color='accent'>edit_note</Mi> {item.memo}</></div>}
               </div>
               <div style={{padding:'6px 12px 10px',display:'flex',gap:6,justifyContent:'flex-end',borderTop:'1px solid var(--color-border)'}} onClick={e=>e.stopPropagation()}>
@@ -173,7 +173,7 @@ export function DotoriPage() {
         footer={<><button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button><button className="btn btn-primary btn-sm" onClick={save}>저장</button></>}
       >
         <div className="form-group">
-          <label className="form-label">URL *</label>
+          <label className="form-label">URL</label>
           <div style={{display:'flex',gap:8}}>
             <input className="form-input" placeholder="https://..." value={form.url} onChange={set('url')} onBlur={handleUrlBlur} style={{flex:1}}/>
             <button type="button" className="btn btn-outline btn-sm" onClick={doFetch} disabled={fetching} style={{whiteSpace:'nowrap',flexShrink:0}}>{fetching?'로딩...':'🔄 정보 가져오기'}</button>
@@ -181,7 +181,7 @@ export function DotoriPage() {
           {fetchMsg&&<div className="text-xs" style={{marginTop:4,color:fetchMsg.startsWith('✅')?'#558b2f':fetchMsg.startsWith('⚠️')?'#e57373':'var(--color-text-light)'}}>{fetchMsg}</div>}
         </div>
         {form.thumbnail_url&&<div style={{marginBottom:12,borderRadius:8,overflow:'hidden',height:100,background:'var(--color-nav-active-bg)'}}><img src={form.thumbnail_url} alt="thumbnail" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/></div>}
-        <div className="form-group"><label className="form-label">제목</label><input className="form-input" placeholder="자동으로 가져와요" value={form.title||''} onChange={set('title')}/></div>
+        <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" placeholder="제목을 입력하세요" value={form.title||''} onChange={set('title')}/></div>
         <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name||''} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
         <div className="form-group"><label className="form-label">썸네일 이미지 URL</label><input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.thumbnail_url||''} onChange={set('thumbnail_url')}/></div>
         <div className="form-group">
