@@ -585,29 +585,33 @@ export function GuestbookPublicView({ ownerId, postId, mode }) {
     if (!msgForm.content.trim()) return
     const authorName = msgForm.nickname.trim() || profile?.display_name || profile?.username || '익명'
     setMsgSubmitting(true)
-    await supabase.from('guestbook').insert({
+    const { error } = await supabase.from('guestbook').insert({
       owner_id:ownerId, author_id:user?.id||null,
       author_name: authorName,
       content:msgForm.content.trim(), is_private:msgForm.is_private, type:'message',
     })
+    setMsgSubmitting(false)
+    if (error) { alert('저장 실패: ' + error.message); return }
     setMsgForm({ nickname:'', content:'', is_private:false })
     setMsgDone(true); setTimeout(() => setMsgDone(false), 2500)
-    loadAll(); setMsgSubmitting(false)
+    await loadAll()
   }
 
   const submitPage = async () => {
     if (!pageForm.nickname.trim() || !pageForm.url.trim()) { alert('닉네임과 URL은 필수예요!'); return }
     setPageSubmitting(true)
-    await supabase.from('guestbook').insert({
+    const { error } = await supabase.from('guestbook').insert({
       owner_id:ownerId, author_id:user?.id||null,
       author_name:pageForm.nickname.trim(),
       author_avatar_url:pageForm.avatar_url.trim() || null,
       content:pageForm.url.trim(), type:'mypage',
     })
+    setPageSubmitting(false)
+    if (error) { alert('저장 실패: ' + error.message); return }
     setPageForm({ nickname:'', url:'', avatar_url:'' })
     setPageFormOpen(false)
     setPageDone(true); setTimeout(() => setPageDone(false), 3000)
-    loadAll(); setPageSubmitting(false)
+    await loadAll()
   }
 
   const removeEntry = async (id) => {
