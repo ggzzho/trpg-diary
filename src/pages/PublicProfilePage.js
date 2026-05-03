@@ -903,7 +903,7 @@ export default function PublicProfilePage() {
                           {l.character_name && <span><span style={{ fontWeight:600, marginRight:4 }}>PL.</span>{l.character_name}</span>}
                         </div>
                       )}
-                      {l.npc && <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>등장인물.</span>{l.npc}</div>}
+                      {l.npc && <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)' }}><span style={{ fontWeight:600, marginRight:4 }}>PC.</span>{l.npc}</div>}
                       {(l.start_date||l.played_date) && (
                         <div style={{ fontSize:'0.79rem', color:'var(--color-text-light)', display:'flex', gap:14, flexWrap:'wrap' }}>
                           {l.start_date && <span><span style={{ fontWeight:600, marginRight:4 }}>Start.</span>{format(new Date(l.start_date),'yyyy.MM.dd')}</span>}
