@@ -324,7 +324,7 @@ export function PlayLogPage() {
           </div>
 
           {/* PC */}
-          <div className="form-group"><label className="form-label">PC</label><input className="form-input" autoComplete="off" placeholder="주요 등장인물, NPC 등..." value={form.npc||''} onChange={set('npc')}/></div>
+          <div className="form-group"><label className="form-label">PC</label><input className="form-input" autoComplete="off" placeholder="참가한 PC, NPC, GMPC 등.." value={form.npc||''} onChange={set('npc')}/></div>
 
 
 
