@@ -97,7 +97,7 @@ export function LogDetailContent({ detail, isOwner }) {
         )}
         {detail.npc && (
           <div>
-            <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>등장인물</div>
+            <div style={{fontSize:'0.82rem',fontWeight:700,color:'var(--color-text-light)',marginBottom:3}}>PC</div>
             <div className="text-sm">{detail.npc}</div>
           </div>
         )}
@@ -242,7 +242,7 @@ export function PlayLogPage() {
                       {item.character_name&&<span><span style={{fontWeight:600,marginRight:4}}>PL.</span>{item.character_name}</span>}
                     </div>
                   )}
-                  {item.npc&&<div style={{fontSize:'0.79rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>등장인물.</span>{item.npc}</div>}
+                  {item.npc&&<div style={{fontSize:'0.79rem',color:'var(--color-text-light)'}}><span style={{fontWeight:600,marginRight:4}}>PC.</span>{item.npc}</div>}
                   {(item.start_date||item.played_date)&&(
                     <div style={{fontSize:'0.79rem',color:'var(--color-text-light)',display:'flex',gap:14,flexWrap:'wrap'}}>
                       {item.start_date&&<span><span style={{fontWeight:600,marginRight:4}}>Start.</span>{format(new Date(item.start_date),'yyyy.MM.dd')}</span>}
@@ -323,8 +323,8 @@ export function PlayLogPage() {
             <div className="form-group"><label className="form-label">PL</label><input className="form-input" autoComplete="off" placeholder="플레이어" value={form.character_name||''} onChange={set('character_name')}/></div>
           </div>
 
-          {/* 등장인물 */}
-          <div className="form-group"><label className="form-label">등장인물</label><input className="form-input" autoComplete="off" placeholder="주요 등장인물, NPC 등..." value={form.npc||''} onChange={set('npc')}/></div>
+          {/* PC */}
+          <div className="form-group"><label className="form-label">PC</label><input className="form-input" autoComplete="off" placeholder="주요 등장인물, NPC 등..." value={form.npc||''} onChange={set('npc')}/></div>
 
 
 
