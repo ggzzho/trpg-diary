@@ -44,7 +44,7 @@ function DetailSection({ label, value }) {
 }
 
 const BLANK = {
-  name:'', age:'', gender:'', height_weight:'', job:'',
+  name:'', age:'', gender:'', height_weight:'', job:'', job_label:'',
   personality:'', background:'', extra_settings:'',
   image_url:'', rules:[], extra_urls:[], custom_fields:[]
 }
@@ -369,8 +369,13 @@ export function CharactersPage() {
             <input className="form-input" value={form.height_weight||''} onChange={set('height_weight')} placeholder="예: 162cm / 52kg"/>
           </div>
           <div className="form-group">
-            <label className="form-label">직업</label>
-            <input className="form-input" value={form.job||''} onChange={set('job')} placeholder="예: 탐정"/>
+            <label className="form-label">네 번째 항목
+              <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.75rem',marginLeft:4}}>(항목명 미입력 시 '직업'으로 표시)</span>
+            </label>
+            <div style={{display:'flex',gap:8}}>
+              <input className="form-input" placeholder="항목명 (예: 직업, 직위, 종족...)" value={form.job_label||''} onChange={set('job_label')} style={{flex:'0 0 150px'}}/>
+              <input className="form-input" value={form.job||''} onChange={set('job')} placeholder="내용" style={{flex:1}}/>
+            </div>
           </div>
         </div>
         {/* 성격 */}
@@ -484,7 +489,7 @@ export function CharactersPage() {
               {detailChar.age&&<InfoRow label="나이" value={`${detailChar.age}세`}/>}
               {detailChar.gender&&<InfoRow label="성별" value={detailChar.gender}/>}
               {detailChar.height_weight&&<InfoRow label="키/몸무게" value={detailChar.height_weight}/>}
-              {detailChar.job&&<InfoRow label="직업" value={detailChar.job}/>}
+              {detailChar.job&&<InfoRow label={detailChar.job_label||'직업'} value={detailChar.job}/>}
             </div>
           )}
           {/* 룰 태그 */}
