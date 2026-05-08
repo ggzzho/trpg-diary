@@ -46,6 +46,8 @@ export function MarkdownRenderer({ content, style }) {
     .replace(/(<\/h[1-3]>)\n/g, '$1')
     .replace(/\n\n(<(?:h[1-3]|ul)[^>]*>)/g, '\n$1')
     .replace(/\n/g, '<br/>')
+    // 이미지 뒤 <br/> 제거 — img는 display:block이라 자체 줄바꿈되므로 불필요
+    .replace(/(<img[^>]*\/>)<br\/>/g, '$1')
 
   return (
     <div
@@ -73,6 +75,7 @@ export default function AdminNoticePage() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(BLANK)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [confirm, setConfirm] = useState(null)
   const [preview, setPreview] = useState(false)
 
@@ -87,18 +90,24 @@ export default function AdminNoticePage() {
   }
   useEffect(() => { load() }, [])
 
-  const openNew = () => { setEditing(null); setForm(BLANK); setPreview(false); setModal(true) }
-  const openEdit = (n) => { setEditing(n); setForm({ title:n.title, content:n.content, is_popup:n.is_popup, is_active:n.is_active }); setPreview(false); setModal(true) }
+  const openNew = () => { setEditing(null); setForm(BLANK); setSaveError(''); setPreview(false); setModal(true) }
+  const openEdit = (n) => { setEditing(n); setForm({ title:n.title, content:n.content, is_popup:n.is_popup, is_active:n.is_active }); setSaveError(''); setPreview(false); setModal(true) }
 
   const save = async () => {
     if (!form.title.trim()) return
-    setSaving(true)
+    setSaving(true); setSaveError('')
+    let error
     if (editing) {
-      await supabase.from('notices').update({ ...form, updated_at: new Date().toISOString() }).eq('id', editing.id)
+      ({ error } = await supabase.from('notices').update({ ...form, updated_at: new Date().toISOString() }).eq('id', editing.id))
     } else {
-      await supabase.from('notices').insert(form)
+      ({ error } = await supabase.from('notices').insert(form))
     }
-    setSaving(false); setModal(false); load()
+    setSaving(false)
+    if (error) {
+      setSaveError(`저장 실패: ${error.message}`)
+      return
+    }
+    setModal(false); load()
   }
 
   const remove = async (id) => {
@@ -217,6 +226,11 @@ export default function AdminNoticePage() {
               </label>
             </div>
 
+            {saveError && (
+              <div style={{marginBottom:12,padding:'8px 12px',borderRadius:8,background:'#fdecea',border:'1px solid #e57373',color:'#c62828',fontSize:'0.82rem'}}>
+                ⚠️ {saveError}
+              </div>
+            )}
             <div className="flex justify-end gap-8">
               <button className="btn btn-outline btn-sm" onClick={()=>setModal(false)}>취소</button>
               <button className="btn btn-primary btn-sm" onClick={save} disabled={saving||!form.title.trim()}>
