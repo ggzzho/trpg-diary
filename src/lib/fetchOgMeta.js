@@ -1,6 +1,17 @@
 // src/lib/fetchOgMeta.js
 // OG 메타 가져오기 — 여러 서비스 순차 시도
+
+// URL에 프로토콜이 없으면 https:// 자동 추가
+export function normalizeUrl(url) {
+  if (!url) return url
+  const trimmed = url.trim()
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
+  if (trimmed.startsWith('//')) return 'https:' + trimmed
+  return 'https://' + trimmed
+}
+
 export async function fetchOgMeta(url) {
+  url = normalizeUrl(url)
   // 1차: jsonlink.io (무료, 제한 없음)
   try {
     const res = await fetch(

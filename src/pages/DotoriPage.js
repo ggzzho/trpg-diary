@@ -6,7 +6,7 @@ import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Paginatio
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
 import { RuleSelect } from '../components/RuleSelect'
-import { fetchOgMeta } from '../lib/fetchOgMeta'
+import { fetchOgMeta, normalizeUrl } from '../lib/fetchOgMeta'
 import { handleStorageLimitError } from '../lib/storageError'
 
 const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[], system_name:'' }
@@ -62,7 +62,7 @@ export function DotoriPage() {
     if (!form.title?.trim()) return
     const validTagNames = tags.map(t=>t.name)
     const { id, user_id, created_at, ...formFields } = form
-    const payload = {...formFields, url: form.url?.trim() || null, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
+    const payload = {...formFields, url: form.url?.trim() ? normalizeUrl(form.url.trim()) : null, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
     if (editing) await dotoriApi.update(editing.id, payload)
     else {
       const { error } = await dotoriApi.create({...payload,user_id:user.id})
@@ -139,7 +139,7 @@ export function DotoriPage() {
               onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 2px 12px var(--color-shadow)'}}
             >
               <div style={{height:130,background:'var(--color-nav-active-bg)',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:item.url?'pointer':'default'}}
-                onClick={()=>item.url&&window.open(item.url,'_blank','noopener,noreferrer')}
+                onClick={()=>item.url&&window.open(normalizeUrl(item.url),'_blank','noopener,noreferrer')}
               >
                 {item.thumbnail_url?<img src={item.thumbnail_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}><Mi size="lg" color="light">link</Mi></span>}
                 {item.tags?.length>0&&(
@@ -151,7 +151,7 @@ export function DotoriPage() {
                 )}
               </div>
               <div style={{padding:'12px 14px',flex:1,display:'flex',flexDirection:'column',gap:4,cursor:item.url?'pointer':'default'}}
-                onClick={()=>item.url&&window.open(item.url,'_blank','noopener,noreferrer')}
+                onClick={()=>item.url&&window.open(normalizeUrl(item.url),'_blank','noopener,noreferrer')}
               >
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.title||item.url}</div>
                 {item.system_name&&<div style={{fontSize:'0.7rem',color:'var(--color-accent)',fontWeight:600}}><Mi size='sm' color='accent'>menu_book</Mi> {item.system_name}</div>}
