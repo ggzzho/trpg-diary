@@ -14,7 +14,8 @@ const BLANK = {
   title:'', start_date:'', played_date:'', system_name:'', role:'PL',
   character_name:'', together_with:'', npc:'', memo:'',
   session_image_url:'', scenario_link:'', series_tag:'', session_log_url:'',
-  spoiler_content:'', spoiler_password:'', is_private:false, extra_urls:[]
+  spoiler_content:'', spoiler_password:'', is_private:false, extra_urls:[],
+  is_intro:false, intro_rule:''
 }
 const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, played_date:f.played_date||null, start_date:f.start_date||null, extra_urls:f.extra_urls||[]} }
 
@@ -24,9 +25,10 @@ const TAG_COLORS = {
   role_PL:{bg:'#4a7ad4',color:'#fff',border:'#3a6ac4'},
   role_GM:{bg:'#7a5ab8',color:'#fff',border:'#6a4aa8'},
   rule:{bg:'#5a8a40',color:'#fff',border:'#4a7a30'},
+  intro:{bg:'#2e9e6e',color:'#fff',border:'#1e8e5e'},
 }
 function TagChip({ type, label }) {
-  const c = type==='series'?TAG_COLORS.series:type==='role'?(label==='GM'?TAG_COLORS.role_GM:TAG_COLORS.role_PL):TAG_COLORS.rule
+  const c = type==='series'?TAG_COLORS.series:type==='role'?(label==='GM'?TAG_COLORS.role_GM:TAG_COLORS.role_PL):type==='intro'?TAG_COLORS.intro:TAG_COLORS.rule
   return <span style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:100,fontSize:'0.63rem',fontWeight:700,background:c.bg,color:c.color,border:`1px solid ${c.border}`,whiteSpace:'nowrap'}}>{label}</span>
 }
 
@@ -77,6 +79,7 @@ export function LogDetailContent({ detail, isOwner }) {
         {detail.series_tag && <TagChip type="series" label={detail.series_tag}/>}
         <TagChip type="role" label={detail.role}/>
         {detail.system_name && <TagChip type="rule" label={detail.system_name}/>}
+        {detail.is_intro && <TagChip type="intro" label={`입문${detail.intro_rule?` · ${detail.intro_rule}`:''}`}/>}
       </div>
       <div className="grid-2" style={{marginBottom:12}}>
         {detail.start_date && (
@@ -170,7 +173,7 @@ export function PlayLogPage() {
   const ruleList = useMemo(()=>[...new Set(items.map(i=>i.system_name).filter(Boolean))].sort(),[items])
 
   const filtered = items.filter(i=>{
-    const ms=!search||i.title.includes(search)||i.system_name?.includes(search)||i.together_with?.includes(search)||i.series_tag?.includes(search)||i.memo?.includes(search)
+    const ms=!search||i.title.includes(search)||i.system_name?.includes(search)||i.together_with?.includes(search)||i.series_tag?.includes(search)||i.memo?.includes(search)||i.intro_rule?.includes(search)
     const mr=ruleFilter==='all'||i.system_name===ruleFilter
     return ms&&mr
   }).sort((a,b)=>{
@@ -231,6 +234,7 @@ export function PlayLogPage() {
                   {item.series_tag&&<TagChip type="series" label={item.series_tag}/>}
                   <TagChip type="role" label={item.role}/>
                   {item.system_name&&<TagChip type="rule" label={item.system_name}/>}
+                  {item.is_intro&&<TagChip type="intro" label={`입문${item.intro_rule?` · ${item.intro_rule}`:''}`}/>}
                 </div>
               </div>
               <div style={{padding:'10px 12px 0',flex:1,display:'flex',flexDirection:'column'}}>
@@ -313,7 +317,23 @@ export function PlayLogPage() {
 
           {/* 룰 + 역할 */}
           <div className="grid-2">
-            <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
+            <div className="form-group">
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                <label className="form-label" style={{margin:0}}>룰</label>
+                <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',userSelect:'none'}}>
+                  <input type="checkbox" checked={!!form.is_intro}
+                    onChange={e=>setForm(f=>({...f,is_intro:e.target.checked,intro_rule:e.target.checked?f.intro_rule:''}))}
+                    style={{width:14,height:14,accentColor:'var(--color-primary)',cursor:'pointer'}}/>
+                  <span style={{fontSize:'0.82rem',fontWeight:600,color:'var(--color-text-light)'}}>입문탁</span>
+                </label>
+              </div>
+              <RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))} disabled={!!form.is_intro}/>
+              {form.is_intro&&(
+                <input className="form-input" placeholder="어떤 룰의 입문인지 입력 (예: CoC, 인세인...)"
+                  value={form.intro_rule||''} onChange={set('intro_rule')}
+                  style={{marginTop:6}} autoComplete="off"/>
+              )}
+            </div>
             <div className="form-group"><label className="form-label">역할</label><select className="form-select" value={form.role} onChange={set('role')}><option value="PL">PL</option><option value="GM">GM</option></select></div>
           </div>
 

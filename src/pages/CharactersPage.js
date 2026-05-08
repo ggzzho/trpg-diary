@@ -46,11 +46,11 @@ function DetailSection({ label, value }) {
 const BLANK = {
   name:'', age:'', gender:'', height_weight:'', job:'',
   personality:'', background:'', extra_settings:'',
-  image_url:'', rules:[], extra_urls:[]
+  image_url:'', rules:[], extra_urls:[], custom_fields:[]
 }
 const cleanPayload = f => {
   const { id, user_id, created_at, ...rest } = f
-  return { ...rest, rules:f.rules||[], extra_urls:f.extra_urls||[] }
+  return { ...rest, rules:f.rules||[], extra_urls:f.extra_urls||[], custom_fields:f.custom_fields||[] }
 }
 
 const LOG_SELECT = 'id,title,played_date,start_date,system_name,role,series_tag,session_image_url'
@@ -129,7 +129,7 @@ export function CharactersPage() {
     ...f, rules: (f.rules||[]).includes(tag) ? f.rules.filter(r=>r!==tag) : [...(f.rules||[]), tag]
   }))
   const openNew = () => { setEditing(null); setForm(BLANK); setModal(true) }
-  const openEdit = item => { setEditing(item); setForm({...item, rules:item.rules||[], extra_urls:item.extra_urls||[]}); setModal(true) }
+  const openEdit = item => { setEditing(item); setForm({...item, rules:item.rules||[], extra_urls:item.extra_urls||[], custom_fields:item.custom_fields||[]}); setModal(true) }
 
   const save = async () => {
     if (!form.name) return
@@ -206,7 +206,8 @@ export function CharactersPage() {
         (i.personality||'').toLowerCase().includes(s) ||
         (i.background||'').toLowerCase().includes(s) ||
         (i.extra_settings||'').toLowerCase().includes(s) ||
-        (i.rules||[]).some(r=>r.toLowerCase().includes(s))
+        (i.rules||[]).some(r=>r.toLowerCase().includes(s)) ||
+        (i.custom_fields||[]).some(f=>(f.title||'').toLowerCase().includes(s)||(f.content||'').toLowerCase().includes(s))
       )
     })
     result.sort((a, b) => {
@@ -403,6 +404,30 @@ export function CharactersPage() {
               </div>
           }
         </div>
+        {/* 추가 항목 */}
+        <div className="form-group">
+          <label className="form-label">추가 항목</label>
+          {(form.custom_fields||[]).map((field,i)=>(
+            <div key={i} style={{marginBottom:10,padding:10,borderRadius:8,border:'1px solid var(--color-border)',background:'var(--color-nav-active-bg)'}}>
+              <div style={{display:'flex',gap:8,marginBottom:6,alignItems:'center'}}>
+                <input className="form-input" placeholder="항목 이름 (예: 특기, 소지품, 명언...)"
+                  value={field.title||''} style={{flex:1}}
+                  onChange={e=>setForm(f=>({...f,custom_fields:f.custom_fields.map((x,j)=>j===i?{...x,title:e.target.value}:x)}))}/>
+                <button type="button" className="btn btn-ghost btn-sm" style={{color:'#e57373',flexShrink:0}}
+                  onClick={()=>setForm(f=>({...f,custom_fields:f.custom_fields.filter((_,j)=>j!==i)}))}>
+                  <Mi size='sm'>close</Mi>
+                </button>
+              </div>
+              <textarea className="form-textarea" placeholder="내용"
+                value={field.content||''} style={{minHeight:60,marginBottom:0}}
+                onChange={e=>setForm(f=>({...f,custom_fields:f.custom_fields.map((x,j)=>j===i?{...x,content:e.target.value}:x)}))}/>
+            </div>
+          ))}
+          <button type="button" className="btn btn-outline btn-sm" style={{marginTop:2}}
+            onClick={()=>setForm(f=>({...f,custom_fields:[...(f.custom_fields||[]),{title:'',content:''}]}))}>
+            <Mi size='sm'>add</Mi> 항목 추가
+          </button>
+        </div>
         {/* 기타 URL */}
         <div className="form-group">
           <label className="form-label">기타 URL</label>
@@ -475,6 +500,10 @@ export function CharactersPage() {
           {detailChar.personality&&<DetailSection label="성격" value={detailChar.personality}/>}
           {detailChar.background&&<DetailSection label="배경" value={detailChar.background}/>}
           {detailChar.extra_settings&&<DetailSection label="기타설정" value={detailChar.extra_settings}/>}
+          {/* 커스텀 항목 */}
+          {(detailChar.custom_fields||[]).filter(f=>f.title||f.content).map((field,i)=>(
+            <DetailSection key={i} label={field.title||'(항목)'} value={field.content||''}/>
+          ))}
           {/* 기타 URL */}
           {(detailChar.extra_urls||[]).filter(u=>u.url).length>0&&(
             <div style={{marginTop:4}}>
