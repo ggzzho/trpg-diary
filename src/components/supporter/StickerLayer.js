@@ -273,8 +273,11 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
   // 스티커 없고 오너도 아님 → 렌더링 안 함
   if (savedStickers.length === 0 && !isOwner) return null
 
-  // 방문자 + 모바일 + 숨기기 설정 ON → 렌더링 안 함
+  // 방문자 + 모바일 + 숨기기 설정 ON → 완전히 숨김
   if (!isOwner && isMobile && savedHideMobile) return null
+
+  // 모바일에서 스티커를 실제로 표시할지 여부 (오너는 편집모드 진입 시 항상 표시)
+  const showStickers = !isMobile || !savedHideMobile || editMode
 
   // 선택된 스티커의 레이어 범위
   const allLayers  = stickers.map(x => x.layer ?? 0)
@@ -296,7 +299,7 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
         }}
         onClick={editMode ? (e) => { if (e.target === e.currentTarget) setSelectedId(null) } : undefined}
       >
-        {stickers.map(s => (
+        {showStickers && stickers.map(s => (
           <StickerItem
             key={s.id}
             sticker={s}
