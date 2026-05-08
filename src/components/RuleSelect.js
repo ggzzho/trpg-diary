@@ -3,7 +3,7 @@ import React from 'react'
 import { useRules } from '../context/RuleContext'
 
 // 룰북 목록에 등록된 룰을 드롭다운으로 선택
-export function RuleSelect({ value, onChange, placeholder = '룰 선택' }) {
+export function RuleSelect({ value, onChange, placeholder = '룰 선택', disabled = false }) {
   const { rules } = useRules()
 
   return (
@@ -11,6 +11,8 @@ export function RuleSelect({ value, onChange, placeholder = '룰 선택' }) {
       className="form-select"
       value={value || ''}
       onChange={e => onChange(e.target.value)}
+      disabled={disabled}
+      style={disabled ? { opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none' } : undefined}
     >
       <option value="">{placeholder}</option>
       {rules.map(r => (

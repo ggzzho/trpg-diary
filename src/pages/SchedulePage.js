@@ -310,7 +310,14 @@ export default function SchedulePage() {
     } else t=t.filter(i=>getYear(new Date(i.scheduled_date))===yearView)
     const total=t.length,gmCount=t.filter(i=>i.is_gm).length,plCount=total-gmCount
     const rc={}; t.forEach(i=>{if(i.system_name)rc[i.system_name]=(rc[i.system_name]||0)+1})
-    return {total,gmCount,plCount,topRules:Object.entries(rc).sort((a,b)=>b[1]-a[1]).slice(0,5)}
+    const timeToMin = s => { if(!s) return null; const [h,m]=s.split(':').map(Number); return h*60+m }
+    const timeSessions = t.filter(i=>i.scheduled_time&&i.end_time)
+    const totalPlayMinutes = timeSessions.reduce((acc,i)=>{
+      const s=timeToMin(i.scheduled_time), e=timeToMin(i.end_time)
+      if(s===null||e===null) return acc
+      return acc+(e>=s?e-s:e+1440-s)
+    },0)
+    return {total,gmCount,plCount,topRules:Object.entries(rc).sort((a,b)=>b[1]-a[1]).slice(0,5),totalPlayMinutes,timeSessionCount:timeSessions.length}
   }, [items,summaryPeriod,summaryDate,yearView])
 
   const renderCalendar = () => {
@@ -460,13 +467,38 @@ export default function SchedulePage() {
           </div>
         }
       </div>
-      <div className="grid-3" style={{marginBottom:16}}>
+      <div className="grid-3" style={{marginBottom:12}}>
         {[{v:summaryStats.total,l:'총 세션'},{v:summaryStats.plCount,l:'PL 횟수'},{v:summaryStats.gmCount,l:'GM 횟수'}].map(s=>(
           <div key={s.l} className="card" style={{textAlign:'center'}}>
             <div style={{fontSize:'1.8rem',fontWeight:700,color:'var(--color-accent)'}}>{s.v}</div>
             <div className="text-sm text-light">{s.l}</div>
           </div>
         ))}
+      </div>
+      {/* 총 플레이 시간 카드 */}
+      <div className="card" style={{textAlign:'center',marginBottom:16}}>
+        {summaryStats.totalPlayMinutes > 0 ? (
+          <>
+            <div style={{fontSize:'1.8rem',fontWeight:700,color:'var(--color-accent)'}}>
+              {Math.floor(summaryStats.totalPlayMinutes/60)}시간{' '}
+              {summaryStats.totalPlayMinutes%60 > 0 && <span>{summaryStats.totalPlayMinutes%60}분</span>}
+            </div>
+            <div className="text-sm text-light">
+              총 플레이 시간
+              <span style={{marginLeft:6,fontSize:'0.72rem'}}>
+                ({summaryStats.total > 0 ? `${summaryStats.timeSessionCount}/${summaryStats.total}세션 기준` : ''})
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{fontSize:'1.4rem',fontWeight:700,color:'var(--color-text-light)'}}>—</div>
+            <div className="text-sm text-light">
+              총 플레이 시간
+              <span style={{marginLeft:6,fontSize:'0.72rem'}}>(시작·종료 시간 기록 시 집계)</span>
+            </div>
+          </>
+        )}
       </div>
       {summaryStats.topRules.length>0&&(
         <div className="card">
@@ -705,7 +737,13 @@ export default function SchedulePage() {
         <div className="grid-2">
           <div className="form-group"><label className="form-label">날짜 *</label><input className="form-input" type="date" value={form.scheduled_date} onChange={set('scheduled_date')}/></div>
           <div className="form-group"><label className="form-label">시작 시간</label><input className="form-input" type="time" value={form.scheduled_time||''} onChange={set('scheduled_time')}/></div>
-          <div className="form-group"><label className="form-label">종료 시간</label><input className="form-input" type="time" value={form.end_time||''} onChange={set('end_time')}/></div>
+          <div className="form-group">
+            <label className="form-label" style={{display:'flex',alignItems:'center',gap:6}}>
+              종료 시간
+              <span style={{fontSize:'0.68rem',color:'var(--color-text-light)',fontWeight:400}}>결산 플레이 시간에 반영</span>
+            </label>
+            <input className="form-input" type="time" value={form.end_time||''} onChange={set('end_time')}/>
+          </div>
         </div>
 
         {/* 반복 일정 - 새 일정 등록 시에만 표시 */}
@@ -758,7 +796,23 @@ export default function SchedulePage() {
           </div>
         )}
         <div className="grid-2">
-          <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
+          <div className="form-group">
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+              <label className="form-label" style={{margin:0}}>룰</label>
+              <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',userSelect:'none'}}>
+                <input type="checkbox" checked={!!form.is_intro}
+                  onChange={e=>setForm(f=>({...f,is_intro:e.target.checked,intro_rule:e.target.checked?f.intro_rule:''}))}
+                  style={{width:14,height:14,accentColor:'var(--color-primary)',cursor:'pointer'}}/>
+                <span style={{fontSize:'0.82rem',fontWeight:600,color:'var(--color-text-light)'}}>입문탁</span>
+              </label>
+            </div>
+            <RuleSelect value={form.system_name} onChange={v=>setForm(f=>({...f,system_name:v}))} disabled={!!form.is_intro}/>
+            {form.is_intro&&(
+              <input className="form-input" placeholder="어떤 룰의 입문인지 입력 (예: CoC, 인세인...)"
+                value={form.intro_rule||''} onChange={set('intro_rule')}
+                style={{marginTop:6}} autoComplete="off"/>
+            )}
+          </div>
           <div className="form-group"><label className="form-label">사이트</label><input className="form-input" placeholder="roll20, 코코포리아..." value={form.location||''} onChange={set('location')}/></div>
         </div>
         <div className="grid-2">
@@ -772,20 +826,6 @@ export default function SchedulePage() {
               <option value="pl">PL</option><option value="gm">GM</option>
             </select>
           </div>
-        </div>
-        {/* 입문탁 */}
-        <div className="form-group">
-          <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',userSelect:'none'}}>
-            <input type="checkbox" checked={!!form.is_intro}
-              onChange={e=>setForm(f=>({...f,is_intro:e.target.checked,intro_rule:e.target.checked?f.intro_rule:''}))}
-              style={{width:16,height:16,accentColor:'var(--color-primary)',cursor:'pointer'}}/>
-            <span style={{fontSize:'0.88rem',fontWeight:600}}>입문탁</span>
-          </label>
-          {form.is_intro&&(
-            <input className="form-input" placeholder="어떤 룰의 입문인지 입력 (예: CoC, 인세인...)"
-              value={form.intro_rule||''} onChange={set('intro_rule')}
-              style={{marginTop:8}} autoComplete="off"/>
-          )}
         </div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.description||''} onChange={set('description')} style={{minHeight:72}}/></div>
         </>}
