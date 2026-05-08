@@ -264,6 +264,7 @@ export default function StickerLayer({ profile, isOwner, onSave }) {
 
   const cancelEdit = () => {
     setStickers(profile?.stickers || [])
+    setHideMobile(profile?.stickers_hide_mobile ?? false)
     setSelectedId(null)
     setEditMode(false)
     setUrlInput('')
