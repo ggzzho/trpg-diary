@@ -102,11 +102,13 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
   }, [hasVideo])
 
   // ── 오너 편집 상태 ──
-  const [editList,      setEditList]      = useState([])
-  const [hasChanges,    setHasChanges]    = useState(false)
-  const [newUrl,        setNewUrl]        = useState('')
-  const [newTitle,      setNewTitle]      = useState('')
-  const [fetchingTitle, setFetchingTitle] = useState(false)
+  const [editList,        setEditList]        = useState([])
+  const [hasChanges,      setHasChanges]      = useState(false)
+  const [newUrl,          setNewUrl]          = useState('')
+  const [newTitle,        setNewTitle]        = useState('')
+  const [fetchingTitle,   setFetchingTitle]   = useState(false)
+  const [editingTrackIdx, setEditingTrackIdx] = useState(null)
+  const [editingTrackData,setEditingTrackData]= useState({url:'',title:''})
 
   // 햄버거 패널 열릴 때 editList 초기화 (오너)
   useEffect(() => {
@@ -115,6 +117,7 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
       setHasChanges(false)
       setNewUrl('')
       setNewTitle('')
+      setEditingTrackIdx(null)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPlaylist])
@@ -240,6 +243,19 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
     setHasChanges(false)
     setNewUrl('')
     setNewTitle('')
+    setEditingTrackIdx(null)
+  }
+  const startEditTrack = (i) => {
+    setEditingTrackIdx(i)
+    setEditingTrackData({url: editList[i].url||'', title: editList[i].title||''})
+  }
+  const confirmEditTrack = () => {
+    if (editingTrackIdx === null) return
+    setEditList(prev => prev.map((t, idx) =>
+      idx === editingTrackIdx ? {...t, url:editingTrackData.url, title:editingTrackData.title} : t
+    ))
+    setHasChanges(true)
+    setEditingTrackIdx(null)
   }
 
   // 데이터 없고 오너도 아님 → 렌더링 안 함
@@ -430,55 +446,85 @@ export default function BgmPlayer({ profile, isOwner, onSave }) {
                 </p>
               ) : (isOwner ? editList : resolvedList).map((track, i) => {
                 const isActive = i === currentIndex
+                const isEditing = isOwner && editingTrackIdx === i
                 return (
-                  <div key={i} style={{
-                    display:'flex', alignItems:'center', gap:4,
-                    padding:'5px 0',
-                    borderBottom:'1px solid var(--color-border)',
-                  }}>
-                    {/* 번호 + 제목 클릭 → 재생 */}
-                    <button
-                      onClick={() => playTrackAt(i)}
-                      style={{
-                        flex:1, display:'flex', alignItems:'center', gap:6,
-                        background:'none', border:'none', cursor:'pointer',
-                        textAlign:'left', padding:0, minWidth:0,
-                        color: isActive ? 'var(--color-primary)' : 'var(--color-text)',
-                      }}
-                    >
-                      <span style={{
-                        fontSize:'0.63rem', flexShrink:0, minWidth:14,
-                        color: isActive ? 'var(--color-primary)' : 'var(--color-text-light)',
-                        fontWeight: isActive ? 700 : 400,
-                      }}>
-                        {isActive && playing ? '▶' : i + 1}
-                      </span>
-                      <span style={{
-                        fontSize:'0.78rem', fontWeight: isActive ? 700 : 400,
-                        overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                      }}>
-                        {track.title || <span style={{ opacity:0.5, fontStyle:'italic' }}>제목 없음</span>}
-                      </span>
-                    </button>
+                  <div key={i} style={{ borderBottom:'1px solid var(--color-border)' }}>
+                    {/* 트랙 행 */}
+                    <div style={{ display:'flex', alignItems:'center', gap:4, padding:'5px 0' }}>
+                      {/* 번호 + 제목 클릭 → 재생 */}
+                      <button
+                        onClick={() => playTrackAt(i)}
+                        style={{
+                          flex:1, display:'flex', alignItems:'center', gap:6,
+                          background:'none', border:'none', cursor:'pointer',
+                          textAlign:'left', padding:0, minWidth:0,
+                          color: isActive ? 'var(--color-primary)' : 'var(--color-text)',
+                        }}
+                      >
+                        <span style={{
+                          fontSize:'0.63rem', flexShrink:0, minWidth:14,
+                          color: isActive ? 'var(--color-primary)' : 'var(--color-text-light)',
+                          fontWeight: isActive ? 700 : 400,
+                        }}>
+                          {isActive && playing ? '▶' : i + 1}
+                        </span>
+                        <span style={{
+                          fontSize:'0.78rem', fontWeight: isActive ? 700 : 400,
+                          overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                        }}>
+                          {track.title || <span style={{ opacity:0.5, fontStyle:'italic' }}>제목 없음</span>}
+                        </span>
+                      </button>
 
-                    {/* 오너: ▲ ▼ × */}
-                    {isOwner && (
-                      <div style={{ display:'flex', alignItems:'center', gap:1, flexShrink:0 }}>
-                        <button
-                          onClick={() => moveTrack(i, -1)} disabled={i === 0}
-                          style={{ background:'none', border:'none', cursor: i > 0 ? 'pointer' : 'default', color:'var(--color-text-light)', fontSize:'0.6rem', padding:'2px 3px', opacity: i > 0 ? 1 : 0.25, lineHeight:1 }}
-                          title="위로"
-                        >▲</button>
-                        <button
-                          onClick={() => moveTrack(i, 1)} disabled={i === editList.length - 1}
-                          style={{ background:'none', border:'none', cursor: i < editList.length - 1 ? 'pointer' : 'default', color:'var(--color-text-light)', fontSize:'0.6rem', padding:'2px 3px', opacity: i < editList.length - 1 ? 1 : 0.25, lineHeight:1 }}
-                          title="아래로"
-                        >▼</button>
-                        <button
-                          onClick={() => removeTrack(i)}
-                          style={{ background:'none', border:'none', cursor:'pointer', color:'#e57373', fontSize:'0.85rem', padding:'2px 3px', lineHeight:1 }}
-                          title="삭제"
-                        >×</button>
+                      {/* 오너: ✏️ ▲ ▼ × */}
+                      {isOwner && (
+                        <div style={{ display:'flex', alignItems:'center', gap:1, flexShrink:0 }}>
+                          <button
+                            onClick={() => isEditing ? setEditingTrackIdx(null) : startEditTrack(i)}
+                            style={{ background:'none', border:'none', cursor:'pointer', color: isEditing ? 'var(--color-primary)' : 'var(--color-text-light)', fontSize:'0.72rem', padding:'2px 3px', lineHeight:1 }}
+                            title={isEditing ? '편집 닫기' : '수정'}
+                          >✏️</button>
+                          <button
+                            onClick={() => moveTrack(i, -1)} disabled={i === 0}
+                            style={{ background:'none', border:'none', cursor: i > 0 ? 'pointer' : 'default', color:'var(--color-text-light)', fontSize:'0.6rem', padding:'2px 3px', opacity: i > 0 ? 1 : 0.25, lineHeight:1 }}
+                            title="위로"
+                          >▲</button>
+                          <button
+                            onClick={() => moveTrack(i, 1)} disabled={i === editList.length - 1}
+                            style={{ background:'none', border:'none', cursor: i < editList.length - 1 ? 'pointer' : 'default', color:'var(--color-text-light)', fontSize:'0.6rem', padding:'2px 3px', opacity: i < editList.length - 1 ? 1 : 0.25, lineHeight:1 }}
+                            title="아래로"
+                          >▼</button>
+                          <button
+                            onClick={() => removeTrack(i)}
+                            style={{ background:'none', border:'none', cursor:'pointer', color:'#e57373', fontSize:'0.85rem', padding:'2px 3px', lineHeight:1 }}
+                            title="삭제"
+                          >×</button>
+                        </div>
+                      )}
+                    </div>
+                    {/* 인라인 편집 폼 */}
+                    {isEditing && (
+                      <div style={{ padding:'6px 0 8px', display:'flex', flexDirection:'column', gap:5 }}>
+                        <input
+                          className="form-input"
+                          placeholder="YouTube URL"
+                          value={editingTrackData.url}
+                          onChange={e => setEditingTrackData(d => ({...d, url:e.target.value}))}
+                          style={{ fontSize:'0.73rem' }}
+                        />
+                        <input
+                          className="form-input"
+                          placeholder="곡 제목"
+                          value={editingTrackData.title}
+                          onChange={e => setEditingTrackData(d => ({...d, title:e.target.value}))}
+                          style={{ fontSize:'0.73rem' }}
+                        />
+                        <div style={{ display:'flex', gap:5 }}>
+                          <button className="btn btn-primary btn-sm" onClick={confirmEditTrack}
+                            style={{ flex:1, fontSize:'0.73rem' }}>확인</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => setEditingTrackIdx(null)}
+                            style={{ fontSize:'0.73rem' }}>취소</button>
+                        </div>
                       </div>
                     )}
                   </div>
