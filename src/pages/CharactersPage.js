@@ -362,20 +362,19 @@ export function CharactersPage() {
             <input className="form-input" value={form.gender||''} onChange={set('gender')} placeholder="예: 여성"/>
           </div>
         </div>
-        {/* 키/몸무게·직업 */}
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-          <div className="form-group">
-            <label className="form-label">키/몸무게</label>
-            <input className="form-input" value={form.height_weight||''} onChange={set('height_weight')} placeholder="예: 162cm / 52kg"/>
-          </div>
-          <div className="form-group">
-            <label className="form-label">네 번째 항목
-              <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.75rem',marginLeft:4}}>(항목명 미입력 시 '직업'으로 표시)</span>
-            </label>
-            <div style={{display:'flex',gap:8}}>
-              <input className="form-input" placeholder="항목명 (예: 직업, 직위, 종족...)" value={form.job_label||''} onChange={set('job_label')} style={{flex:'0 0 150px'}}/>
-              <input className="form-input" value={form.job||''} onChange={set('job')} placeholder="내용" style={{flex:1}}/>
-            </div>
+        {/* 키/몸무게 */}
+        <div className="form-group">
+          <label className="form-label">키/몸무게</label>
+          <input className="form-input" value={form.height_weight||''} onChange={set('height_weight')} placeholder="예: 162cm / 52kg"/>
+        </div>
+        {/* 네 번째 항목 (항목명 직접 지정) */}
+        <div className="form-group">
+          <label className="form-label">네 번째 항목
+            <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.75rem',marginLeft:4}}>(항목명 미입력 시 '직업'으로 표시)</span>
+          </label>
+          <div style={{display:'flex',gap:8}}>
+            <input className="form-input" placeholder="항목명" value={form.job_label||''} onChange={set('job_label')} style={{flex:'0 0 90px'}}/>
+            <input className="form-input" value={form.job||''} onChange={set('job')} placeholder="내용" style={{flex:1}}/>
           </div>
         </div>
         {/* 성격 */}
@@ -387,11 +386,6 @@ export function CharactersPage() {
         <div className="form-group">
           <label className="form-label">배경</label>
           <textarea className="form-textarea" value={form.background||''} onChange={set('background')} style={{minHeight:70}} placeholder="캐릭터의 배경을 적어주세요"/>
-        </div>
-        {/* 기타설정 */}
-        <div className="form-group">
-          <label className="form-label">기타설정</label>
-          <textarea className="form-textarea" value={form.extra_settings||''} onChange={set('extra_settings')} style={{minHeight:70}} placeholder="외형, 특기, 소지품 등 기타 설정"/>
         </div>
         {/* 룰 태그 */}
         <div className="form-group">
