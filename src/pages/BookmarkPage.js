@@ -5,7 +5,7 @@ import { bookmarksApi, bookmarkTagsApi, supabase } from '../lib/supabase'
 import { Modal, EmptyState, LoadingSpinner, ConfirmDialog, TagManager, Pagination } from '../components/Layout'
 import { usePagination } from '../hooks/usePagination'
 import { Mi } from '../components/Mi'
-import { fetchOgMeta } from '../lib/fetchOgMeta'
+import { fetchOgMeta, normalizeUrl } from '../lib/fetchOgMeta'
 import { handleStorageLimitError } from '../lib/storageError'
 
 const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[] }
@@ -60,7 +60,7 @@ export function BookmarkPage() {
     if (!form.url) return
     const validTagNames = tags.map(t=>t.name)
     const { id, user_id, created_at, ...formFields } = form
-    const payload = {...formFields, tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
+    const payload = {...formFields, url: normalizeUrl(form.url), tags:(form.tags||[]).filter(t=>validTagNames.includes(t))}
     if (editing) await bookmarksApi.update(editing.id, payload)
     else {
       const { error } = await bookmarksApi.create({...payload,user_id:user.id})
@@ -129,7 +129,7 @@ export function BookmarkPage() {
               onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 2px 12px var(--color-shadow)'}}
             >
               <div style={{height:130,background:'var(--color-nav-active-bg)',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:'pointer'}}
-                onClick={()=>window.open(item.url,'_blank','noopener,noreferrer')}
+                onClick={()=>window.open(normalizeUrl(item.url),'_blank','noopener,noreferrer')}
               >
                 {item.thumbnail_url?<img src={item.thumbnail_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}><Mi size="lg" color="light">link</Mi></span>}
                 {item.tags?.length>0&&(
@@ -141,7 +141,7 @@ export function BookmarkPage() {
                 )}
               </div>
               <div style={{padding:'12px 14px',flex:1,display:'flex',flexDirection:'column',gap:4,cursor:'pointer'}}
-                onClick={()=>window.open(item.url,'_blank','noopener,noreferrer')}
+                onClick={()=>window.open(normalizeUrl(item.url),'_blank','noopener,noreferrer')}
               >
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.title||item.url}</div>
                 {item.description&&<div style={{fontSize:'0.72rem',color:'var(--color-text-light)',lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.description}</div>}
