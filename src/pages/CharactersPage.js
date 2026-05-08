@@ -304,9 +304,14 @@ export function CharactersPage() {
                   {/* 카드 정보 — 클릭 시 상세 팝업 */}
                   <div style={{padding:'12px 14px',cursor:'pointer'}} onClick={()=>setDetailChar(item)}>
                     <div style={{fontWeight:700,fontSize:'1rem',marginBottom:3}}>{item.name}</div>
-                    {(item.age||item.gender||item.job)&&(
+                    {(item.age||item.gender)&&(
+                      <div className="text-xs text-light" style={{marginBottom:2}}>
+                        {[item.age&&`${item.age}세`, item.gender].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
+                    {(item.height_weight||item.job)&&(
                       <div className="text-xs text-light" style={{marginBottom:5}}>
-                        {[item.age&&`${item.age}세`, item.gender, item.job].filter(Boolean).join(' · ')}
+                        {[item.height_weight, item.job&&`${item.job_label||'직업'}: ${item.job}`].filter(Boolean).join(' · ')}
                       </div>
                     )}
                     {displayRules.length>0&&(
