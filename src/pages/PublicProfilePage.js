@@ -53,13 +53,14 @@ function calcDday(d) {
 
 // ── 공개 페이지 태그칩: 불투명 ──
 const TC = {
-  series: { bg:'#c8a96e', color:'#fff', border:'#b8944e' },
+  series:  { bg:'#c8a96e', color:'#fff', border:'#b8944e' },
   role_PL: { bg:'#4a7ad4', color:'#fff', border:'#3a6ac4' },
   role_GM: { bg:'#7a5ab8', color:'#fff', border:'#6a4aa8' },
-  rule: { bg:'#5a8a40', color:'#fff', border:'#4a7a30' },
+  rule:    { bg:'#5a8a40', color:'#fff', border:'#4a7a30' },
+  intro:   { bg:'#2e9e6e', color:'#fff', border:'#1e8e5e' },
 }
 function Chip({ type, label }) {
-  const c = type==='series' ? TC.series : type==='role' ? (label==='GM' ? TC.role_GM : TC.role_PL) : TC.rule
+  const c = type==='series' ? TC.series : type==='intro' ? TC.intro : type==='role' ? (label==='GM' ? TC.role_GM : TC.role_PL) : TC.rule
   return (
     <span style={{ display:'inline-flex', padding:'2px 7px', borderRadius:100, fontSize:'0.62rem', fontWeight:700,
       background:c.bg, color:c.color, border:`1px solid ${c.border}`, whiteSpace:'nowrap' }}>
@@ -890,8 +891,9 @@ export default function PublicProfilePage() {
                     <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'65%', background:'linear-gradient(to top,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 55%,transparent 100%)', pointerEvents:'none' }}/>
                     <div style={{ position:'absolute', bottom:8, left:8, right:8, display:'flex', gap:4, flexWrap:'wrap' }}>
                       {l.series_tag && <Chip type="series" label={l.series_tag}/>}
+                      {l.is_intro && <Chip type="intro" label={l.intro_rule ? `입문 (${l.intro_rule})` : '입문'}/>}
                       <Chip type="role" label={l.role}/>
-                      {l.system_name && <Chip type="rule" label={l.system_name}/>}
+                      {l.system_name && !l.is_intro && <Chip type="rule" label={l.system_name}/>}
                     </div>
                   </div>
                   <div style={{ padding:'10px 12px 12px', flex:1, display:'flex', flexDirection:'column' }}>
@@ -1190,9 +1192,14 @@ export default function PublicProfilePage() {
                     {/* 카드 정보 — 클릭 시 상세 팝업 */}
                     <div style={{ padding:'12px 14px', cursor:'pointer' }} onClick={()=>setPubDetailChar(c)}>
                       <div style={{ fontWeight:700, fontSize:'1rem', marginBottom:3 }}>{c.name}</div>
-                      {(c.age||c.gender||c.job)&&(
+                      {(c.age||c.gender||c.height_weight)&&(
+                        <div className="text-xs text-light" style={{ marginBottom:2 }}>
+                          {[c.age&&`${c.age}세`, c.gender, c.height_weight].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
+                      {c.job&&(
                         <div className="text-xs text-light" style={{ marginBottom:5 }}>
-                          {[c.age&&`${c.age}세`, c.gender, c.job].filter(Boolean).join(' · ')}
+                          {`${c.job_label||'직업'}: ${c.job}`}
                         </div>
                       )}
                       {displayRules.length>0&&(
