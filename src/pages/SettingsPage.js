@@ -56,6 +56,7 @@ export default function SettingsPage() {
   const [tab, setTab] = useState(location.state?.tab || 'profile')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [newLink, setNewLink] = useState({label:'',url:''})
   const [pwForm, setPwForm] = useState({next:'', confirm:''})
   const [pwMsg, setPwMsg] = useState(null)
@@ -160,6 +161,7 @@ export default function SettingsPage() {
 
   const save = async () => {
     setSaving(true)
+    setSaveError('')
     // 커서 효과 최초 ON 시 혜택 최초 사용일 기록
     const ce = form.cursor_effect
     if (ce && (ce.trail?.enabled || ce.click?.enabled)) {
@@ -173,6 +175,8 @@ export default function SettingsPage() {
       setSaved(true); setTimeout(()=>setSaved(false),2500)
       applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent,form.theme_text_color||null,form.dark_mode)
       applyBackground(form.background_image_url,form.bg_opacity,form.dark_mode,form.theme_color)
+    } else {
+      setSaveError(`저장에 실패했어요. (${error.message || '잠시 후 다시 시도해주세요'})`)
     }
     setSaving(false)
   }
@@ -738,9 +742,12 @@ export default function SettingsPage() {
 
         {/* 저장 버튼 (보안 설정/후원 탭 제외) */}
         {tab!=='security' && tab!=='donation' &&(
-          <div style={{marginTop:20,paddingTop:16,borderTop:'1px solid var(--color-border)',display:'flex',justifyContent:'flex-end',alignItems:'center',gap:10}}>
-            {saved&&<span className="text-sm" style={{color:'#558b2f'}}>✅ 저장됐어요!</span>}
-            <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?'저장 중...':'설정 저장'}</button>
+          <div style={{marginTop:20,paddingTop:16,borderTop:'1px solid var(--color-border)'}}>
+            {saveError&&<div style={{padding:'10px 14px',borderRadius:8,background:'rgba(229,115,115,0.1)',border:'1px solid rgba(229,115,115,0.3)',color:'#c62828',fontSize:'0.82rem',marginBottom:10}}>{saveError}</div>}
+            <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:10}}>
+              {saved&&<span className="text-sm" style={{color:'#558b2f'}}>✅ 저장됐어요!</span>}
+              <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?'저장 중...':'설정 저장'}</button>
+            </div>
           </div>
         )}
       </div>
