@@ -408,6 +408,26 @@ export function CharactersPage() {
               </div>
           }
         </div>
+        {/* 레거시 기타설정 마이그레이션 배너 */}
+        {(form.extra_settings||'').trim() && (
+          <div style={{padding:'12px 14px',borderRadius:8,background:'rgba(200,169,110,0.12)',border:'1px solid rgba(200,169,110,0.4)',marginBottom:12}}>
+            <div style={{fontWeight:600,fontSize:'0.85rem',marginBottom:4,color:'var(--color-accent)'}}>⚠ 이전 버전 '기타설정' 항목이 있어요</div>
+            <div className="text-xs text-light" style={{marginBottom:10,whiteSpace:'pre-wrap'}}>{form.extra_settings}</div>
+            <div style={{display:'flex',gap:8}}>
+              <button type="button" className="btn btn-outline btn-sm"
+                onClick={()=>setForm(f=>({...f,
+                  custom_fields:[...(f.custom_fields||[]),{title:'기타설정',content:f.extra_settings}],
+                  extra_settings:''
+                }))}>
+                추가 항목으로 이동
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm" style={{color:'#e57373'}}
+                onClick={()=>setForm(f=>({...f,extra_settings:''}))}>
+                삭제
+              </button>
+            </div>
+          </div>
+        )}
         {/* 추가 항목 */}
         <div className="form-group">
           <label className="form-label">추가 항목</label>
