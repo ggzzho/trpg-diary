@@ -790,7 +790,8 @@ export default function PublicProfilePage() {
               {key:'mypages', label:'친구 페이지', v: counts.mypages||0},
             ]
             const dashCards = profile?.dashboard_cards || ['logs','rulebooks','scenarios','pairs']
-            const publicStats = ALL_PUBLIC_STATS.filter(s=>dashCards.includes(s.key))
+            // hidden_tabs도 함께 적용 — 탭을 숨기면 통계 위젯도 같이 숨김
+            const publicStats = ALL_PUBLIC_STATS.filter(s => dashCards.includes(s.key) && !hiddenTabs.includes(s.key))
             return (
               <div className="flex justify-between" style={{ marginTop:16, padding:'12px 0', borderTop:'1px solid var(--color-border)', borderBottom:'1px solid var(--color-border)' }}>
                 {publicStats.map(s => (
