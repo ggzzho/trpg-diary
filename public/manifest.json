@@ -1,15 +1,26 @@
 {
-  "short_name": "TRPG Diary",
   "name": "TRPG Diary ✦",
+  "short_name": "TRPG Diary",
+  "description": "나만의 TRPG Diary - 일정, 기록, 룰북, 시나리오를 한곳에서 관리하세요",
   "icons": [
     {
-      "src": "og-image.png",
+      "src": "icon_192.png",
       "type": "image/png",
-      "sizes": "1200x630"
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon_512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#c8a96e",
-  "background_color": "#fdf8f0"
+  "background_color": "#fdf8f0",
+  "id": "trpg-diary"
 }
