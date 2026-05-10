@@ -127,7 +127,8 @@ export function DotoriPage() {
           <div style={{minWidth:160}}>
             <RuleSelect value={ruleFilter} onChange={v=>setRuleFilter(v)} placeholder="룰 전체"/>
           </div>
-          <select className="form-input" value={playFilter} onChange={e=>setPlayFilter(e.target.value)} style={{minWidth:130,height:36}}>
+          <select value={playFilter} onChange={e=>setPlayFilter(e.target.value)}
+            style={{height:36,minWidth:130,border:'1px solid var(--color-border)',borderRadius:6,padding:'0 8px',fontSize:'0.85rem',background:'var(--color-surface)',color:'var(--color-text)',cursor:'pointer',flexShrink:0}}>
             <option value="">플레이 희망 전체</option>
             {PLAY_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
           </select>
@@ -205,15 +206,10 @@ export function DotoriPage() {
         <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name||''} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
         <div className="form-group">
           <label className="form-label">플레이 희망</label>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-            {PLAY_TYPES.map(t=>(
-              <button key={t} type="button"
-                className={`btn btn-sm ${form.play_type===t?'btn-primary':'btn-outline'}`}
-                onClick={()=>setForm(f=>({...f,play_type:f.play_type===t?'':t}))}>
-                {t}
-              </button>
-            ))}
-          </div>
+          <select className="form-input" value={form.play_type||''} onChange={e=>setForm(f=>({...f,play_type:e.target.value}))}>
+            <option value="">선택 안 함</option>
+            {PLAY_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+          </select>
         </div>
         <div className="form-group"><label className="form-label">썸네일 이미지 URL</label><input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.thumbnail_url||''} onChange={set('thumbnail_url')}/></div>
         <div className="form-group">
