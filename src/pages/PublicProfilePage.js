@@ -318,6 +318,7 @@ export default function PublicProfilePage() {
     return sortedBookmarks.filter(b =>
       (b.title||'').toLowerCase().includes(s) ||
       (b.description||'').toLowerCase().includes(s) ||
+      (b.memo||'').toLowerCase().includes(s) ||
       b.tags?.some(t => t.toLowerCase().includes(s))
     )
   }, [sortedBookmarks, tabSearch])
@@ -406,6 +407,7 @@ export default function PublicProfilePage() {
     return sortedDotori.filter(d =>
       (d.title||'').toLowerCase().includes(s) ||
       (d.description||'').toLowerCase().includes(s) ||
+      (d.memo||'').toLowerCase().includes(s) ||
       (d.system_name||'').toLowerCase().includes(s) ||
       d.tags?.some(t => t.toLowerCase().includes(s))
     )
@@ -1113,11 +1115,12 @@ export default function PublicProfilePage() {
                     </div>
                   )}
                   {d.description && <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.description}</p>}
+                  {d.memo && <p style={{ fontSize:'0.72rem', color:'var(--color-accent)', padding:'4px 8px', borderRadius:6, background:'var(--color-nav-active-bg)', marginBottom:3, whiteSpace:'pre-wrap', wordBreak:'break-all' }}><Mi size='sm' color='accent'>edit_note</Mi> {d.memo}</p>}
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
-                    {d.system_name
-                      ? <span style={{ fontSize:'0.7rem', color:'var(--color-accent)', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}><Mi size='sm' color='accent'>menu_book</Mi> {d.system_name}</span>
-                      : <span/>
-                    }
+                    <div style={{ display:'flex', gap:6, alignItems:'center', overflow:'hidden' }}>
+                      {d.system_name && <span style={{ fontSize:'0.7rem', color:'var(--color-accent)', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}><Mi size='sm' color='accent'>menu_book</Mi> {d.system_name}</span>}
+                      {d.play_type && <span style={{ fontSize:'0.62rem', fontWeight:700, padding:'1px 7px', borderRadius:100, color:'#fff', background: d.play_type==='PL 희망'?'#5b8dd9':d.play_type==='GM 희망'?'#9b6fb5':'#7a9e7e', flexShrink:0 }}>{d.play_type}</span>}
+                    </div>
                     {d.url && <a href={d.url} target="_blank" rel="noreferrer" style={{ fontSize:'0.72rem', color:'var(--color-primary)', flexShrink:0 }}>
                       <Mi size='sm'>link</Mi> 링크 열기
                     </a>}
@@ -1268,6 +1271,7 @@ export default function PublicProfilePage() {
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.title||'제목 없음'}</div>
                   {b.description && <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.description}</p>}
+                  {b.memo && <p style={{ fontSize:'0.72rem', color:'var(--color-accent)', padding:'4px 8px', borderRadius:6, background:'var(--color-nav-active-bg)', marginBottom:3, whiteSpace:'pre-wrap', wordBreak:'break-all' }}><Mi size='sm' color='accent'>edit_note</Mi> {b.memo}</p>}
                   <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize:'0.72rem', color:'var(--color-primary)' }}>
                     <Mi size='sm'>link</Mi> 링크 열기
                   </a>
