@@ -9,7 +9,10 @@ import { RuleSelect } from '../components/RuleSelect'
 import { fetchOgMeta, normalizeUrl } from '../lib/fetchOgMeta'
 import { handleStorageLimitError } from '../lib/storageError'
 
-const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[], system_name:'' }
+const BLANK = { url:'', title:'', description:'', thumbnail_url:'', memo:'', tags:[], system_name:'', play_type:'' }
+const PLAY_TYPES = ['PL 희망', 'GM 희망', 'PL·GM 무관']
+const PLAY_TYPE_ORDER = { 'PL 희망':0, 'GM 희망':1, 'PL·GM 무관':2 }
+const PLAY_TYPE_COLOR = { 'PL 희망':'#5b8dd9', 'GM 희망':'#9b6fb5', 'PL·GM 무관':'#7a9e7e' }
 
 export function DotoriPage() {
   const { user, profile, updateProfileField } = useAuth()
@@ -23,6 +26,7 @@ export function DotoriPage() {
   const [tagModal, setTagModal] = useState(false)
   const [tagFilter, setTagFilter] = useState('all')
   const [ruleFilter, setRuleFilter] = useState('')
+  const [playFilter, setPlayFilter] = useState('')
   const [search, setSearch] = useState('')
   const [sortOrder, setSortOrder] = useState('asc')
   const [fetching, setFetching] = useState(false)
@@ -88,11 +92,20 @@ export function DotoriPage() {
     const ms=!s||i.title?.toLowerCase().includes(s)||i.url?.toLowerCase().includes(s)||i.memo?.toLowerCase().includes(s)||i.system_name?.toLowerCase().includes(s)||i.tags?.some(t=>t.toLowerCase().includes(s))
     const mt=tagFilter==='all'||i.tags?.includes(tagFilter)
     const mr=!ruleFilter||i.system_name===ruleFilter
-    return ms&&mt&&mr
+    const mp=!playFilter||i.play_type===playFilter
+    return ms&&mt&&mr&&mp
   }).sort((a,b)=>{
+    // 1차: 룰 가나다순 (없으면 맨 뒤)
+    const ra=a.system_name||'￿', rb=b.system_name||'￿'
+    const rCmp=ra.localeCompare(rb,'ko')
+    if(rCmp!==0) return rCmp
+    // 2차: 플레이 희망 순 (PL→GM→무관→없음)
+    const pa=PLAY_TYPE_ORDER[a.play_type]??3, pb=PLAY_TYPE_ORDER[b.play_type]??3
+    if(pa!==pb) return pa-pb
+    // 3차: 제목 가나다순
     const ta=(a.title||a.url||'').toLowerCase(), tb=(b.title||b.url||'').toLowerCase()
     return sortOrder==='asc' ? ta.localeCompare(tb,'ko') : tb.localeCompare(ta,'ko')
-  }),[items,search,tagFilter,ruleFilter,sortOrder])
+  }),[items,search,tagFilter,ruleFilter,playFilter,sortOrder])
 
   const { paged, page, setPage, perPage, setPerPage } = usePagination(filtered, 10)
 
@@ -114,12 +127,16 @@ export function DotoriPage() {
           <div style={{minWidth:160}}>
             <RuleSelect value={ruleFilter} onChange={v=>setRuleFilter(v)} placeholder="룰 전체"/>
           </div>
+          <select className="form-input" value={playFilter} onChange={e=>setPlayFilter(e.target.value)} style={{minWidth:130,height:36}}>
+            <option value="">플레이 희망 전체</option>
+            {PLAY_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+          </select>
           <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
             onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await updateProfileField({dotori_sort_order:next}) }}>
             <Mi size='sm' color={sortOrder==='asc'?'white':'accent'}>{sortOrder==='asc'?'sort':'sort'}</Mi>
             가나다순 {sortOrder==='asc'?'↑':'↓'}
           </button>
-          {ruleFilter&&<button className="btn btn-ghost btn-sm" style={{color:'var(--color-text-light)'}} onClick={()=>setRuleFilter('')}>필터 초기화</button>}
+          {(ruleFilter||playFilter)&&<button className="btn btn-ghost btn-sm" style={{color:'var(--color-text-light)'}} onClick={()=>{setRuleFilter('');setPlayFilter('')}}>필터 초기화</button>}
         </div>
         {tags.length>0&&(
           <div className="flex gap-8" style={{flexWrap:'wrap',marginTop:8}}>
@@ -154,7 +171,10 @@ export function DotoriPage() {
                 onClick={()=>item.url&&window.open(normalizeUrl(item.url),'_blank','noopener,noreferrer')}
               >
                 <div style={{fontWeight:700,fontSize:'0.88rem',lineHeight:1.3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.title||item.url}</div>
-                {item.system_name&&<div style={{fontSize:'0.7rem',color:'var(--color-accent)',fontWeight:600}}><Mi size='sm' color='accent'>menu_book</Mi> {item.system_name}</div>}
+                <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+                  {item.system_name&&<div style={{fontSize:'0.7rem',color:'var(--color-accent)',fontWeight:600}}><Mi size='sm' color='accent'>menu_book</Mi> {item.system_name}</div>}
+                  {item.play_type&&<span style={{fontSize:'0.62rem',fontWeight:700,padding:'1px 7px',borderRadius:100,color:'#fff',background:PLAY_TYPE_COLOR[item.play_type]||'#888'}}>{item.play_type}</span>}
+                </div>
                 {item.description&&<div style={{fontSize:'0.72rem',color:'var(--color-text-light)',lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.description}</div>}
                 {item.url&&<div style={{fontSize:'0.65rem',color:'var(--color-text-light)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'auto',paddingTop:4}}><Mi size='sm' color='light'>link</Mi> {item.url}</div>}
                 {item.memo&&<div style={{fontSize:'0.72rem',color:'var(--color-accent)',padding:'5px 8px',borderRadius:6,background:'var(--color-nav-active-bg)',marginTop:4,wordBreak:'break-all',overflowWrap:'break-word',whiteSpace:'pre-wrap'}}><><Mi size='sm' color='accent'>edit_note</Mi> {item.memo}</></div>}
@@ -183,6 +203,18 @@ export function DotoriPage() {
         {form.thumbnail_url&&<div style={{marginBottom:12,borderRadius:8,overflow:'hidden',height:100,background:'var(--color-nav-active-bg)'}}><img src={form.thumbnail_url} alt="thumbnail" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/></div>}
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" placeholder="제목을 입력하세요" value={form.title||''} onChange={set('title')}/></div>
         <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name||''} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
+        <div className="form-group">
+          <label className="form-label">플레이 희망</label>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {PLAY_TYPES.map(t=>(
+              <button key={t} type="button"
+                className={`btn btn-sm ${form.play_type===t?'btn-primary':'btn-outline'}`}
+                onClick={()=>setForm(f=>({...f,play_type:f.play_type===t?'':t}))}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="form-group"><label className="form-label">썸네일 이미지 URL</label><input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.thumbnail_url||''} onChange={set('thumbnail_url')}/></div>
         <div className="form-group">
           <label className="form-label">태그<button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button></label>
