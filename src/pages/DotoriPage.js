@@ -127,11 +127,12 @@ export function DotoriPage() {
           <div style={{minWidth:160}}>
             <RuleSelect value={ruleFilter} onChange={v=>setRuleFilter(v)} placeholder="룰 전체"/>
           </div>
-          <select value={playFilter} onChange={e=>setPlayFilter(e.target.value)}
-            style={{height:36,minWidth:130,border:'1px solid var(--color-border)',borderRadius:6,padding:'0 8px',fontSize:'0.85rem',background:'var(--color-surface)',color:'var(--color-text)',cursor:'pointer',flexShrink:0}}>
-            <option value="">플레이 희망 전체</option>
-            {PLAY_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
-          </select>
+          <div style={{minWidth:160}}>
+            <select className="form-select" value={playFilter} onChange={e=>setPlayFilter(e.target.value)}>
+              <option value="">플레이 희망 전체</option>
+              {PLAY_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
           <button className={`btn btn-sm ${sortOrder==='asc'?'btn-primary':'btn-outline'}`}
             onClick={async()=>{ const next=sortOrder==='asc'?'desc':'asc'; setSortOrder(next); await updateProfileField({dotori_sort_order:next}) }}>
             <Mi size='sm' color={sortOrder==='asc'?'white':'accent'}>{sortOrder==='asc'?'sort':'sort'}</Mi>
