@@ -15,27 +15,26 @@ const CONFIG = {
     // 템플릿 헤더 (한글 표시명 → DB 필드명)
     columns: [
       { header: '제목(필수)',    key: 'title' },
-      { header: '시스템명',      key: 'system_name' },
       { header: '출판사',        key: 'publisher' },
       { header: '메모',          key: 'memo' },
       { header: '태그(쉼표구분)', key: 'tags' },
     ],
-    // 중복 체크 기준 필드
-    dupKeys: ['title', 'system_name'],
+    // 중복 체크 기준 필드 (제목만)
+    dupKeys: ['title'],
     // 행 → insert payload 변환
     rowToPayload: (row, userId) => ({
       user_id: userId,
       title: (row.title || '').trim(),
-      system_name: (row.system_name || '').trim() || null,
       publisher: (row.publisher || '').trim() || null,
       memo: (row.memo || '').trim() || null,
       tags: row.tags ? row.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       parent_id: null,
       color: '',
+      cover_image_url: '',
     }),
     sample: [
-      { '제목(필수)': '크툴루의 부름 7판', '시스템명': 'CoC 7판', '출판사': '아크라이트', '메모': '주력 시스템', '태그(쉼표구분)': 'GM,주력' },
-      { '제목(필수)': '던전즈&드래곤즈 5판', '시스템명': 'D&D 5e', '출판사': '', '메모': '', '태그(쉼표구분)': '' },
+      { '제목(필수)': '크툴루의 부름 7판', '출판사': '아크라이트', '메모': '주력 시스템', '태그(쉼표구분)': 'GM,주력' },
+      { '제목(필수)': '던전즈&드래곤즈 플레이어즈 핸드북', '출판사': '', '메모': '', '태그(쉼표구분)': '' },
     ],
   },
   scenario: {
@@ -360,7 +359,7 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
 
           {dupCount > 0 && (
             <div style={{ fontSize:'0.78rem', color:'var(--color-text-light)', background:'var(--color-nav-active-bg)', borderRadius:8, padding:'8px 12px', lineHeight:1.6 }}>
-              ℹ️ 중복 기준: 제목 + 시스템명이 동일한 경우 건너뜁니다.
+              ℹ️ 중복 기준: {type === 'rulebook' ? '제목이 동일한 경우' : '제목 + 시스템명이 동일한 경우'} 건너뜁니다.
             </div>
           )}
         </div>
