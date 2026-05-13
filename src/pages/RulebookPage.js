@@ -10,6 +10,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { handleStorageLimitError } from '../lib/storageError'
+import { BulkImportModal } from '../components/BulkImportModal'
 
 const BLANK = { title:'', publisher:'', system_name:'', cover_image_url:'', memo:'', tags:[], parent_id:null, color:'' }
 const COLOR_PALETTE = ['#e74c3c','#e67e22','#f1c40f','#27ae60','#1abc9c','#3498db','#2980b9','#9b59b6','#e91e63','#795548','#607d8b','#95a5a6']
@@ -131,6 +132,7 @@ export function RulebookPage() {
   const [expanded, setExpanded] = useState({})   // 아코디언 열림 상태
   const [isDirty, setIsDirty] = useState(false)  // 정렬 순서 변경 후 미저장 상태
   const [saving, setSaving] = useState(false)
+  const [bulkModal, setBulkModal] = useState(false)
 
   const load = async () => {
     const { data } = await supabase.from('rulebooks').select('*').eq('user_id', user.id)
@@ -354,6 +356,7 @@ export function RulebookPage() {
         <div><h1 className="page-title"><Mi style={{ marginRight:8, verticalAlign:'middle' }}>menu_book</Mi>보유 룰북</h1><p className="page-subtitle">보유한 TRPG 룰북 목록이에요 ({parents.length}권 / 서플 {items.length - parents.length}권)</p></div>
         <div className="flex gap-8">
           <button className="btn btn-outline btn-sm" onClick={() => setTagModal(true)}><Mi size='sm'>sell</Mi> 태그 관리</button>
+          <button className="btn btn-outline btn-sm" onClick={() => setBulkModal(true)}><Mi size='sm'>upload_file</Mi> 일괄 등록</button>
           <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 룰북 추가</button>
         </div>
       </div>
@@ -476,6 +479,14 @@ export function RulebookPage() {
       </Modal>
 
       <ConfirmDialog isOpen={!!confirm} onClose={() => setConfirm(null)} onConfirm={() => remove(confirm)} message="이 룰북을 삭제하시겠어요? 서플리먼트도 함께 삭제돼요."/>
+
+      <BulkImportModal
+        isOpen={bulkModal}
+        onClose={() => setBulkModal(false)}
+        type="rulebook"
+        existingItems={items}
+        onSuccess={() => { load(); reloadRules() }}
+      />
     </div>
   )
 }

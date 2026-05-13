@@ -11,6 +11,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from '@dnd-kit/utilities'
 import { handleStorageLimitError } from '../lib/storageError'
 import { TIER_LIMITS } from '../lib/tierLimits'
+import { BulkImportModal } from '../components/BulkImportModal'
 
 const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
 const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', digital_purchase:'전자', digital_free:'전자', physical_digital:'실물+전자', other:'기타' }
@@ -55,6 +56,7 @@ export function BaseScenarioPage({ config }) {
   const [showParentDrop, setShowParentDrop] = useState(false)
   const [statusTags, setStatusTags] = useState([])
   const [tagModal, setTagModal] = useState(false)
+  const [bulkModal, setBulkModal] = useState(false)
 
   const load = async () => {
     const { data } = await supabase.from(table).select('*').eq('user_id', user.id)
@@ -283,6 +285,7 @@ export function BaseScenarioPage({ config }) {
         </div>
         <div className="flex gap-8">
           <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}><Mi size='sm'>sell</Mi> 상태 태그 관리</button>
+          <button className="btn btn-outline btn-sm" onClick={()=>setBulkModal(true)}><Mi size='sm'>upload_file</Mi> 일괄 등록</button>
           <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 시나리오 추가</button>
         </div>
       </div>
@@ -452,6 +455,14 @@ export function BaseScenarioPage({ config }) {
       </Modal>
 
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 시나리오를 삭제하시겠어요?"/>
+
+      <BulkImportModal
+        isOpen={bulkModal}
+        onClose={() => setBulkModal(false)}
+        type="scenario"
+        existingItems={items}
+        onSuccess={load}
+      />
     </div>
   )
 }

@@ -4,9 +4,9 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Mi } from '../components/Mi'
 
+import { TIER_LIMITS, TIER_LABEL } from '../lib/tierLimits'
 // ── 공통 상수 (tierLimits.js에서 import, re-export) ─────
 export { TIER_LIMITS } from '../lib/tierLimits'
-import { TIER_LIMITS, TIER_LABEL } from '../lib/tierLimits'
 
 // labelCol: 레코드 목록에서 제목으로 쓸 컬럼명
 const BOARDS = [
