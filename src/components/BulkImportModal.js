@@ -42,8 +42,8 @@ const CONFIG = {
     table: 'scenarios',
     columns: [
       { header: '제목(필수)',        key: 'title' },
-      { header: '시스템명',          key: 'system_name' },
-      { header: '저자',              key: 'author' },
+      { header: '룰',               key: 'system_name' },
+      { header: '라이터',            key: 'author' },
       { header: '형태',              key: 'format' },
       { header: '인원',              key: 'player_count' },
       { header: '상태태그(쉼표구분)', key: 'status_tags' },
@@ -65,8 +65,8 @@ const CONFIG = {
       purchase_date: null,
     }),
     sample: [
-      { '제목(필수)': '가스등 속으로', '시스템명': 'CoC 7판', '저자': '홍길동', '형태': 'digital', '인원': '3~5', '상태태그(쉼표구분)': 'PL완료', '시나리오URL': '', '메모': '명작' },
-      { '제목(필수)': '붉은 달', '시스템명': 'D&D 5e', '저자': '', '형태': '', '인원': '', '상태태그(쉼표구분)': '위시', '시나리오URL': '', '메모': '' },
+      { '제목(필수)': '가스등 속으로', '룰': 'CoC 7판', '라이터': '홍길동', '형태': 'digital', '인원': '3~5', '상태태그(쉼표구분)': 'PL완료', '시나리오URL': '', '메모': '명작' },
+      { '제목(필수)': '붉은 달', '룰': 'D&D 5e', '라이터': '', '형태': '', '인원': '', '상태태그(쉼표구분)': '위시', '시나리오URL': '', '메모': '' },
     ],
   },
 }
