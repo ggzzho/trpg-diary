@@ -793,7 +793,13 @@ export default function PublicProfilePage() {
             ]
             const dashCards = profile?.dashboard_cards || ['logs','rulebooks','scenarios','pairs']
             // hidden_tabs도 함께 적용 — 탭을 숨기면 통계 위젯도 같이 숨김
-            const publicStats = ALL_PUBLIC_STATS.filter(s => dashCards.includes(s.key) && !hiddenTabs.includes(s.key))
+            // ALL_PUBLIC_STATS의 'schedule' key는 hidden_tabs의 'schedules'와 매핑
+            const STAT_TAB_MAP = { schedule: 'schedules' }
+            const publicStats = ALL_PUBLIC_STATS.filter(s => {
+              if (!dashCards.includes(s.key)) return false
+              const tabKey = STAT_TAB_MAP[s.key] || s.key
+              return !hiddenTabs.includes(tabKey)
+            })
             return (
               <div className="flex justify-between" style={{ marginTop:16, padding:'12px 0', borderTop:'1px solid var(--color-border)', borderBottom:'1px solid var(--color-border)' }}>
                 {publicStats.map(s => (
@@ -1410,6 +1416,13 @@ export default function PublicProfilePage() {
           {pubDetailChar.personality&&<div style={{marginBottom:14}}><div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>성격</div><div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{pubDetailChar.personality}</div></div>}
           {pubDetailChar.background&&<div style={{marginBottom:14}}><div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>배경</div><div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{pubDetailChar.background}</div></div>}
           {pubDetailChar.extra_settings&&<div style={{marginBottom:14}}><div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>기타설정</div><div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{pubDetailChar.extra_settings}</div></div>}
+          {/* 추가 항목 (custom_fields) */}
+          {(pubDetailChar.custom_fields||[]).filter(f=>f.title||f.content).map((f,i)=>(
+            <div key={i} style={{marginBottom:14}}>
+              <div style={{fontSize:'0.72rem',color:'var(--color-text-light)',fontWeight:600,marginBottom:4}}>{f.title||'추가 항목'}</div>
+              <div style={{fontSize:'0.85rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{f.content}</div>
+            </div>
+          ))}
           {/* 기타 URL */}
           {(pubDetailChar.extra_urls||[]).filter(u=>u.url).length>0&&(
             <div style={{marginTop:4}}>

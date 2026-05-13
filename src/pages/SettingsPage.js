@@ -20,16 +20,17 @@ function hexToRgb(hex) {
   catch { return [200,169,110] }
 }
 const WIDGET_OPTIONS = [
-  {key:'rulebooks', label:'보유 룰북', icon:'menu_book'},
-  {key:'scenarios', label:'보유 시나리오', icon:'description'},
-  {key:'dotori', label:'도토리', icon:'forest'},
-  {key:'availability', label:'공수표', icon:'event_available'},
-  {key:'logs', label:'다녀온 기록', icon:'auto_stories'},
-  {key:'pairs', label:'페어/팀 목록', icon:'people'},
-  {key:'characters', label:'PC 목록', icon:'person'},
-  {key:'bookmarks', label:'북마크', icon:'bookmark'},
-  {key:'guestbook', label:'방명록', icon:'mail'},
-  {key:'mypages', label:'친구 페이지', icon:'link'},
+  {key:'schedule',   label:'일정 관리',    icon:'calendar_month'},
+  {key:'rulebooks',  label:'보유 룰북',    icon:'menu_book'},
+  {key:'scenarios',  label:'보유 시나리오', icon:'description'},
+  {key:'dotori',     label:'도토리',       icon:'forest'},
+  {key:'availability',label:'공수표',      icon:'event_available'},
+  {key:'logs',       label:'다녀온 기록',  icon:'auto_stories'},
+  {key:'pairs',      label:'페어/팀 목록', icon:'people'},
+  {key:'characters', label:'PC 목록',      icon:'person'},
+  {key:'bookmarks',  label:'북마크',       icon:'bookmark'},
+  {key:'guestbook',  label:'방명록',       icon:'mail'},
+  {key:'mypages',    label:'친구 페이지',  icon:'link'},
 ]
 
 const DEFAULT_SECTIONS = [
