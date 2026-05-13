@@ -285,8 +285,9 @@ export default function PublicProfilePage() {
       (p.title||'').toLowerCase().includes(s) ||
       (p.system_name||'').toLowerCase().includes(s) ||
       (p.author||'').toLowerCase().includes(s) ||
+      (p.memo||'').toLowerCase().includes(s) ||
       (scenarioChildMap[p.id]||[]).some(c =>
-        (c.title||'').toLowerCase().includes(s) || (c.system_name||'').toLowerCase().includes(s)
+        (c.title||'').toLowerCase().includes(s) || (c.system_name||'').toLowerCase().includes(s) || (c.memo||'').toLowerCase().includes(s)
       )
     )
   }, [scenarioParents, scenarioChildMap, tabSearch])
@@ -1074,6 +1075,7 @@ export default function PublicProfilePage() {
                         {item.format && <span className="text-xs text-light"><Mi size='sm' color='light'>inventory_2</Mi> {FORMAT_MAP[item.format]||item.format}</span>}
                       </div>
                       {item.scenario_url && <a href={item.scenario_url} target="_blank" rel="noreferrer" style={{ fontSize:'0.7rem', color:'var(--color-primary)', marginTop:2, display:'block' }}><Mi size='sm'>link</Mi> 시나리오 링크</a>}
+                      {item.memo && <div style={{fontSize:'0.78rem',color:'var(--color-text-light)',marginTop:5,lineHeight:1.6,whiteSpace:'pre-wrap'}}>{item.memo}</div>}
                     </div>
                   </div>
                 )
