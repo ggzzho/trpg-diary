@@ -792,14 +792,16 @@ export default function PublicProfilePage() {
               {key:'mypages', label:'친구 페이지', v: counts.mypages||0},
             ]
             const dashCards = profile?.dashboard_cards || ['logs','rulebooks','scenarios','pairs']
-            // hidden_tabs도 함께 적용 — 탭을 숨기면 통계 위젯도 같이 숨김
+            // dashboard_cards 순서 그대로 유지 + hidden_tabs 적용
             // ALL_PUBLIC_STATS의 'schedule' key는 hidden_tabs의 'schedules'와 매핑
             const STAT_TAB_MAP = { schedule: 'schedules' }
-            const publicStats = ALL_PUBLIC_STATS.filter(s => {
-              if (!dashCards.includes(s.key)) return false
-              const tabKey = STAT_TAB_MAP[s.key] || s.key
-              return !hiddenTabs.includes(tabKey)
-            })
+            const publicStats = dashCards
+              .map(key => ALL_PUBLIC_STATS.find(s => s.key === key))
+              .filter(s => {
+                if (!s) return false
+                const tabKey = STAT_TAB_MAP[s.key] || s.key
+                return !hiddenTabs.includes(tabKey)
+              })
             return (
               <div className="flex justify-between" style={{ marginTop:16, padding:'12px 0', borderTop:'1px solid var(--color-border)', borderBottom:'1px solid var(--color-border)' }}>
                 {publicStats.map(s => (
