@@ -112,8 +112,12 @@ export default function Dashboard() {
     {key:'guestbook',   label:'방명록',       value:stats.guestbook,      icon:'mail',            to:'/guestbook',      unit:'개'},
   ]
   const dashboardCards = profile?.dashboard_cards || ['logs','rulebooks','scenarios','pairs']
-  // dashboard_cards 순서 그대로 유지
-  const STAT_CARDS = useMemo(() => dashboardCards.map(key => ALL_STAT_CARDS.find(c => c.key === key)).filter(Boolean), [stats, profile])
+  // ALL_STAT_CARDS 정의 순서 기준으로 재정렬 (stale dashboard_cards 데이터 호환)
+  const STAT_CARDS = useMemo(() => {
+    const cardOrder = ALL_STAT_CARDS.map(c => c.key)
+    const sorted = [...dashboardCards].sort((a,b) => cardOrder.indexOf(a) - cardOrder.indexOf(b))
+    return sorted.map(key => ALL_STAT_CARDS.find(c => c.key === key)).filter(Boolean)
+  }, [stats, profile])
 
   // 오늘 세션 있는지 확인
   const hasTodaySession = useMemo(() => upcoming.some(s => s.scheduled_date === todayStr), [upcoming, todayStr])

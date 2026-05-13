@@ -365,7 +365,10 @@ export default function SettingsPage() {
                       <div
                         onClick={()=>{
                           if(isSelected) setForm(f=>({...f,dashboard_cards:(f.dashboard_cards||[]).filter(k=>k!==w.key)}))
-                          else if(canAdd) setForm(f=>({...f,dashboard_cards:[...(f.dashboard_cards||[]),w.key]}))
+                          else if(canAdd) {
+                            const WIDGET_ORDER = WIDGET_OPTIONS.map(o=>o.key)
+                            setForm(f=>({...f,dashboard_cards:[...(f.dashboard_cards||[]),w.key].sort((a,b)=>WIDGET_ORDER.indexOf(a)-WIDGET_ORDER.indexOf(b))}))
+                          }
                         }}
                         style={{width:36,height:20,borderRadius:10,background:isSelected?'var(--color-primary)':'#ccc',position:'relative',cursor:(!isSelected&&!canAdd)?'not-allowed':'pointer',transition:'background 0.2s',flexShrink:0}}>
                         <div style={{position:'absolute',top:2,left:isSelected?18:2,width:16,height:16,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>

@@ -779,23 +779,25 @@ export default function PublicProfilePage() {
           {/* 통계 */}
           {(() => {
             const ALL_PUBLIC_STATS = [
-              {key:'logs', label:'기록', v: data.logs !== undefined ? publicLogs.length : (counts.logs||0)},
+              {key:'schedule', label:'일정', v: data.schedules?.length || (counts.schedule||0)},
               {key:'rulebooks', label:'룰북', v: data.rulebooks !== undefined ? (data.rulebooks||[]).filter(r=>!r.parent_id).length : (counts.rulebooks||0)},
               {key:'scenarios', label:'보유 시나리오', v: data.scenarios?.length || (counts.scenarios||0)},
               {key:'dotori', label:'도토리', v: data.dotori?.length || (counts.dotori||0)},
+              {key:'availability', label:'공수표', v: data.availability?.length || (counts.availability||0)},
+              {key:'logs', label:'기록', v: data.logs !== undefined ? publicLogs.length : (counts.logs||0)},
               {key:'pairs', label:'페어/팀', v: data.pairs?.length || (counts.pairs||0)},
               {key:'characters', label:'PC 목록', v: data.characters?.length || (counts.characters||0)},
-              {key:'schedule', label:'일정', v: data.schedules?.length || (counts.schedule||0)},
-              {key:'availability', label:'공수표', v: data.availability?.length || (counts.availability||0)},
-              {key:'guestbook', label:'방명록', v: counts.guestbook||0},
               {key:'bookmarks', label:'북마크', v: data.bookmarks?.length || (counts.bookmarks||0)},
+              {key:'guestbook', label:'방명록', v: counts.guestbook||0},
               {key:'mypages', label:'친구 페이지', v: counts.mypages||0},
             ]
             const dashCards = profile?.dashboard_cards || ['logs','rulebooks','scenarios','pairs']
-            // dashboard_cards 순서 그대로 유지 + hidden_tabs 적용
+            // ALL_PUBLIC_STATS 정의 순서 기준으로 재정렬 (stale dashboard_cards 데이터 호환) + hidden_tabs 적용
             // ALL_PUBLIC_STATS의 'schedule' key는 hidden_tabs의 'schedules'와 매핑
             const STAT_TAB_MAP = { schedule: 'schedules' }
-            const publicStats = dashCards
+            const statOrder = ALL_PUBLIC_STATS.map(s => s.key)
+            const sortedDashCards = [...dashCards].sort((a,b) => statOrder.indexOf(a) - statOrder.indexOf(b))
+            const publicStats = sortedDashCards
               .map(key => ALL_PUBLIC_STATS.find(s => s.key === key))
               .filter(s => {
                 if (!s) return false
