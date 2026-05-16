@@ -42,6 +42,7 @@ const CONFIG = {
     table: 'scenarios',
     columns: [
       { header: '제목(필수)',        key: 'title' },
+      { header: '수록집',            key: 'parent_title' },
       { header: '룰',               key: 'system_name' },
       { header: '라이터',            key: 'author' },
       { header: '형태',              key: 'format' },
@@ -51,7 +52,7 @@ const CONFIG = {
       { header: '메모',              key: 'memo' },
     ],
     dupKeys: ['title', 'system_name'],
-    rowToPayload: (row, userId) => ({
+    rowToPayload: (row, userId, parentId = null) => ({
       user_id: userId,
       title: (row.title || '').trim(),
       system_name: (row.system_name || '').trim() || null,
@@ -61,12 +62,14 @@ const CONFIG = {
       status_tags: row.status_tags ? row.status_tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       scenario_url: (row.scenario_url || '').trim() || null,
       memo: (row.memo || '').trim() || null,
-      parent_id: null,
+      parent_id: parentId,
       purchase_date: null,
     }),
     sample: [
-      { '제목(필수)': '가스등 속으로', '룰': 'CoC 7판', '라이터': '홍길동', '형태': 'digital', '인원': '3~5', '상태태그(쉼표구분)': 'PL완료', '시나리오URL': '', '메모': '명작' },
-      { '제목(필수)': '붉은 달', '룰': 'D&D 5e', '라이터': '', '형태': '', '인원': '', '상태태그(쉼표구분)': '위시', '시나리오URL': '', '메모': '' },
+      { '제목(필수)': '황혼의 가면무도', '수록집': '', '룰': 'CoC 7판', '라이터': '홍길동', '형태': 'digital', '인원': '3~5', '상태태그(쉼표구분)': '', '시나리오URL': '', '메모': '시나리오집' },
+      { '제목(필수)': '가스등 속으로', '수록집': '황혼의 가면무도', '룰': 'CoC 7판', '라이터': '', '형태': '', '인원': '2~4', '상태태그(쉼표구분)': 'PL완료', '시나리오URL': '', '메모': '' },
+      { '제목(필수)': '붉은 낙조', '수록집': '황혼의 가면무도', '룰': 'CoC 7판', '라이터': '', '형태': '', '인원': '3~5', '상태태그(쉼표구분)': '', '시나리오URL': '', '메모': '' },
+      { '제목(필수)': '붉은 달', '수록집': '', '룰': 'D&D 5e', '라이터': '', '형태': '', '인원': '', '상태태그(쉼표구분)': '위시', '시나리오URL': '', '메모': '' },
     ],
   },
 }
@@ -82,6 +85,8 @@ const REFERENCE_SHEETS = {
     { 항목: '태그', '입력 방법': '쉼표로 구분해서 입력', 예시: 'GM,주력,관심' },
   ],
   scenario: [
+    { 항목: '수록집', '입력 방법': '수록 시나리오인 경우 부모 시나리오의 제목을 정확히 입력. 독립 시나리오는 비워둠', 예시: '황혼의 가면무도' },
+    { 항목: '',       '입력 방법': '※ 수록집은 같은 파일 안에 있거나 이미 등록된 시나리오여야 연결됨', 예시: '' },
     { 항목: '룰',    '입력 방법': '보유 룰북에 등록된 이름과 동일하게 입력', 예시: 'CoC 7판' },
     { 항목: '형태',  '입력 방법': '아래 영문 값 중 하나를 입력', 예시: 'digital' },
     { 항목: '',      '입력 방법': 'physical     → 실물', 예시: '' },
@@ -231,15 +236,51 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
   const handleImport = async () => {
     if (!toInsert.length) return
     setLoading(true)
-    const payloads = toInsert.map(row => cfg.rowToPayload(row, user.id))
-
-    // 100건씩 배치 insert
     let count = 0
     const BATCH = 100
-    for (let i = 0; i < payloads.length; i += BATCH) {
-      const batch = payloads.slice(i, i + BATCH)
-      const { error } = await supabase.from(cfg.table).insert(batch)
-      if (!error) count += batch.length
+
+    if (type !== 'scenario') {
+      // 룰북 등 단순 insert
+      const payloads = toInsert.map(row => cfg.rowToPayload(row, user.id))
+      for (let i = 0; i < payloads.length; i += BATCH) {
+        const { error } = await supabase.from(cfg.table).insert(payloads.slice(i, i + BATCH))
+        if (!error) count += Math.min(BATCH, payloads.length - i)
+      }
+    } else {
+      // 시나리오 2패스: 부모 먼저 → 자식 연결
+      const parents = toInsert.filter(r => !(r.parent_title || '').trim())
+      const children = toInsert.filter(r => !!(r.parent_title || '').trim())
+
+      // 1패스: 부모 insert
+      const parentPayloads = parents.map(r => cfg.rowToPayload(r, user.id, null))
+      for (let i = 0; i < parentPayloads.length; i += BATCH) {
+        const { error } = await supabase.from('scenarios').insert(parentPayloads.slice(i, i + BATCH))
+        if (!error) count += Math.min(BATCH, parentPayloads.length - i)
+      }
+
+      // 2패스: 부모 ID 조회 (이번에 insert한 것 + 기존 DB)
+      if (children.length > 0) {
+        const parentTitles = [...new Set(children.map(r => r.parent_title.trim()))]
+        const { data: dbParents } = await supabase
+          .from('scenarios')
+          .select('id, title')
+          .eq('user_id', user.id)
+          .is('parent_id', null)
+          .in('title', parentTitles)
+
+        const parentIdMap = {}
+        ;(dbParents || []).forEach(p => { parentIdMap[p.title.toLowerCase()] = p.id })
+
+        // 자식 insert (부모 못 찾으면 독립 시나리오로 등록)
+        const childPayloads = children.map(r => {
+          const pid = parentIdMap[(r.parent_title || '').trim().toLowerCase()] || null
+          return cfg.rowToPayload(r, user.id, pid)
+        })
+        for (let i = 0; i < childPayloads.length; i += BATCH) {
+          const { error } = await supabase.from('scenarios').insert(childPayloads.slice(i, i + BATCH))
+          if (!error) count += Math.min(BATCH, childPayloads.length - i)
+        }
+      }
     }
 
     setDoneCount(count)
