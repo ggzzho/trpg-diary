@@ -12,6 +12,7 @@ const CONFIG = {
   rulebook: {
     label: '룰북',
     table: 'rulebooks',
+    googleSheetUrl: 'https://docs.google.com/spreadsheets/d/1k-aBpkGsTkWozcI9e0Xzp_g7gfYsX-1cn-ZjGf2UOEc/copy',
     // 템플릿 헤더 (한글 표시명 → DB 필드명)
     columns: [
       { header: '제목(필수)',    key: 'title' },
@@ -34,14 +35,13 @@ const CONFIG = {
       cover_image_url: '',
     }),
     sample: [
-      { '제목(필수)': '크툴루의 부름 7판', '수록집(부모룰북)': '', '출판사': '아크라이트', '메모': '주력 시스템', '태그(쉼표구분)': 'GM,주력' },
-      { '제목(필수)': '크툴루의 부름 키퍼 룰북', '수록집(부모룰북)': '크툴루의 부름 7판', '출판사': '아크라이트', '메모': '', '태그(쉼표구분)': '' },
-      { '제목(필수)': '던전즈&드래곤즈 플레이어즈 핸드북', '수록집(부모룰북)': '', '출판사': '', '메모': '', '태그(쉼표구분)': '' },
+      { '제목(필수)': '블러드 패스', '수록집(부모룰북)': '', '출판사': '', '메모': '', '태그(쉼표구분)': 'GM,주력' },
     ],
   },
   scenario: {
     label: '시나리오',
     table: 'scenarios',
+    googleSheetUrl: 'https://docs.google.com/spreadsheets/d/1QqJ624D1qXqmESm6KuTWEZMj8KLTgGr7qKyhVw5FCfo/copy',
     columns: [
       { header: '제목(필수)',        key: 'title' },
       { header: '수록집',            key: 'parent_title' },
@@ -68,10 +68,7 @@ const CONFIG = {
       purchase_date: null,
     }),
     sample: [
-      { '제목(필수)': '황혼의 가면무도', '수록집': '', '룰': 'CoC 7판', '라이터': '홍길동', '형태': 'digital', '인원': '3~5', '상태태그(쉼표구분)': '', '시나리오URL': '', '메모': '시나리오집' },
-      { '제목(필수)': '가스등 속으로', '수록집': '황혼의 가면무도', '룰': 'CoC 7판', '라이터': '', '형태': '', '인원': '2~4', '상태태그(쉼표구분)': 'PL완료', '시나리오URL': '', '메모': '' },
-      { '제목(필수)': '붉은 낙조', '수록집': '황혼의 가면무도', '룰': 'CoC 7판', '라이터': '', '형태': '', '인원': '3~5', '상태태그(쉼표구분)': '', '시나리오URL': '', '메모': '' },
-      { '제목(필수)': '붉은 달', '수록집': '', '룰': 'D&D 5e', '라이터': '', '형태': '', '인원': '', '상태태그(쉼표구분)': '위시', '시나리오URL': '', '메모': '' },
+      { '제목(필수)': '가능성의 별', '수록집': '', '룰': '크툴루의 부름 7th', '라이터': '쏘믕 @TRPG_ssomeung', '형태': 'digital', '인원': '1', '상태태그(쉼표구분)': '', '시나리오URL': '', '메모': '시나리오집' },
     ],
   },
 }
@@ -334,12 +331,17 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
               1단계 — 템플릿 다운로드
             </div>
             <p className="text-sm text-light" style={{ marginBottom:10, lineHeight:1.6 }}>
-              아래 버튼으로 엑셀 템플릿을 받아 작성한 뒤 업로드하세요.<br/>
-              Google 스프레드시트도 CSV로 내보내기 후 업로드 가능해요.
+              구글 시트 또는 엑셀 템플릿을 받아 작성한 뒤 업로드하세요.<br/>
+              구글 시트는 사본을 만들어 작성 후 CSV로 내보내기 하면 돼요.
             </p>
-            <button className="btn btn-outline btn-sm" onClick={() => downloadTemplate(type)}>
-              <Mi size='sm'>table_view</Mi> {cfg.label} 템플릿 다운로드 (.xlsx)
-            </button>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              <a className="btn btn-outline btn-sm" href={cfg.googleSheetUrl} target="_blank" rel="noreferrer">
+                <Mi size='sm'>open_in_new</Mi> 구글 시트 템플릿 열기
+              </a>
+              <button className="btn btn-outline btn-sm" onClick={() => downloadTemplate(type)}>
+                <Mi size='sm'>table_view</Mi> 엑셀 템플릿 다운로드 (.xlsx)
+              </button>
+            </div>
           </div>
 
           {/* 파일 업로드 */}
