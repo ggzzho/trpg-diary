@@ -76,12 +76,39 @@ function dupKey(row, keys) {
   return keys.map(k => (row[k] || '').toLowerCase().trim()).join('||')
 }
 
-// ── 템플릿 CSV 다운로드 ──────────────────────────────────────────────────────
+// ── 참고표 시트 데이터 ──────────────────────────────────────────────────────
+const REFERENCE_SHEETS = {
+  rulebook: [
+    { 항목: '태그', '입력 방법': '쉼표로 구분해서 입력', 예시: 'GM,주력,관심' },
+  ],
+  scenario: [
+    { 항목: '룰',    '입력 방법': '보유 룰북에 등록된 이름과 동일하게 입력', 예시: 'CoC 7판' },
+    { 항목: '형태',  '입력 방법': '아래 영문 값 중 하나를 입력', 예시: 'digital' },
+    { 항목: '',      '입력 방법': 'physical     → 실물', 예시: '' },
+    { 항목: '',      '입력 방법': 'digital      → 전자', 예시: '' },
+    { 항목: '',      '입력 방법': 'both         → 실물+전자', 예시: '' },
+    { 항목: '',      '입력 방법': 'physical_soft  → 실물(소프트)', 예시: '' },
+    { 항목: '',      '입력 방법': 'physical_hard  → 실물(하드)', 예시: '' },
+    { 항목: '',      '입력 방법': 'other        → 기타', 예시: '' },
+    { 항목: '상태태그', '입력 방법': '쉼표로 구분해서 입력', 예시: 'PL완료,위시' },
+    { 항목: '중복 기준', '입력 방법': '제목 + 룰이 동일하면 건너뜀', 예시: '' },
+  ],
+}
+
+// ── 템플릿 xlsx 다운로드 ──────────────────────────────────────────────────────
 function downloadTemplate(type) {
   const cfg = CONFIG[type]
+
+  // 1시트: 데이터 입력 시트
   const ws = XLSX.utils.json_to_sheet(cfg.sample, { header: cfg.columns.map(c => c.header) })
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, cfg.label)
+  XLSX.utils.book_append_sheet(wb, ws, '데이터 입력')
+
+  // 2시트: 참고표
+  const refData = REFERENCE_SHEETS[type]
+  const wsRef = XLSX.utils.json_to_sheet(refData, { header: ['항목', '입력 방법', '예시'] })
+  XLSX.utils.book_append_sheet(wb, wsRef, '참고표')
+
   XLSX.writeFile(wb, `${cfg.label}_일괄등록_템플릿.xlsx`)
 }
 
