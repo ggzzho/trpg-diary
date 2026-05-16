@@ -281,7 +281,7 @@ export function BaseScenarioPage({ config }) {
       <div className="page-header flex justify-between items-center">
         <div>
           <h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>{icon}</Mi>{title}</h1>
-          <p className="page-subtitle">{subtitle} ({items.length}개)</p>
+          <p className="page-subtitle">{subtitle} ({(() => { const pids = new Set(items.filter(i=>i.parent_id).map(i=>i.parent_id)); return items.filter(i=>i.parent_id||!pids.has(i.id)).length })()} 개)</p>
         </div>
         <div className="flex gap-8">
           <button className="btn btn-outline btn-sm" onClick={()=>setTagModal(true)}><Mi size='sm'>sell</Mi> 상태 태그 관리</button>

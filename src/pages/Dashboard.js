@@ -38,7 +38,7 @@ export default function Dashboard() {
           .select('id,title,role,system_name,npc,start_date,played_date')
           .eq('user_id',user.id).order('played_date',{ascending:false,nullsFirst:false}).limit(4),
         supabase.from('rulebooks').select('id',{count:'exact',head:true}).eq('user_id',user.id),
-        supabase.from('scenarios').select('id',{count:'exact',head:true}).eq('user_id',user.id),
+        supabase.from('scenarios').select('id,parent_id').eq('user_id',user.id).limit(10000),
         supabase.from('wish_scenarios').select('id',{count:'exact',head:true}).eq('user_id',user.id),
         supabase.from('dotori').select('id',{count:'exact',head:true}).eq('user_id',user.id),
         supabase.from('pairs').select('id',{count:'exact',head:true}).eq('user_id',user.id),
@@ -59,10 +59,14 @@ export default function Dashboard() {
         supabase.from('bookmarks').select('id',{count:'exact',head:true}).eq('user_id',user.id),
       ])
       const upcomingData = schedRes.data || []
+      // 시나리오집(자식을 가진 부모) 제외한 실제 시나리오 수
+      const scData = scCount.data || []
+      const scParentIds = new Set(scData.filter(s => s.parent_id).map(s => s.parent_id))
+      const scRealCount = scData.filter(s => s.parent_id || !scParentIds.has(s.id)).length
       setStats({
         logs: logsCount.count||0,
         rulebooks: rbCount.count||0,
-        scenarios: scCount.count||0,
+        scenarios: scRealCount,
         wish_scenarios: wishCount.count||0,
         dotori: dotCount.count||0,
         pairs: pairsCount.count||0,
