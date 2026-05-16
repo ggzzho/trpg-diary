@@ -22,7 +22,7 @@ import { ko } from 'date-fns/locale'
 import { getTodayKST } from '../lib/dateFormatters'
 
 const SCENARIO_STATUS = { unplayed:'미플', played:'PL완료', gm_done:'GM완료', want:'위시' }
-const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', digital_purchase:'전자', digital_free:'전자', physical_digital:'실물+전자', other:'기타' }
+const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', other:'기타' }
 
 // ── 회원 등급 뱃지 ──
 const TIER_BADGE = {

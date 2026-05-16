@@ -310,7 +310,11 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
           {/* 필드 안내 */}
           <div style={{ fontSize:'0.78rem', color:'var(--color-text-light)', lineHeight:1.8 }}>
             <strong style={{ color:'var(--color-text)' }}>사용 가능한 컬럼:</strong><br/>
-            {cfg.columns.map(c => `${c.header}`).join(' · ')}
+            {cfg.columns.map(c => c.header).join(' · ')}
+            {type === 'scenario' && (
+              <><br/><strong style={{ color:'var(--color-text)' }}>형태 입력값:</strong>{' '}
+              physical · digital · both · physical_soft · physical_hard · other</>
+            )}
           </div>
         </div>
       )}
