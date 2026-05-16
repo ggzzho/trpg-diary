@@ -509,10 +509,13 @@ export default function PublicProfilePage() {
       // 탭 카운트 + 통계용 경량 head 쿼리
       const today = getTodayKST()
       const safeC = async pr => { try { const r = await pr; return r.count || 0 } catch { return 0 } }
-      const [logsCount, rulebooksCount, scenariosCount, dotoriCount, pairsCount, charsCount, schedsCount, availCount, guestbookCount, bookmarksCount, mypagesCount] = await Promise.all([
+      const scenariosRes = await supabase.from('scenarios').select('id,parent_id').eq('user_id',p.id).limit(10000)
+      const scAll = scenariosRes.data || []
+      const scPids = new Set(scAll.filter(s=>s.parent_id).map(s=>s.parent_id))
+      const scenariosCount = scAll.filter(s=>s.parent_id||!scPids.has(s.id)).length
+      const [logsCount, rulebooksCount, dotoriCount, pairsCount, charsCount, schedsCount, availCount, guestbookCount, bookmarksCount, mypagesCount] = await Promise.all([
         safeC(supabase.from('play_logs').select('id',{count:'exact',head:true}).eq('user_id',p.id).eq('is_private',false)),
         safeC(supabase.from('rulebooks').select('id',{count:'exact',head:true}).eq('user_id',p.id).is('parent_id',null)),
-        safeC(supabase.from('scenarios').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('dotori').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('pairs').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
         safeC(supabase.from('characters').select('id',{count:'exact',head:true}).eq('user_id',p.id)),
@@ -523,6 +526,7 @@ export default function PublicProfilePage() {
         safeC(supabase.from('guestbook').select('id',{count:'exact',head:true}).eq('owner_id',p.id).eq('type','mypage')),
       ])
       setCounts({ logs:logsCount, rulebooks:rulebooksCount, scenarios:scenariosCount, dotori:dotoriCount, pairs:pairsCount, characters:charsCount, schedule:schedsCount, availability:availCount, guestbook:guestbookCount, bookmarks:bookmarksCount, mypages:mypagesCount })
+
 
       const hidden = p.hidden_tabs || []
       const allTabKeys = ['schedules','rulebooks','logs','availability','scenarios','dotori','pairs','characters','bookmarks','guestbook','mypages']
@@ -782,7 +786,7 @@ export default function PublicProfilePage() {
             const ALL_PUBLIC_STATS = [
               {key:'schedule', label:'일정', v: data.schedules?.length || (counts.schedule||0)},
               {key:'rulebooks', label:'룰북', v: data.rulebooks !== undefined ? (data.rulebooks||[]).filter(r=>!r.parent_id).length : (counts.rulebooks||0)},
-              {key:'scenarios', label:'보유 시나리오', v: data.scenarios?.length || (counts.scenarios||0)},
+              {key:'scenarios', label:'보유 시나리오', v: (() => { if (!data.scenarios) return counts.scenarios||0; const pids = new Set(data.scenarios.filter(s=>s.parent_id).map(s=>s.parent_id)); return data.scenarios.filter(s=>s.parent_id||!pids.has(s.id)).length })()},
               {key:'dotori', label:'도토리', v: data.dotori?.length || (counts.dotori||0)},
               {key:'availability', label:'공수표', v: data.availability?.length || (counts.availability||0)},
               {key:'logs', label:'기록', v: data.logs !== undefined ? publicLogs.length : (counts.logs||0)},
