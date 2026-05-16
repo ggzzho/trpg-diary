@@ -175,6 +175,7 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
   const [dupCount, setDupCount] = useState(0)
   const [errCount, setErrCount] = useState(0)
   const [doneCount, setDoneCount] = useState(0)
+  const [failCount, setFailCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [fileError, setFileError] = useState('')
 
@@ -187,6 +188,7 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
     setDupCount(0)
     setErrCount(0)
     setDoneCount(0)
+    setFailCount(0)
     setFileError('')
     if (fileRef.current) fileRef.current.value = ''
   }
@@ -238,6 +240,7 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
     if (!toInsert.length) return
     setLoading(true)
     let count = 0
+    let fails = 0
     const BATCH = 100
 
     // 룰북·시나리오 모두 2패스: 부모 먼저 → 자식 연결
@@ -247,8 +250,10 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
     // 1패스: 부모 insert
     const parentPayloads = parents.map(r => cfg.rowToPayload(r, user.id, null))
     for (let i = 0; i < parentPayloads.length; i += BATCH) {
-      const { error } = await supabase.from(cfg.table).insert(parentPayloads.slice(i, i + BATCH))
-      if (!error) count += Math.min(BATCH, parentPayloads.length - i)
+      const batch = parentPayloads.slice(i, i + BATCH)
+      const { error } = await supabase.from(cfg.table).insert(batch)
+      if (error) { fails += batch.length }
+      else { count += batch.length }
     }
 
     // 2패스: 부모 ID 조회 후 자식 insert
@@ -270,15 +275,18 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
         return cfg.rowToPayload(r, user.id, pid)
       })
       for (let i = 0; i < childPayloads.length; i += BATCH) {
-        const { error } = await supabase.from(cfg.table).insert(childPayloads.slice(i, i + BATCH))
-        if (!error) count += Math.min(BATCH, childPayloads.length - i)
+        const batch = childPayloads.slice(i, i + BATCH)
+        const { error } = await supabase.from(cfg.table).insert(batch)
+        if (error) { fails += batch.length }
+        else { count += batch.length }
       }
     }
 
     setDoneCount(count)
+    setFailCount(fails)
     setLoading(false)
     setStep('done')
-    onSuccess?.()
+    if (count > 0) onSuccess?.()
   }
 
   // ── 비후원자 안내 ──
@@ -437,12 +445,21 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
       {/* ── STEP 3: 완료 ── */}
       {step === 'done' && (
         <div style={{ textAlign:'center', padding:'24px 0' }}>
-          <Mi style={{ fontSize:44, color:'var(--color-accent)', marginBottom:12 }}>check_circle</Mi>
+          <Mi style={{ fontSize:44, color: failCount > 0 && doneCount === 0 ? '#e57373' : 'var(--color-accent)', marginBottom:12 }}>
+            {failCount > 0 && doneCount === 0 ? 'error' : 'check_circle'}
+          </Mi>
           <div style={{ fontWeight:700, fontSize:'1.1rem', marginBottom:8 }}>
-            {doneCount}건이 등록되었어요!
+            {doneCount > 0 ? `${doneCount}건이 등록되었어요!` : '등록된 항목이 없어요.'}
           </div>
           {dupCount > 0 && (
-            <div className="text-sm text-light">{dupCount}건은 중복으로 건너뛰었어요.</div>
+            <div className="text-sm text-light" style={{ marginBottom:4 }}>{dupCount}건은 중복으로 건너뛰었어요.</div>
+          )}
+          {failCount > 0 && (
+            <div style={{ marginTop:8, fontSize:'0.83rem', color:'#e57373', background:'#ffeaea', borderRadius:8, padding:'8px 14px', display:'inline-block' }}>
+              <Mi size='sm' style={{ color:'#e57373', verticalAlign:'middle', marginRight:4 }}>warning</Mi>
+              {failCount}건은 오류로 등록에 실패했어요.<br/>
+              <span style={{ fontSize:'0.78rem' }}>잠시 후 다시 시도하거나, 파일 내용을 확인해주세요.</span>
+            </div>
           )}
         </div>
       )}
