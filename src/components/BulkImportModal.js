@@ -15,6 +15,7 @@ const CONFIG = {
     // 템플릿 헤더 (한글 표시명 → DB 필드명)
     columns: [
       { header: '제목(필수)',    key: 'title' },
+      { header: '수록집(부모룰북)', key: 'parent_title' },
       { header: '출판사',        key: 'publisher' },
       { header: '메모',          key: 'memo' },
       { header: '태그(쉼표구분)', key: 'tags' },
@@ -22,19 +23,20 @@ const CONFIG = {
     // 중복 체크 기준 필드 (제목만)
     dupKeys: ['title'],
     // 행 → insert payload 변환
-    rowToPayload: (row, userId) => ({
+    rowToPayload: (row, userId, parentId = null) => ({
       user_id: userId,
       title: (row.title || '').trim(),
       publisher: (row.publisher || '').trim() || null,
       memo: (row.memo || '').trim() || null,
       tags: row.tags ? row.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-      parent_id: null,
+      parent_id: parentId,
       color: '',
       cover_image_url: '',
     }),
     sample: [
-      { '제목(필수)': '크툴루의 부름 7판', '출판사': '아크라이트', '메모': '주력 시스템', '태그(쉼표구분)': 'GM,주력' },
-      { '제목(필수)': '던전즈&드래곤즈 플레이어즈 핸드북', '출판사': '', '메모': '', '태그(쉼표구분)': '' },
+      { '제목(필수)': '크툴루의 부름 7판', '수록집(부모룰북)': '', '출판사': '아크라이트', '메모': '주력 시스템', '태그(쉼표구분)': 'GM,주력' },
+      { '제목(필수)': '크툴루의 부름 키퍼 룰북', '수록집(부모룰북)': '크툴루의 부름 7판', '출판사': '아크라이트', '메모': '', '태그(쉼표구분)': '' },
+      { '제목(필수)': '던전즈&드래곤즈 플레이어즈 핸드북', '수록집(부모룰북)': '', '출판사': '', '메모': '', '태그(쉼표구분)': '' },
     ],
   },
   scenario: {
@@ -82,7 +84,9 @@ function dupKey(row, keys) {
 // ── 참고표 시트 데이터 ──────────────────────────────────────────────────────
 const REFERENCE_SHEETS = {
   rulebook: [
-    { 항목: '태그', '입력 방법': '쉼표로 구분해서 입력', 예시: 'GM,주력,관심' },
+    { 항목: '수록집(부모룰북)', '입력 방법': '서플리먼트인 경우 부모 룰북 제목을 정확히 입력. 독립 룰북은 비워둠', 예시: '크툴루의 부름 7판' },
+    { 항목: '',                '입력 방법': '※ 부모 룰북은 같은 파일 안에 있거나 이미 등록된 룰북이어야 연결됨', 예시: '' },
+    { 항목: '태그',            '입력 방법': '쉼표로 구분해서 입력', 예시: 'GM,주력,관심' },
   ],
   scenario: [
     { 항목: '수록집', '입력 방법': '수록 시나리오인 경우 부모 시나리오의 제목을 정확히 입력. 독립 시나리오는 비워둠', 예시: '황혼의 가면무도' },
@@ -239,47 +243,38 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
     let count = 0
     const BATCH = 100
 
-    if (type !== 'scenario') {
-      // 룰북 등 단순 insert
-      const payloads = toInsert.map(row => cfg.rowToPayload(row, user.id))
-      for (let i = 0; i < payloads.length; i += BATCH) {
-        const { error } = await supabase.from(cfg.table).insert(payloads.slice(i, i + BATCH))
-        if (!error) count += Math.min(BATCH, payloads.length - i)
-      }
-    } else {
-      // 시나리오 2패스: 부모 먼저 → 자식 연결
-      const parents = toInsert.filter(r => !(r.parent_title || '').trim())
-      const children = toInsert.filter(r => !!(r.parent_title || '').trim())
+    // 룰북·시나리오 모두 2패스: 부모 먼저 → 자식 연결
+    const parents = toInsert.filter(r => !(r.parent_title || '').trim())
+    const children = toInsert.filter(r => !!(r.parent_title || '').trim())
 
-      // 1패스: 부모 insert
-      const parentPayloads = parents.map(r => cfg.rowToPayload(r, user.id, null))
-      for (let i = 0; i < parentPayloads.length; i += BATCH) {
-        const { error } = await supabase.from('scenarios').insert(parentPayloads.slice(i, i + BATCH))
-        if (!error) count += Math.min(BATCH, parentPayloads.length - i)
-      }
+    // 1패스: 부모 insert
+    const parentPayloads = parents.map(r => cfg.rowToPayload(r, user.id, null))
+    for (let i = 0; i < parentPayloads.length; i += BATCH) {
+      const { error } = await supabase.from(cfg.table).insert(parentPayloads.slice(i, i + BATCH))
+      if (!error) count += Math.min(BATCH, parentPayloads.length - i)
+    }
 
-      // 2패스: 부모 ID 조회 (이번에 insert한 것 + 기존 DB)
-      if (children.length > 0) {
-        const parentTitles = [...new Set(children.map(r => r.parent_title.trim()))]
-        const { data: dbParents } = await supabase
-          .from('scenarios')
-          .select('id, title')
-          .eq('user_id', user.id)
-          .is('parent_id', null)
-          .in('title', parentTitles)
+    // 2패스: 부모 ID 조회 후 자식 insert
+    if (children.length > 0) {
+      const parentTitles = [...new Set(children.map(r => r.parent_title.trim()))]
+      const { data: dbParents } = await supabase
+        .from(cfg.table)
+        .select('id, title')
+        .eq('user_id', user.id)
+        .is('parent_id', null)
+        .in('title', parentTitles)
 
-        const parentIdMap = {}
-        ;(dbParents || []).forEach(p => { parentIdMap[p.title.toLowerCase()] = p.id })
+      const parentIdMap = {}
+      ;(dbParents || []).forEach(p => { parentIdMap[p.title.toLowerCase()] = p.id })
 
-        // 자식 insert (부모 못 찾으면 독립 시나리오로 등록)
-        const childPayloads = children.map(r => {
-          const pid = parentIdMap[(r.parent_title || '').trim().toLowerCase()] || null
-          return cfg.rowToPayload(r, user.id, pid)
-        })
-        for (let i = 0; i < childPayloads.length; i += BATCH) {
-          const { error } = await supabase.from('scenarios').insert(childPayloads.slice(i, i + BATCH))
-          if (!error) count += Math.min(BATCH, childPayloads.length - i)
-        }
+      // 부모 못 찾으면 독립 항목으로 등록
+      const childPayloads = children.map(r => {
+        const pid = parentIdMap[(r.parent_title || '').trim().toLowerCase()] || null
+        return cfg.rowToPayload(r, user.id, pid)
+      })
+      for (let i = 0; i < childPayloads.length; i += BATCH) {
+        const { error } = await supabase.from(cfg.table).insert(childPayloads.slice(i, i + BATCH))
+        if (!error) count += Math.min(BATCH, childPayloads.length - i)
       }
     }
 
