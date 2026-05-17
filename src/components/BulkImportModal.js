@@ -74,7 +74,7 @@ const CONFIG = {
   log: {
     label: '다녀온 기록',
     table: 'play_logs',
-    googleSheetUrl: null, // 추후 구글 시트 템플릿 추가 예정
+    googleSheetUrl: 'https://docs.google.com/spreadsheets/d/1S-BsbH6bJbEzgaSFCwCgxQpT7YAVqeWEE0ojoAHx0G8/copy',
     columns: [
       { header: '제목(필수)',    key: 'title' },
       { header: '엔딩날짜(필수)', key: 'played_date' },
