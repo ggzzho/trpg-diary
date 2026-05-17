@@ -85,6 +85,8 @@ const CONFIG = {
       { header: 'GM/PL',        key: 'together_with' },
       { header: 'PC',           key: 'npc' },
       { header: '시리즈',        key: 'series_tag' },
+      { header: '입문탁(Y/N)',   key: 'is_intro' },
+      { header: '입문룰',        key: 'intro_rule' },
       { header: '메모',          key: 'memo' },
     ],
     dupKeys: ['title', 'played_date'],
@@ -95,27 +97,31 @@ const CONFIG = {
       if (row.start_date && row.start_date.trim() && !dateRe.test(row.start_date.trim())) return '시작날짜가 YYYY-MM-DD 형식이 아니에요'
       return null
     },
-    rowToPayload: (row, userId) => ({
-      user_id: userId,
-      title: (row.title || '').trim(),
-      played_date: (row.played_date || '').trim(),
-      start_date: (row.start_date || '').trim() || null,
-      system_name: (row.system_name || '').trim() || null,
-      role: ['GM', 'PL'].includes((row.role || '').trim().toUpperCase())
-        ? (row.role || '').trim().toUpperCase()
-        : 'PL',
-      character_name: (row.character_name || '').trim() || null,
-      together_with: (row.together_with || '').trim() || null,
-      npc: (row.npc || '').trim() || null,
-      series_tag: (row.series_tag || '').trim() || null,
-      memo: (row.memo || '').trim() || null,
-      is_private: false,
-      is_intro: false,
-      intro_rule: null,
-      extra_urls: [],
-    }),
+    rowToPayload: (row, userId) => {
+      const isIntroRaw = (row.is_intro || '').trim().toUpperCase()
+      const isIntro = isIntroRaw === 'Y' || isIntroRaw === 'YES' || isIntroRaw === 'TRUE' || isIntroRaw === '1'
+      return {
+        user_id: userId,
+        title: (row.title || '').trim(),
+        played_date: (row.played_date || '').trim(),
+        start_date: (row.start_date || '').trim() || null,
+        system_name: (row.system_name || '').trim() || null,
+        role: ['GM', 'PL'].includes((row.role || '').trim().toUpperCase())
+          ? (row.role || '').trim().toUpperCase()
+          : 'PL',
+        character_name: (row.character_name || '').trim() || null,
+        together_with: (row.together_with || '').trim() || null,
+        npc: (row.npc || '').trim() || null,
+        series_tag: (row.series_tag || '').trim() || null,
+        is_intro: isIntro,
+        intro_rule: isIntro ? ((row.intro_rule || '').trim() || null) : null,
+        memo: (row.memo || '').trim() || null,
+        is_private: false,
+        extra_urls: [],
+      }
+    },
     sample: [
-      { '제목(필수)': '황혼의 가면무도', '엔딩날짜(필수)': '2024-03-15', '시작날짜': '2024-03-01', '룰': 'CoC 7판', '역할': 'PL', 'PC명': '이유리', 'GM/PL': '김GM', 'PC': '탐정 이유리', '시리즈': '가면 시리즈', '메모': '첫 솔로 세션' },
+      { '제목(필수)': '황혼의 가면무도', '엔딩날짜(필수)': '2024-03-15', '시작날짜': '2024-03-01', '룰': 'CoC 7판', '역할': 'PL', 'PC명': '이유리', 'GM/PL': '김GM', 'PC': '탐정 이유리', '시리즈': '가면 시리즈', '입문탁(Y/N)': 'Y', '입문룰': 'CoC', '메모': '첫 솔로 세션' },
     ],
   },
 }
@@ -152,6 +158,8 @@ const REFERENCE_SHEETS = {
     { 항목: 'GM/PL',   '입력 방법': '함께 플레이한 GM 또는 PL 이름(닉네임 등)', 예시: '김GM' },
     { 항목: 'PC',      '입력 방법': '세션에 등장한 PC 이름', 예시: '탐정 이유리' },
     { 항목: '시리즈',   '입력 방법': '같은 시리즈로 묶을 태그명. 동일한 텍스트끼리 묶임', 예시: '가면 시리즈' },
+    { 항목: '입문탁',   '입력 방법': '입문탁 여부. Y 입력 시 입문탁으로 등록. 비워두면 일반 세션', 예시: 'Y' },
+    { 항목: '입문룰',   '입력 방법': '입문탁일 때만 적용. 입문한 룰 이름 입력', 예시: 'CoC' },
     { 항목: '중복 기준', '입력 방법': '제목 + 엔딩날짜가 동일하면 건너뜀', 예시: '' },
     { 항목: '미지원 항목', '입력 방법': '이미지, 링크, 스포일러 등은 등록 후 개별 수정해주세요', 예시: '' },
   ],
@@ -471,6 +479,8 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
               YYYY-MM-DD (예: 2024-03-15)
               <br/><strong style={{ color:'var(--color-text)' }}>역할 입력값:</strong>{' '}
               PL · GM (비워두면 PL)
+              <br/><strong style={{ color:'var(--color-text)' }}>입문탁 입력값:</strong>{' '}
+              Y (입문탁) · 비워두면 일반 세션
               <br/><strong style={{ color:'var(--color-text)' }}>미지원:</strong>{' '}
               이미지, 링크, 스포일러 등은 등록 후 개별 수정</>
             )}
