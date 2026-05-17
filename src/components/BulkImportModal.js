@@ -292,7 +292,9 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
   // ── 비후원자 안내 ──
   if (!isSponsor) {
     return (
-      <Modal isOpen={isOpen} onClose={handleClose} title="일괄 등록">
+      <Modal isOpen={isOpen} onClose={handleClose} title="일괄 등록"
+        footer={<button className="btn btn-outline btn-sm" onClick={handleClose}>닫기</button>}
+      >
         <div style={{ textAlign:'center', padding:'24px 0' }}>
           <Mi style={{ fontSize:40, color:'var(--color-primary)', marginBottom:12 }}>volunteer_activism</Mi>
           <div style={{ fontWeight:700, fontSize:'1rem', marginBottom:8 }}>후원자 전용 기능이에요</div>
