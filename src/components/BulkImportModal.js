@@ -71,6 +71,53 @@ const CONFIG = {
       { '제목(필수)': '가능성의 별', '수록집': '', '룰': '크툴루의 부름 7th', '라이터': '쏘믕 @TRPG_ssomeung', '형태': 'digital', '인원': '1', '상태태그(쉼표구분)': '', '시나리오URL': '', '메모': '시나리오집' },
     ],
   },
+  log: {
+    label: '다녀온 기록',
+    table: 'play_logs',
+    googleSheetUrl: null, // 추후 구글 시트 템플릿 추가 예정
+    columns: [
+      { header: '제목(필수)',    key: 'title' },
+      { header: '엔딩날짜(필수)', key: 'played_date' },
+      { header: '시작날짜',      key: 'start_date' },
+      { header: '룰',           key: 'system_name' },
+      { header: '역할',          key: 'role' },
+      { header: 'PC명',          key: 'character_name' },
+      { header: 'GM/PL',        key: 'together_with' },
+      { header: 'PC',           key: 'npc' },
+      { header: '시리즈',        key: 'series_tag' },
+      { header: '메모',          key: 'memo' },
+    ],
+    dupKeys: ['title', 'played_date'],
+    // 날짜 유효성 검사 (YYYY-MM-DD 형식)
+    validateRow: row => {
+      const dateRe = /^\d{4}-\d{2}-\d{2}$/
+      if (!dateRe.test((row.played_date || '').trim())) return '엔딩날짜가 YYYY-MM-DD 형식이 아니에요'
+      if (row.start_date && row.start_date.trim() && !dateRe.test(row.start_date.trim())) return '시작날짜가 YYYY-MM-DD 형식이 아니에요'
+      return null
+    },
+    rowToPayload: (row, userId) => ({
+      user_id: userId,
+      title: (row.title || '').trim(),
+      played_date: (row.played_date || '').trim(),
+      start_date: (row.start_date || '').trim() || null,
+      system_name: (row.system_name || '').trim() || null,
+      role: ['GM', 'PL'].includes((row.role || '').trim().toUpperCase())
+        ? (row.role || '').trim().toUpperCase()
+        : 'PL',
+      character_name: (row.character_name || '').trim() || null,
+      together_with: (row.together_with || '').trim() || null,
+      npc: (row.npc || '').trim() || null,
+      series_tag: (row.series_tag || '').trim() || null,
+      memo: (row.memo || '').trim() || null,
+      is_private: false,
+      is_intro: false,
+      intro_rule: null,
+      extra_urls: [],
+    }),
+    sample: [
+      { '제목(필수)': '황혼의 가면무도', '엔딩날짜(필수)': '2024-03-15', '시작날짜': '2024-03-01', '룰': 'CoC 7판', '역할': 'PL', 'PC명': '이유리', 'GM/PL': '김GM', 'PC': '탐정 이유리', '시리즈': '가면 시리즈', '메모': '첫 솔로 세션' },
+    ],
+  },
 }
 
 // ── 중복 키 만들기 ──────────────────────────────────────────────────────────
@@ -98,6 +145,15 @@ const REFERENCE_SHEETS = {
     { 항목: '',      '입력 방법': 'other        → 기타', 예시: '' },
     { 항목: '상태태그', '입력 방법': '쉼표로 구분해서 입력', 예시: 'PL완료,위시' },
     { 항목: '중복 기준', '입력 방법': '제목 + 룰이 동일하면 건너뜀', 예시: '' },
+  ],
+  log: [
+    { 항목: '날짜 형식', '입력 방법': '반드시 YYYY-MM-DD 형식으로 입력', 예시: '2024-03-15' },
+    { 항목: '역할',     '입력 방법': 'PL 또는 GM 중 하나 입력. 비워두면 PL로 자동 설정', 예시: 'PL' },
+    { 항목: 'GM/PL',   '입력 방법': '함께 플레이한 GM 또는 PL 이름(닉네임 등)', 예시: '김GM' },
+    { 항목: 'PC',      '입력 방법': '세션에 등장한 PC 이름', 예시: '탐정 이유리' },
+    { 항목: '시리즈',   '입력 방법': '같은 시리즈로 묶을 태그명. 동일한 텍스트끼리 묶임', 예시: '가면 시리즈' },
+    { 항목: '중복 기준', '입력 방법': '제목 + 엔딩날짜가 동일하면 건너뜀', 예시: '' },
+    { 항목: '미지원 항목', '입력 방법': '이미지, 링크, 스포일러 등은 등록 후 개별 수정해주세요', 예시: '' },
   ],
 }
 
@@ -231,8 +287,12 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
 
     try {
       const rows = await parseFile(file, cfg.columns)
-      // 제목 없는 행 = 형식 오류
-      const valid = rows.filter(r => r.title)
+      // 제목 없는 행 + 타입별 추가 유효성 오류 = 형식 오류
+      const valid = rows.filter(r => {
+        if (!r.title) return false
+        if (cfg.validateRow) return !cfg.validateRow(r)
+        return true
+      })
       const errors = rows.length - valid.length
 
       // 중복 판별
@@ -261,39 +321,51 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
     let fails = 0
     const BATCH = 100
 
-    // 룰북·시나리오 모두 2패스: 부모 먼저 → 자식 연결
-    const parents = toInsert.filter(r => !(r.parent_title || '').trim())
-    const children = toInsert.filter(r => !!(r.parent_title || '').trim())
+    // 부모-자식 구조가 있는 타입(rulebook, scenario)은 2패스, 없는 타입(log)은 단순 insert
+    const hasParentChild = toInsert.some(r => 'parent_title' in r)
 
-    // 1패스: 부모 insert
-    const parentPayloads = parents.map(r => cfg.rowToPayload(r, user.id, null))
-    for (let i = 0; i < parentPayloads.length; i += BATCH) {
-      const batch = parentPayloads.slice(i, i + BATCH)
-      const { error } = await supabase.from(cfg.table).insert(batch)
-      if (error) { fails += batch.length }
-      else { count += batch.length }
-    }
+    if (hasParentChild) {
+      // 1패스: 부모 insert
+      const parents = toInsert.filter(r => !(r.parent_title || '').trim())
+      const children = toInsert.filter(r => !!(r.parent_title || '').trim())
 
-    // 2패스: 부모 ID 조회 후 자식 insert
-    if (children.length > 0) {
-      const parentTitles = [...new Set(children.map(r => r.parent_title.trim()))]
-      const { data: dbParents } = await supabase
-        .from(cfg.table)
-        .select('id, title')
-        .eq('user_id', user.id)
-        .is('parent_id', null)
-        .in('title', parentTitles)
+      const parentPayloads = parents.map(r => cfg.rowToPayload(r, user.id, null))
+      for (let i = 0; i < parentPayloads.length; i += BATCH) {
+        const batch = parentPayloads.slice(i, i + BATCH)
+        const { error } = await supabase.from(cfg.table).insert(batch)
+        if (error) { fails += batch.length }
+        else { count += batch.length }
+      }
 
-      const parentIdMap = {}
-      ;(dbParents || []).forEach(p => { parentIdMap[p.title.toLowerCase()] = p.id })
+      // 2패스: 부모 ID 조회 후 자식 insert
+      if (children.length > 0) {
+        const parentTitles = [...new Set(children.map(r => r.parent_title.trim()))]
+        const { data: dbParents } = await supabase
+          .from(cfg.table)
+          .select('id, title')
+          .eq('user_id', user.id)
+          .is('parent_id', null)
+          .in('title', parentTitles)
 
-      // 부모 못 찾으면 독립 항목으로 등록
-      const childPayloads = children.map(r => {
-        const pid = parentIdMap[(r.parent_title || '').trim().toLowerCase()] || null
-        return cfg.rowToPayload(r, user.id, pid)
-      })
-      for (let i = 0; i < childPayloads.length; i += BATCH) {
-        const batch = childPayloads.slice(i, i + BATCH)
+        const parentIdMap = {}
+        ;(dbParents || []).forEach(p => { parentIdMap[p.title.toLowerCase()] = p.id })
+
+        const childPayloads = children.map(r => {
+          const pid = parentIdMap[(r.parent_title || '').trim().toLowerCase()] || null
+          return cfg.rowToPayload(r, user.id, pid)
+        })
+        for (let i = 0; i < childPayloads.length; i += BATCH) {
+          const batch = childPayloads.slice(i, i + BATCH)
+          const { error } = await supabase.from(cfg.table).insert(batch)
+          if (error) { fails += batch.length }
+          else { count += batch.length }
+        }
+      }
+    } else {
+      // 단순 insert (부모-자식 없음)
+      const payloads = toInsert.map(r => cfg.rowToPayload(r, user.id))
+      for (let i = 0; i < payloads.length; i += BATCH) {
+        const batch = payloads.slice(i, i + BATCH)
         const { error } = await supabase.from(cfg.table).insert(batch)
         if (error) { fails += batch.length }
         else { count += batch.length }
@@ -359,13 +431,17 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
               1단계 — 템플릿 다운로드
             </div>
             <p className="text-sm text-light" style={{ marginBottom:10, lineHeight:1.6 }}>
-              구글 시트 또는 엑셀 템플릿을 받아 작성한 뒤 업로드하세요.<br/>
-              구글 시트는 사본을 만들어 작성 후 CSV로 내보내기 하면 돼요.
+              {cfg.googleSheetUrl
+                ? <>구글 시트 또는 엑셀 템플릿을 받아 작성한 뒤 업로드하세요.<br/>구글 시트는 사본을 만들어 작성 후 CSV로 내보내기 하면 돼요.</>
+                : <>엑셀 템플릿을 받아 작성한 뒤 업로드하세요.</>
+              }
             </p>
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-              <a className="btn btn-outline btn-sm" href={cfg.googleSheetUrl} target="_blank" rel="noreferrer">
-                <Mi size='sm'>open_in_new</Mi> 구글 시트 템플릿 열기
-              </a>
+              {cfg.googleSheetUrl && (
+                <a className="btn btn-outline btn-sm" href={cfg.googleSheetUrl} target="_blank" rel="noreferrer">
+                  <Mi size='sm'>open_in_new</Mi> 구글 시트 템플릿 열기
+                </a>
+              )}
               <button className="btn btn-outline btn-sm" onClick={() => downloadTemplate(type)}>
                 <Mi size='sm'>table_view</Mi> 엑셀 템플릿 다운로드 (.xlsx)
               </button>
@@ -407,6 +483,14 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
             {type === 'scenario' && (
               <><br/><strong style={{ color:'var(--color-text)' }}>형태 입력값:</strong>{' '}
               physical · digital · both · physical_soft · physical_hard · other</>
+            )}
+            {type === 'log' && (
+              <><br/><strong style={{ color:'var(--color-text)' }}>날짜 형식:</strong>{' '}
+              YYYY-MM-DD (예: 2024-03-15)
+              <br/><strong style={{ color:'var(--color-text)' }}>역할 입력값:</strong>{' '}
+              PL · GM (비워두면 PL)
+              <br/><strong style={{ color:'var(--color-text)' }}>미지원:</strong>{' '}
+              이미지, 링크, 스포일러 등은 등록 후 개별 수정</>
             )}
           </div>
         </div>
@@ -456,7 +540,7 @@ export function BulkImportModal({ isOpen, onClose, type, existingItems = [], onS
 
           {dupCount > 0 && (
             <div style={{ fontSize:'0.78rem', color:'var(--color-text-light)', background:'var(--color-nav-active-bg)', borderRadius:8, padding:'8px 12px', lineHeight:1.6 }}>
-              ℹ️ 중복 기준: {type === 'rulebook' ? '제목이 동일한 경우' : '제목 + 시스템명이 동일한 경우'} 건너뜁니다.
+              ℹ️ 중복 기준: {type === 'rulebook' ? '제목이 동일한 경우' : type === 'log' ? '제목 + 엔딩날짜가 동일한 경우' : '제목 + 시스템명이 동일한 경우'} 건너뜁니다.
             </div>
           )}
         </div>
