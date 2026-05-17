@@ -9,6 +9,7 @@ import { format } from 'date-fns'
 import { usePagination } from '../hooks/usePagination'
 import { getTodayKST } from '../lib/dateFormatters'
 import { handleStorageLimitError } from '../lib/storageError'
+import { BulkImportModal } from '../components/BulkImportModal'
 
 const BLANK = {
   title:'', start_date:'', played_date:'', system_name:'', role:'PL',
@@ -134,6 +135,7 @@ export function PlayLogPage() {
   const [ruleFilter, setRuleFilter] = useState('all')
   const [showSpoilerPw, setShowSpoilerPw] = useState(false)
   const [sortDir, setSortDir] = useState('desc')
+  const [bulkModal, setBulkModal] = useState(false)
 
   useEffect(() => { if (profile?.play_log_sort_order) setSortDir(profile.play_log_sort_order) }, [profile])
 
@@ -192,7 +194,10 @@ export function PlayLogPage() {
     <div className="fade-in">
       <div className="page-header flex justify-between items-center">
         <div><h1 className="page-title"><Mi style={{marginRight:8,verticalAlign:"middle"}}>auto_stories</Mi>다녀온 기록</h1><p className="page-subtitle">플레이한 세션들의 소중한 기억을 남겨요</p></div>
-        <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 기록 추가</button>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <button className="btn btn-outline btn-sm" onClick={()=>setBulkModal(true)}><Mi size='sm'>upload_file</Mi> 일괄 등록</button>
+          <button className="btn btn-primary" onClick={openNew}><Mi size='sm' color='white'>add</Mi> 기록 추가</button>
+        </div>
       </div>
 
       <div style={{marginBottom:20}}>
@@ -429,6 +434,14 @@ export function PlayLogPage() {
       </Modal>
 
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={()=>remove(confirm)} message="이 기록을 삭제하시겠어요?"/>
+
+      <BulkImportModal
+        isOpen={bulkModal}
+        onClose={()=>setBulkModal(false)}
+        type="log"
+        existingItems={items}
+        onSuccess={load}
+      />
     </div>
   )
 }
