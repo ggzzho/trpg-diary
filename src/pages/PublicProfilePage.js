@@ -1410,7 +1410,7 @@ export default function PublicProfilePage() {
               {pubDetailChar.age&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>나이</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.age}세</div></div>}
               {pubDetailChar.gender&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>성별</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.gender}</div></div>}
               {pubDetailChar.height_weight&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>키/몸무게</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.height_weight}</div></div>}
-              {pubDetailChar.job&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>직업</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.job}</div></div>}
+              {pubDetailChar.job&&<div style={{background:'var(--color-nav-active-bg)',borderRadius:8,padding:'8px 12px'}}><div style={{fontSize:'0.65rem',color:'var(--color-text-light)',marginBottom:2}}>{pubDetailChar.job_label||'직업'}</div><div style={{fontSize:'0.88rem',fontWeight:600}}>{pubDetailChar.job}</div></div>}
             </div>
           )}
           {/* 룰 태그 */}
