@@ -140,7 +140,8 @@ async function parseFile(file, columns) {
         const ws = wb.Sheets[wb.SheetNames[0]]
         const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
         if (raw.length < 2) return resolve([])
-        const headers = (raw[0] || []).map(String)
+        // UTF-8 BOM 제거 (구글 시트 CSV 내보내기 시 첫 셀에 ﻿ 붙는 문제)
+        const headers = (raw[0] || []).map((h, i) => i === 0 ? String(h).replace(/^﻿/, '') : String(h))
         const keyMap = mapHeaders(headers, columns)
         const rows = []
         for (let i = 1; i < raw.length; i++) {
