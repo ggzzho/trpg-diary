@@ -196,22 +196,32 @@ function mapHeaders(rawHeaders, columns) {
 
 // ── 파일 파싱 ────────────────────────────────────────────────────────────────
 async function parseFile(file, columns) {
+  const ext = file.name.split('.').pop().toLowerCase()
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = e => {
+
+    const process = rawData => {
       try {
-        const data = new Uint8Array(e.target.result)
-        const wb = XLSX.read(data, { type: 'array' })
+        let wb
+        if (ext === 'csv') {
+          // CSV: 텍스트로 읽어서 파싱 — BOM·인코딩 문제를 근본적으로 방지
+          const text = typeof rawData === 'string'
+            ? rawData.replace(/^﻿/, '') // BOM 제거
+            : rawData
+          wb = XLSX.read(text, { type: 'string' })
+        } else {
+          // xlsx/xls: 바이너리로 파싱
+          wb = XLSX.read(new Uint8Array(rawData), { type: 'array' })
+        }
         const ws = wb.Sheets[wb.SheetNames[0]]
         const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
         if (raw.length < 2) return resolve([])
-        // UTF-8 BOM 제거 (구글 시트 CSV 내보내기 시 첫 셀에 ﻿ 붙는 문제)
-        const headers = (raw[0] || []).map((h, i) => i === 0 ? String(h).replace(/^﻿/, '') : String(h))
+        const headers = (raw[0] || []).map(String)
         const keyMap = mapHeaders(headers, columns)
         const rows = []
         for (let i = 1; i < raw.length; i++) {
           const cells = raw[i]
-          // 모든 셀이 비어있으면 skip
           if (!cells.some(c => String(c).trim())) continue
           const row = {}
           keyMap.forEach((key, idx) => {
@@ -224,8 +234,15 @@ async function parseFile(file, columns) {
         reject(err)
       }
     }
+
     reader.onerror = reject
-    reader.readAsArrayBuffer(file)
+    if (ext === 'csv') {
+      reader.onload = e => process(e.target.result)
+      reader.readAsText(file, 'UTF-8') // 텍스트로 읽기 → 인코딩·BOM 안정적 처리
+    } else {
+      reader.onload = e => process(e.target.result)
+      reader.readAsArrayBuffer(file)
+    }
   })
 }
 
