@@ -21,8 +21,8 @@ function TagChip({ type, label }) {
   return <span style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:100,fontSize:'0.63rem',fontWeight:700,background:c.bg,color:c.color,border:`1px solid ${c.border}`,whiteSpace:'nowrap'}}>{label}</span>
 }
 
-const BLANK = { name:'', nickname:'', memo:'', relations:[], first_met_date:'', pair_image_url:'' }
-const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, first_met_date:f.first_met_date||null, relations:f.relations||[]} }
+const BLANK = { name:'', nickname:'', memo:'', relations:[], first_met_date:'', pair_image_url:'', profile_url:'' }
+const cleanPayload = f => { const { id, user_id, created_at, ...rest } = f; return {...rest, first_met_date:f.first_met_date||null, relations:f.relations||[], profile_url:f.profile_url||null} }
 function calcDday(dateStr) {
   if (!dateStr) return null
   return Math.floor((new Date()-new Date(dateStr))/(1000*60*60*24)) + 1
@@ -235,6 +235,7 @@ export function PairsPage() {
 
                   {displayRelations.length>0&&<div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:6}}>{displayRelations.map(r=><span key={r} className="badge badge-primary">{r}</span>)}</div>}
                   {item.first_met_date&&<div className="text-xs text-light"><><Mi size='sm' color='light'>calendar_today</Mi> {item.first_met_date}</> 첫 만남</div>}
+                  {item.profile_url&&<div className="text-xs" style={{marginTop:4}}><a href={item.profile_url} target="_blank" rel="noreferrer" style={{color:'var(--color-primary)',display:'inline-flex',alignItems:'center',gap:3,wordBreak:'break-all'}}><Mi size='sm' color='primary'>link</Mi>{item.profile_url}</a></div>}
                   {item.memo&&<p className="text-xs text-light" style={{marginTop:8,borderTop:'1px solid var(--color-border)',paddingTop:8}}>{item.memo}</p>}
                 </div>
                 <div style={{padding:'8px 14px',borderTop:'1px solid var(--color-border)',display:'flex',gap:8,justifyContent:'flex-end'}}>
@@ -267,6 +268,7 @@ export function PairsPage() {
           }
         </div>
         <div className="form-group"><label className="form-label">처음 만난 날</label><input className="form-input" type="date" value={form.first_met_date||''} onChange={set('first_met_date')}/></div>
+        <div className="form-group"><label className="form-label">링크 URL</label><input className="form-input" placeholder="https://..." value={form.profile_url||''} onChange={set('profile_url')}/></div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{minHeight:70}}/></div>
       </Modal>
       <Modal isOpen={tagModal} onClose={()=>setTagModal(false)} title="🏷️ 관계 태그 관리"
