@@ -303,7 +303,7 @@ export default function SchedulePage() {
   const { paged: pagedSchedule, page: schedulePage, setPage: setSchedulePage, perPage: schedulePerPage, setPerPage: setSchedulePerPage } = usePagination(filtered, 10)
 
   const summaryStats = useMemo(() => {
-    let t=items.filter(i=>i.status==='completed'||i.scheduled_date<today)
+    let t=items.filter(i=>(i.status==='completed'||i.scheduled_date<today)&&i.status!=='cancelled')
     if (summaryPeriod==='month') {
       const y=getYear(summaryDate),m=getMonth(summaryDate)
       t=t.filter(i=>{const d=new Date(i.scheduled_date);return getYear(d)===y&&getMonth(d)===m})
