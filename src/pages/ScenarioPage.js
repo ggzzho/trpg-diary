@@ -14,7 +14,7 @@ import { TIER_LIMITS } from '../lib/tierLimits'
 import { BulkImportModal } from '../components/BulkImportModal'
 
 const BLANK = { title:'', parent_id:null, system_name:'', author:'', cover_image_url:'', player_count:'', format:'', status_tags:[], memo:'', purchase_date:'', scenario_url:'' }
-const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', other:'기타' }
+const FORMAT_MAP = { physical:'실물', digital:'전자', both:'실물+전자', physical_soft:'실물(소프트)', physical_hard:'실물(하드)', physical_digital:'실물+전자', other:'기타' }
 
 function SortableWrapper({ id, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })

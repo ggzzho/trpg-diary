@@ -344,8 +344,8 @@ export default function SupportPage() {
       {/* 탭 */}
       <div style={{ display:'flex', gap:8, marginBottom:20, borderBottom:'1px solid var(--color-border)', paddingBottom:0 }}>
         {[
-          { key:'form',    label:'문의하기',    icon:'edit_note' },
-          { key:'faq',     label:'FAQ',         icon:'help_outline' },
+          { key:'form',    label:'문의하기',    icon:'edit' },
+          { key:'faq',     label:'FAQ',         icon:'help' },
           { key:'history', label:'내 문의 내역', icon:'history', badge: unreadCount },
         ].map(t => (
           <button key={t.key}
@@ -392,7 +392,7 @@ export default function SupportPage() {
               gap: 12,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Mi style={{ color: 'var(--color-primary)', fontSize: 20 }}>help_outline</Mi>
+                <Mi style={{ color: 'var(--color-primary)', fontSize: 20 }}>help</Mi>
                 <span style={{ fontSize: '0.88rem', color: 'var(--color-text)' }}>
                   문의 전 <strong>FAQ</strong>에서 먼저 확인해보세요!
                 </span>
@@ -491,7 +491,7 @@ export default function SupportPage() {
               원하는 답변을 찾지 못하셨나요?
             </p>
             <button className="btn btn-primary btn-sm" onClick={() => setTab('form')}>
-              <Mi size="sm" color="white">edit_note</Mi> 문의하기
+              <Mi size="sm" color="white">edit</Mi> 문의하기
             </button>
           </div>
           <FAQList />

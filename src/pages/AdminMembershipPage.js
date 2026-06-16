@@ -860,7 +860,7 @@ function NotifyTab() {
       {/* ── 메시지 작성 ── */}
       <div className="card" style={{ marginBottom:16 }}>
         <h3 style={{ fontSize:'0.9rem', fontWeight:700, marginBottom:14 }}>
-          <Mi size="sm" style={{ marginRight:6, verticalAlign:'middle' }}>edit_note</Mi>메시지 작성
+          <Mi size="sm" style={{ marginRight:6, verticalAlign:'middle' }}>edit</Mi>메시지 작성
         </h3>
         <textarea
           className="form-input"

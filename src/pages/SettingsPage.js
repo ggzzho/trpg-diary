@@ -251,7 +251,7 @@ export default function SettingsPage() {
     <div className="fade-in">
       {isDirty && (
         <div style={{position:'sticky',top:0,zIndex:100,background:'var(--color-primary)',color:'white',padding:'8px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',borderRadius:8,marginBottom:12,fontSize:'0.85rem',boxShadow:'0 2px 8px rgba(0,0,0,0.15)'}}>
-          <span style={{display:'flex',alignItems:'center',gap:6}}><Mi size='sm' color='white'>edit_note</Mi>저장하지 않은 변경사항이 있어요.</span>
+          <span style={{display:'flex',alignItems:'center',gap:6}}><Mi size='sm' color='white'>edit</Mi>저장하지 않은 변경사항이 있어요.</span>
           <button className="btn btn-sm" style={{background:'white',color:'var(--color-primary)',fontWeight:700,padding:'3px 12px'}} onClick={save}>{saving?'저장 중…':'지금 저장'}</button>
         </div>
       )}
