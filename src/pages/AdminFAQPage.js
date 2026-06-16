@@ -92,7 +92,7 @@ export default function AdminFAQPage() {
       <div className="page-header flex justify-between items-center">
         <div>
           <h1 className="page-title">
-            <Mi style={{ marginRight: 8, verticalAlign: 'middle' }}>help_outline</Mi>FAQ 관리
+            <Mi style={{ marginRight: 8, verticalAlign: 'middle' }}>help</Mi>FAQ 관리
           </h1>
           <p className="page-subtitle">자주 묻는 질문을 등록하고 관리해요</p>
         </div>

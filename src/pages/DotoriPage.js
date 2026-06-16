@@ -179,7 +179,7 @@ export function DotoriPage() {
                 </div>
                 {item.description&&<div style={{fontSize:'0.72rem',color:'var(--color-text-light)',lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{item.description}</div>}
                 {item.url&&<div style={{fontSize:'0.65rem',color:'var(--color-text-light)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'auto',paddingTop:4}}><Mi size='sm' color='light'>link</Mi> {item.url}</div>}
-                {item.memo&&<div style={{fontSize:'0.72rem',color:'var(--color-accent)',padding:'5px 8px',borderRadius:6,background:'var(--color-nav-active-bg)',marginTop:4,wordBreak:'break-all',overflowWrap:'break-word',whiteSpace:'pre-wrap'}}><><Mi size='sm' color='accent'>edit_note</Mi> {item.memo}</></div>}
+                {item.memo&&<div style={{fontSize:'0.72rem',color:'var(--color-accent)',padding:'5px 8px',borderRadius:6,background:'var(--color-nav-active-bg)',marginTop:4,wordBreak:'break-all',overflowWrap:'break-word',whiteSpace:'pre-wrap'}}><><Mi size='sm' color='accent'>description</Mi> {item.memo}</></div>}
               </div>
               <div style={{padding:'6px 12px 10px',display:'flex',gap:6,justifyContent:'flex-end',borderTop:'1px solid var(--color-border)'}} onClick={e=>e.stopPropagation()}>
                 <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(item)}>수정</button>

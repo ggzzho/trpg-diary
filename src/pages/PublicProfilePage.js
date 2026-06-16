@@ -1131,7 +1131,7 @@ export default function PublicProfilePage() {
                     </div>
                   )}
                   {d.description && <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.description}</p>}
-                  {d.memo && <p style={{ fontSize:'0.72rem', color:'var(--color-accent)', padding:'4px 8px', borderRadius:6, background:'var(--color-nav-active-bg)', marginBottom:3, whiteSpace:'pre-wrap', wordBreak:'break-all' }}><Mi size='sm' color='accent'>edit_note</Mi> {d.memo}</p>}
+                  {d.memo && <p style={{ fontSize:'0.72rem', color:'var(--color-accent)', padding:'4px 8px', borderRadius:6, background:'var(--color-nav-active-bg)', marginBottom:3, whiteSpace:'pre-wrap', wordBreak:'break-all' }}><Mi size='sm' color='accent'>description</Mi> {d.memo}</p>}
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
                     <div style={{ display:'flex', gap:6, alignItems:'center', overflow:'hidden' }}>
                       {d.system_name && <span style={{ fontSize:'0.7rem', color:'var(--color-accent)', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}><Mi size='sm' color='accent'>menu_book</Mi> {d.system_name}</span>}
@@ -1287,7 +1287,7 @@ export default function PublicProfilePage() {
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.title||'제목 없음'}</div>
                   {b.description && <p style={{ fontSize:'0.78rem', color:'var(--color-text-light)', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.description}</p>}
-                  {b.memo && <p style={{ fontSize:'0.72rem', color:'var(--color-accent)', padding:'4px 8px', borderRadius:6, background:'var(--color-nav-active-bg)', marginBottom:3, whiteSpace:'pre-wrap', wordBreak:'break-all' }}><Mi size='sm' color='accent'>edit_note</Mi> {b.memo}</p>}
+                  {b.memo && <p style={{ fontSize:'0.72rem', color:'var(--color-accent)', padding:'4px 8px', borderRadius:6, background:'var(--color-nav-active-bg)', marginBottom:3, whiteSpace:'pre-wrap', wordBreak:'break-all' }}><Mi size='sm' color='accent'>description</Mi> {b.memo}</p>}
                   <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize:'0.72rem', color:'var(--color-primary)' }}>
                     <Mi size='sm'>link</Mi> 링크 열기
                   </a>

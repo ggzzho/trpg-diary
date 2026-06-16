@@ -92,7 +92,7 @@ export function FAQList() {
 
   if (faqs.length === 0) return (
     <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-light)' }}>
-      <Mi style={{ fontSize: 40, marginBottom: 12, display: 'block', opacity: 0.3 }}>help_outline</Mi>
+      <Mi style={{ fontSize: 40, marginBottom: 12, display: 'block', opacity: 0.3 }}>help</Mi>
       <p style={{ fontSize: '0.9rem' }}>아직 등록된 FAQ가 없어요</p>
     </div>
   )
@@ -172,7 +172,7 @@ export default function FAQPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div>
             <h1 className="page-title">
-              <Mi style={{ marginRight: 8, verticalAlign: 'middle' }}>help_outline</Mi>자주 묻는 질문
+              <Mi style={{ marginRight: 8, verticalAlign: 'middle' }}>help</Mi>자주 묻는 질문
             </h1>
             <p className="page-subtitle">궁금한 내용을 빠르게 확인해보세요</p>
           </div>

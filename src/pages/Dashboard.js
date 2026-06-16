@@ -371,7 +371,7 @@ export default function Dashboard() {
             <div className="card">
               <div className="flex justify-between items-center" style={{marginBottom:12}}>
                 <h2 className="text-serif" style={{color:'var(--color-accent)',fontSize:'1rem'}}>
-                  <Mi style={{marginRight:6}}>help_outline</Mi>자주 묻는 질문
+                  <Mi style={{marginRight:6}}>help</Mi>자주 묻는 질문
                 </h2>
                 <Link to="/faq" style={{fontSize:'0.78rem',color:'var(--color-text-light)',textDecoration:'none',display:'flex',alignItems:'center',gap:2}}>
                   전체보기 <Mi size="sm" color="light">chevron_right</Mi>
