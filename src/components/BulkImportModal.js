@@ -225,7 +225,16 @@ async function parseFile(file, columns) {
           if (!cells.some(c => String(c).trim())) continue
           const row = {}
           keyMap.forEach((key, idx) => {
-            if (key) row[key] = String(cells[idx] || '').trim()
+            if (!key) return
+            const val = cells[idx]
+            if (val instanceof Date) {
+              const y = val.getFullYear()
+              const m = String(val.getMonth() + 1).padStart(2, '0')
+              const d = String(val.getDate()).padStart(2, '0')
+              row[key] = `${y}-${m}-${d}`
+            } else {
+              row[key] = String(val || '').trim()
+            }
           })
           rows.push(row)
         }
