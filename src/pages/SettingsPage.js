@@ -163,23 +163,33 @@ export default function SettingsPage() {
   const save = async () => {
     setSaving(true)
     setSaveError('')
-    // 커서 효과 최초 ON 시 혜택 최초 사용일 기록
-    const ce = form.cursor_effect
-    if (ce && (ce.trail?.enabled || ce.click?.enabled)) {
-      await recordFirstMembershipUse(profile, user.id)
+    try {
+      // 세션이 만료된 경우 토큰 갱신 후 저장 진행
+      await supabase.auth.getSession()
+      // 커서 효과 최초 ON 시 혜택 최초 사용일 기록
+      const ce = form.cursor_effect
+      if (ce && (ce.trail?.enabled || ce.click?.enabled)) {
+        await recordFirstMembershipUse(profile, user.id)
+      }
+      const {error} = await updateProfile(user.id, form)
+      if (!error) {
+        await refreshProfile()
+        savedFormRef.current = form
+        setIsDirty(false)
+        setSaved(true); setTimeout(()=>setSaved(false),2500)
+        applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent,form.theme_text_color||null,form.dark_mode)
+        applyBackground(form.background_image_url,form.bg_opacity,form.dark_mode,form.theme_color)
+      } else {
+        const msg = error.message?.includes('Failed to fetch')
+          ? '네트워크 연결을 확인하거나 페이지를 새로고침 후 다시 시도해주세요.'
+          : (error.message || '잠시 후 다시 시도해주세요')
+        setSaveError(`저장에 실패했어요. (${msg})`)
+      }
+    } catch (e) {
+      setSaveError(`저장에 실패했어요. (${e.message || '잠시 후 다시 시도해주세요'})`)
+    } finally {
+      setSaving(false)
     }
-    const {error} = await updateProfile(user.id, form)
-    if (!error) {
-      await refreshProfile()
-      savedFormRef.current = form
-      setIsDirty(false)
-      setSaved(true); setTimeout(()=>setSaved(false),2500)
-      applyTheme(form.theme_color,form.theme_bg_color,form.theme_accent,form.theme_text_color||null,form.dark_mode)
-      applyBackground(form.background_image_url,form.bg_opacity,form.dark_mode,form.theme_color)
-    } else {
-      setSaveError(`저장에 실패했어요. (${error.message || '잠시 후 다시 시도해주세요'})`)
-    }
-    setSaving(false)
   }
 
 
