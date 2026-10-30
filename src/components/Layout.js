@@ -1,4 +1,4 @@
-// src/components/Layout.js
+﻿// src/components/Layout.js
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -413,7 +413,7 @@ export function Layout({ children }) {
         <div className="sidebar-user">
           <div className="sidebar-user-info">
             <div className="user-avatar">
-              {profile?.avatar_url?<img src={profile.avatar_url} alt="avatar"/>:initial}
+              {profile?.avatar_url?<img referrerpolicy="no-referrer" src={profile.avatar_url} alt="avatar"/>:initial}
             </div>
             <div style={{overflow:'hidden'}}>
               <div className="user-name">{profile?.display_name||profile?.username}</div>

@@ -1,4 +1,4 @@
-// src/pages/RulebookPage.js
+﻿// src/pages/RulebookPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { rulebooksApi, supabase } from '../lib/supabase'
@@ -33,7 +33,7 @@ function SortableSupplRow({ item, availableTags, onEdit, onRemove }) {
         <DragHandle listeners={listeners} attributes={attributes}/>
         <div style={{ width:36, height:36, borderRadius:7, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
           {item.cover_image_url
-            ? <img src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+            ? <img referrerpolicy="no-referrer" src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
             : <span style={{ fontSize:'1rem', opacity:0.35 }}><Mi size="sm" color="light">menu_book</Mi></span>}
         </div>
         <div style={{ flex:1, minWidth:0 }}>
@@ -68,7 +68,7 @@ function SortableRulebookCard({ item, suppls, isOpen, availableTags, onToggle, o
           <button onClick={() => suppls.length > 0 && onToggle(item.id)}
             style={{ width:40, height:40, borderRadius:7, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', border:'none', cursor:suppls.length > 0 ? 'pointer' : 'default', position:'relative' }}>
             {item.cover_image_url
-              ? <img src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+              ? <img referrerpolicy="no-referrer" src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
               : <span style={{ fontSize:'1.2rem', opacity:0.35 }}><Mi size="lg" color="light">menu_book</Mi></span>}
             {suppls.length > 0 && (
               <div style={{ position:'absolute', bottom:0, right:0, background:'var(--color-primary)', borderRadius:'4px 0 7px 0', padding:'1px 4px', fontSize:'0.55rem', color:'white', fontWeight:700 }}>
@@ -328,7 +328,7 @@ export function RulebookPage() {
     }}>
       <div style={{ width:40, height:40, borderRadius:7, overflow:'hidden', flexShrink:0, background:'var(--color-border)', display:'flex', alignItems:'center', justifyContent:'center' }}>
         {item.cover_image_url
-          ? <img src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+          ? <img referrerpolicy="no-referrer" src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
           : <span style={{ fontSize:'1.2rem', opacity:0.35 }}><Mi size="lg" color="light">menu_book</Mi></span>
         }
       </div>
@@ -466,8 +466,8 @@ export function RulebookPage() {
         </div>
         <div className="form-group">
           <label className="form-label">아이콘 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 정사각형, 200×200px 이상)</span></label>
-          <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.cover_image_url||''} onChange={set('cover_image_url')}/>
-          {form.cover_image_url && <div style={{ marginTop:8, display:'flex', gap:8, alignItems:'center' }}><img src={form.cover_image_url} alt="preview" style={{ width:48, height:48, objectFit:'cover', borderRadius:6, border:'1px solid var(--color-border)' }}/><button className="btn btn-ghost btn-sm" style={{ color:'#e57373' }} onClick={() => setForm(f => ({ ...f, cover_image_url:'' }))}>제거</button></div>}
+          <input className="form-input" placeholder="https://... (imgur 권장 · X/트위터 이미지 미지원)" value={form.cover_image_url||''} onChange={set('cover_image_url')}/>
+          {form.cover_image_url && <div style={{ marginTop:8, display:'flex', gap:8, alignItems:'center' }}><img referrerpolicy="no-referrer" src={form.cover_image_url} alt="preview" style={{ width:48, height:48, objectFit:'cover', borderRadius:6, border:'1px solid var(--color-border)' }}/><button className="btn btn-ghost btn-sm" style={{ color:'#e57373' }} onClick={() => setForm(f => ({ ...f, cover_image_url:'' }))}>제거</button></div>}
         </div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{ minHeight:64 }}/></div>
       </Modal>

@@ -1,4 +1,4 @@
-// src/pages/PlayLogPage.js
+﻿// src/pages/PlayLogPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { playLogsApi, supabase } from '../lib/supabase'
@@ -74,7 +74,7 @@ export function LogDetailContent({ detail, isOwner }) {
   return (
     <div>
       {detail.session_image_url && (
-        <img src={detail.session_image_url} alt="세션카드" style={{width:'100%',borderRadius:8,marginBottom:12,maxHeight:200,objectFit:'cover'}}/>
+        <img referrerpolicy="no-referrer" src={detail.session_image_url} alt="세션카드" style={{width:'100%',borderRadius:8,marginBottom:12,maxHeight:200,objectFit:'cover'}}/>
       )}
       <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:14}}>
         {detail.series_tag && <TagChip type="series" label={detail.series_tag}/>}
@@ -230,7 +230,7 @@ export function PlayLogPage() {
             >
               <div style={{position:'relative',paddingTop:'56.25%'}}>
                 <div style={{position:'absolute',inset:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-                  {item.session_image_url?<img src={item.session_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}><Mi size="lg" color="light">auto_stories</Mi></span>}
+                  {item.session_image_url?<img referrerpolicy="no-referrer" src={item.session_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}><Mi size="lg" color="light">auto_stories</Mi></span>}
                 </div>
                 {/* 그라디언트 오버레이 */}
                 <div style={{position:'absolute',bottom:0,left:0,right:0,height:'65%',background:'linear-gradient(to top,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 55%,transparent 100%)',pointerEvents:'none'}}/>
@@ -288,7 +288,7 @@ export function PlayLogPage() {
                   {relatedItems.map(r=>(
                     <div key={r.id} style={{display:'flex',gap:10,alignItems:'center',padding:'8px 10px',borderRadius:8,background:'var(--color-nav-active-bg)',cursor:'pointer'}} onClick={()=>setDetail(r)}>
                       <div style={{width:44,height:44,borderRadius:6,overflow:'hidden',flexShrink:0,background:'var(--color-border)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                        {r.session_image_url?<img src={r.session_image_url} alt={r.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'1.2rem',opacity:0.4}}><Mi size="lg" color="light">auto_stories</Mi></span>}
+                        {r.session_image_url?<img referrerpolicy="no-referrer" src={r.session_image_url} alt={r.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'1.2rem',opacity:0.4}}><Mi size="lg" color="light">auto_stories</Mi></span>}
                       </div>
                       <div style={{flex:1,overflow:'hidden'}}>
                         <div style={{fontWeight:600,fontSize:'0.84rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.title}</div>
@@ -363,8 +363,8 @@ export function PlayLogPage() {
           {/* 세션카드 이미지 */}
           <div className="form-group">
             <label className="form-label">세션카드 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 16:9, 800×450px)</span></label>
-            <input className="form-input" autoComplete="off" placeholder="https://... (imgur 주소 등록 추천)" value={form.session_image_url||''} onChange={set('session_image_url')}/>
-            {form.session_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.session_image_url} alt="preview" style={{width:60,height:34,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,session_image_url:''}))}>제거</button></div>}
+            <input className="form-input" autoComplete="off" placeholder="https://... (imgur 권장 · X/트위터 이미지 미지원)" value={form.session_image_url||''} onChange={set('session_image_url')}/>
+            {form.session_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img referrerpolicy="no-referrer" src={form.session_image_url} alt="preview" style={{width:60,height:34,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,session_image_url:''}))}>제거</button></div>}
           </div>
 
           <div className="form-group"><label className="form-label">시나리오 링크 URL</label><input className="form-input" autoComplete="off" placeholder="https://..." value={form.scenario_link||''} onChange={set('scenario_link')}/></div>
