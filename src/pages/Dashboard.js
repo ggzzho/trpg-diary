@@ -1,4 +1,4 @@
-// src/pages/Dashboard.js
+﻿// src/pages/Dashboard.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -310,7 +310,7 @@ export default function Dashboard() {
               <a key={f.id} href={`/u/${f.target_username}`} target="_blank" rel="noreferrer"
                 style={{display:'flex',alignItems:'center',gap:8,padding:'6px 12px',borderRadius:100,background:'var(--color-nav-active-bg)',border:'1px solid var(--color-border)',textDecoration:'none',color:'var(--color-text)'}}>
                 <div style={{width:24,height:24,borderRadius:'50%',background:'var(--color-primary)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.72rem',color:'white',fontWeight:700,flexShrink:0,overflow:'hidden'}}>
-                  {f.target_avatar_url?<img src={f.target_avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:(f.target_display_name||'?')[0]}
+                  {f.target_avatar_url?<img referrerpolicy="no-referrer" src={f.target_avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:(f.target_display_name||'?')[0]}
                 </div>
                 <span style={{fontSize:'0.82rem',fontWeight:500}}>{f.target_display_name||f.target_username}</span>
               </a>

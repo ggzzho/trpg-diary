@@ -1,4 +1,4 @@
-// src/pages/CharactersPage.js
+﻿// src/pages/CharactersPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -297,7 +297,7 @@ export function CharactersPage() {
                   <div style={{position:'relative',width:'100%',paddingTop:'100%',background:'var(--color-nav-active-bg)',overflow:'hidden',cursor:'pointer'}}
                     onClick={()=>setDetailChar(item)}>
                     {item.image_url
-                      ? <img src={item.image_url} alt={item.name} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+                      ? <img referrerpolicy="no-referrer" src={item.image_url} alt={item.name} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
                       : <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{fontSize:'4rem',opacity:0.25}}>🧑</span></div>
                     }
                   </div>
@@ -343,10 +343,10 @@ export function CharactersPage() {
         {/* 두상 이미지 */}
         <div className="form-group">
           <label className="form-label">두상 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 1:1 또는 3:4 비율)</span></label>
-          <input className="form-input" placeholder="https://... (이미지 URL)" value={form.image_url||''} onChange={set('image_url')}/>
+          <input className="form-input" placeholder="https://... (imgur 권장 · X/트위터 이미지 미지원)" value={form.image_url||''} onChange={set('image_url')}/>
           {form.image_url&&(
             <div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}>
-              <img src={form.image_url} alt="preview" style={{width:52,height:52,objectFit:'cover',borderRadius:8,border:'1px solid var(--color-border)'}}/>
+              <img referrerpolicy="no-referrer" src={form.image_url} alt="preview" style={{width:52,height:52,objectFit:'cover',borderRadius:8,border:'1px solid var(--color-border)'}}/>
               <button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,image_url:''}))}>제거</button>
             </div>
           )}
@@ -499,7 +499,7 @@ export function CharactersPage() {
           {/* 이미지 */}
           {detailChar.image_url&&(
             <div style={{width:'100%',aspectRatio:'1/1',maxHeight:260,overflow:'hidden',borderRadius:12,marginBottom:16,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <img src={detailChar.image_url} alt={detailChar.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              <img referrerpolicy="no-referrer" src={detailChar.image_url} alt={detailChar.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
             </div>
           )}
           {/* 기본 정보 그리드 */}
@@ -568,7 +568,7 @@ export function CharactersPage() {
                 {hvPaged.map(h=>(
                   <div key={h.history_id} style={{display:'flex',gap:10,alignItems:'center',padding:'10px',borderRadius:10,border:'1px solid var(--color-border)',background:'var(--color-surface)'}}>
                     <div style={{width:56,height:56,borderRadius:7,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      {h.session_image_url?<img src={h.session_image_url} alt={h.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<Mi size="lg" color="light">auto_stories</Mi>}
+                      {h.session_image_url?<img referrerpolicy="no-referrer" src={h.session_image_url} alt={h.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<Mi size="lg" color="light">auto_stories</Mi>}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:4}}>{h.title||'(제목 없음)'}</div>
@@ -611,7 +611,7 @@ export function CharactersPage() {
               {filteredLogs.map(l=>(
                 <div key={l.id} style={{display:'flex',gap:10,alignItems:'center',padding:'10px',borderRadius:10,border:'1px solid var(--color-border)',background:'var(--color-surface)'}}>
                   <div style={{width:56,height:56,borderRadius:7,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    {l.session_image_url?<img src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<Mi size="lg" color="light">auto_stories</Mi>}
+                    {l.session_image_url?<img referrerpolicy="no-referrer" src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<Mi size="lg" color="light">auto_stories</Mi>}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:'0.88rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:4}}>{l.title||'(제목 없음)'}</div>

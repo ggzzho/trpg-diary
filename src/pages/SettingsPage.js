@@ -1,4 +1,4 @@
-// src/pages/SettingsPage.js
+﻿// src/pages/SettingsPage.js
 import React, { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -279,9 +279,9 @@ export default function SettingsPage() {
             {/* 헤더 이미지 */}
             <div className="form-group">
               <label className="form-label">공개 페이지 헤더 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 1200×400px, 상단 기준 크롭)</span></label>
-              {form.header_image_url&&<div style={{borderRadius:8,overflow:'hidden',marginBottom:8,height:90,background:'var(--color-nav-active-bg)'}}><img src={form.header_image_url} alt="header" style={{width:'100%',height:'100%',objectFit:'cover'}} /></div>}
+              {form.header_image_url&&<div style={{borderRadius:8,overflow:'hidden',marginBottom:8,height:90,background:'var(--color-nav-active-bg)'}}><img referrerpolicy="no-referrer" src={form.header_image_url} alt="header" style={{width:'100%',height:'100%',objectFit:'cover'}} /></div>}
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.header_image_url||''} onChange={set('header_image_url')} style={{flex:1}} />
+                <input className="form-input" placeholder="https://... (imgur 권장 · X/트위터 이미지 미지원)" value={form.header_image_url||''} onChange={set('header_image_url')} style={{flex:1}} />
                 {form.header_image_url&&<button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,header_image_url:''}))}>제거</button>}
               </div>
             </div>
@@ -291,7 +291,7 @@ export default function SettingsPage() {
               <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:10}}>
                 <div className="user-avatar" style={{width:56,height:56,fontSize:'1.3rem',flexShrink:0}}>
                   {(form.avatar_url||profile?.avatar_url)
-                    ? <img src={form.avatar_url||profile?.avatar_url} alt="avatar"/>
+                    ? <img referrerpolicy="no-referrer" src={form.avatar_url||profile?.avatar_url} alt="avatar"/>
                     : (profile?.display_name||'?')[0]}
                 </div>
                 {(form.avatar_url||profile?.avatar_url) && (
@@ -421,9 +421,9 @@ export default function SettingsPage() {
             <div className="form-group">
               <label className="form-label">배경 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 1920×1080px)</span></label>
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.background_image_url} onChange={e=>handleBgUrlChange(e.target.value)} style={{flex:1}} />
+                <input className="form-input" placeholder="https://... (imgur 권장 · X/트위터 이미지 미지원)" value={form.background_image_url} onChange={e=>handleBgUrlChange(e.target.value)} style={{flex:1}} />
               </div>
-              {form.background_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} /><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1,form.dark_mode,form.theme_color)}}>제거</button></div>}
+              {form.background_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img referrerpolicy="no-referrer" src={form.background_image_url} alt="bg" style={{width:72,height:44,objectFit:'cover',borderRadius:5,border:'1px solid var(--color-border)'}} /><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>{setForm(f=>({...f,background_image_url:''}));applyBackground('',1,form.dark_mode,form.theme_color)}}>제거</button></div>}
             </div>
             {form.background_image_url&&(
               <div className="form-group">

@@ -1,4 +1,4 @@
-// src/pages/PairsPage.js
+﻿// src/pages/PairsPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { pairsApi, supabase } from '../lib/supabase'
@@ -223,7 +223,7 @@ export function PairsPage() {
             return (
               <div key={item.id} className="card" style={{padding:0,overflow:'hidden'}}>
                 <div style={{height:160,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',position:'relative'}}>
-                  {item.pair_image_url?<img src={item.pair_image_url} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'4rem',opacity:0.25}}>👤</span>}
+                  {item.pair_image_url?<img referrerpolicy="no-referrer" src={item.pair_image_url} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span style={{fontSize:'4rem',opacity:0.25}}>👤</span>}
                   {dday!==null&&(
                     <div style={{position:'absolute',top:10,right:10,background:'var(--color-primary)',color:'white',borderRadius:8,padding:'4px 10px',textAlign:'center',boxShadow:'0 2px 8px rgba(0,0,0,0.2)'}}>
                       <div style={{fontSize:'1.1rem',fontWeight:700,lineHeight:1.2}}>D+{dday}</div>
@@ -258,8 +258,8 @@ export function PairsPage() {
         <div className="form-group"><label className="form-label">페어명 *</label><input className="form-input" value={form.name} onChange={set('name')}/></div>
         <div className="form-group">
           <label className="form-label">페어 이미지 <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 3:2 비율, 600×400px)</span></label>
-          <input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.pair_image_url||''} onChange={set('pair_image_url')}/>
-          {form.pair_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img src={form.pair_image_url} alt="preview" style={{width:52,height:52,objectFit:'cover',borderRadius:8,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,pair_image_url:''}))}>제거</button></div>}
+          <input className="form-input" placeholder="https://... (imgur 권장 · X/트위터 이미지 미지원)" value={form.pair_image_url||''} onChange={set('pair_image_url')}/>
+          {form.pair_image_url&&<div style={{marginTop:8,display:'flex',gap:8,alignItems:'center'}}><img referrerpolicy="no-referrer" src={form.pair_image_url} alt="preview" style={{width:52,height:52,objectFit:'cover',borderRadius:8,border:'1px solid var(--color-border)'}}/><button className="btn btn-ghost btn-sm" style={{color:'#e57373'}} onClick={()=>setForm(f=>({...f,pair_image_url:''}))}>제거</button></div>}
         </div>
         <div className="form-group">
           <label className="form-label">관계<button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button></label>
@@ -297,7 +297,7 @@ export function PairsPage() {
                   {/* 썸네일 */}
                   <div style={{width:56,height:56,borderRadius:7,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
                     {h.session_image_url
-                      ?<img src={h.session_image_url} alt={h.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                      ?<img referrerpolicy="no-referrer" src={h.session_image_url} alt={h.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                       :<Mi size="lg" color="light">auto_stories</Mi>
                     }
                   </div>
@@ -339,7 +339,7 @@ export function PairsPage() {
                 {/* 썸네일 */}
                 <div style={{width:56,height:56,borderRadius:7,overflow:'hidden',flexShrink:0,background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
                   {l.session_image_url
-                    ?<img src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                    ?<img referrerpolicy="no-referrer" src={l.session_image_url} alt={l.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                     :<Mi size="lg" color="light">auto_stories</Mi>
                   }
                 </div>

@@ -1,4 +1,4 @@
-// src/pages/ScenarioPage.js
+﻿// src/pages/ScenarioPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { scenariosApi, supabase } from '../lib/supabase'
@@ -235,7 +235,7 @@ export function BaseScenarioPage({ config }) {
         background:'var(--color-nav-active-bg)',display:'flex',alignItems:'center',
         justifyContent:'center',border:'1px solid var(--color-border)'}}>
         {item.cover_image_url
-          ? <img src={item.cover_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+          ? <img referrerpolicy="no-referrer" src={item.cover_image_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
           : <span style={{fontSize:'1.1rem',opacity:0.35}}><Mi size="lg" color="light">description</Mi></span>}
       </div>
       <div style={{flex:1,minWidth:0}}>
@@ -444,7 +444,7 @@ export function BaseScenarioPage({ config }) {
           </div>
         </div>
         <div className="form-group"><label className="form-label">시나리오 URL</label><input className="form-input" placeholder="https://..." value={form.scenario_url||''} onChange={set('scenario_url')}/></div>
-        <div className="form-group"><label className="form-label">표지 이미지 URL <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 정사각형, 200×200px 이상)</span></label><input className="form-input" placeholder="https://..." value={form.cover_image_url||''} onChange={set('cover_image_url')}/></div>
+        <div className="form-group"><label className="form-label">표지 이미지 URL <span style={{fontWeight:400,color:'var(--color-text-light)',fontSize:'0.78rem'}}>(권장: 정사각형, 200×200px 이상)</span></label><input className="form-input" placeholder="https://... (imgur 권장 · X/트위터 이미지 미지원)" value={form.cover_image_url||''} onChange={set('cover_image_url')}/></div>
         <div className="form-group"><label className="form-label">메모</label><textarea className="form-textarea" value={form.memo||''} onChange={set('memo')} style={{minHeight:64}}/></div>
       </Modal>
 

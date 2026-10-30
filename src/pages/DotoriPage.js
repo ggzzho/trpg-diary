@@ -1,4 +1,4 @@
-// src/pages/DotoriPage.js
+﻿// src/pages/DotoriPage.js
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { dotoriApi, dotoriTagsApi } from '../lib/supabase'
@@ -160,7 +160,7 @@ export function DotoriPage() {
               <div style={{height:130,background:'var(--color-nav-active-bg)',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:item.url?'pointer':'default'}}
                 onClick={()=>item.url&&window.open(normalizeUrl(item.url),'_blank','noopener,noreferrer')}
               >
-                {item.thumbnail_url?<img src={item.thumbnail_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}><Mi size="lg" color="light">link</Mi></span>}
+                {item.thumbnail_url?<img referrerpolicy="no-referrer" src={item.thumbnail_url} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/>:<span style={{fontSize:'3rem',opacity:0.2}}><Mi size="lg" color="light">link</Mi></span>}
                 {item.tags?.length>0&&(
                   <div style={{position:'absolute',bottom:8,left:8,right:8,display:'flex',gap:4,flexWrap:'wrap'}}>
                     {item.tags.filter(t=>tags.map(tg=>tg.name).includes(t)).map(tag=>(
@@ -202,7 +202,7 @@ export function DotoriPage() {
           </div>
           {fetchMsg&&<div className="text-xs" style={{marginTop:4,color:fetchMsg.startsWith('✅')?'#558b2f':fetchMsg.startsWith('⚠️')?'#e57373':'var(--color-text-light)'}}>{fetchMsg}</div>}
         </div>
-        {form.thumbnail_url&&<div style={{marginBottom:12,borderRadius:8,overflow:'hidden',height:100,background:'var(--color-nav-active-bg)'}}><img src={form.thumbnail_url} alt="thumbnail" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/></div>}
+        {form.thumbnail_url&&<div style={{marginBottom:12,borderRadius:8,overflow:'hidden',height:100,background:'var(--color-nav-active-bg)'}}><img referrerpolicy="no-referrer" src={form.thumbnail_url} alt="thumbnail" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}}/></div>}
         <div className="form-group"><label className="form-label">제목 *</label><input className="form-input" placeholder="제목을 입력하세요" value={form.title||''} onChange={set('title')}/></div>
         <div className="form-group"><label className="form-label">룰</label><RuleSelect value={form.system_name||''} onChange={v=>setForm(f=>({...f,system_name:v}))}/></div>
         <div className="form-group">
@@ -212,7 +212,7 @@ export function DotoriPage() {
             {PLAY_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
           </select>
         </div>
-        <div className="form-group"><label className="form-label">썸네일 이미지 URL</label><input className="form-input" placeholder="https://... (imgur 주소 등록 추천)" value={form.thumbnail_url||''} onChange={set('thumbnail_url')}/></div>
+        <div className="form-group"><label className="form-label">썸네일 이미지 URL</label><input className="form-input" placeholder="https://... (imgur 권장 · X/트위터 이미지 미지원)" value={form.thumbnail_url||''} onChange={set('thumbnail_url')}/></div>
         <div className="form-group">
           <label className="form-label">태그<button type="button" className="btn btn-ghost btn-sm" style={{marginLeft:8,fontSize:'0.68rem'}} onClick={()=>setTagModal(true)}>+ 태그 관리</button></label>
           {tags.length===0?<div className="text-xs text-light">태그가 없어요.</div>

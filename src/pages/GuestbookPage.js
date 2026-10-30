@@ -1,4 +1,4 @@
-// src/pages/GuestbookPage.js
+﻿// src/pages/GuestbookPage.js
 import React, { useEffect, useState, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -347,7 +347,7 @@ function FriendChip({ g, isOwner, userId, onEdit, onRemove }) {
     <div className="card" style={{ padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
       <a href={href} target="_blank" rel="noreferrer" style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:10, flex:1, minWidth:0 }}>
         {g.author_avatar_url
-          ? <img src={g.author_avatar_url} alt={displayName} style={{ width:40, height:40, borderRadius:'50%', objectFit:'cover', flexShrink:0, border:'2px solid var(--color-border)' }}/>
+          ? <img referrerpolicy="no-referrer" src={g.author_avatar_url} alt={displayName} style={{ width:40, height:40, borderRadius:'50%', objectFit:'cover', flexShrink:0, border:'2px solid var(--color-border)' }}/>
           : <div style={{ width:40, height:40, borderRadius:'50%', background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:'1rem', color:'var(--color-accent)', flexShrink:0 }}>{initial}</div>
         }
         <div style={{ minWidth:0 }}>
@@ -820,12 +820,12 @@ export function GuestbookPublicView({ ownerId, postId, mode }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">아바타 이미지 URL (선택)</label>
-                  <input className="form-input" placeholder="https://... (imgur 등)" autoComplete="off"
+                  <input className="form-input" placeholder="https://... (imgur 권장 · X/트위터 이미지 미지원)" autoComplete="off"
                     value={pageForm.avatar_url} onChange={e => setPageForm(f => ({...f, avatar_url:e.target.value}))}/>
                 </div>
                 {pageForm.avatar_url && (
                   <div style={{ marginBottom:10 }}>
-                    <img src={pageForm.avatar_url} alt="preview"
+                    <img referrerpolicy="no-referrer" src={pageForm.avatar_url} alt="preview"
                       style={{ width:40, height:40, borderRadius:'50%', objectFit:'cover', border:'2px solid var(--color-border)' }}
                       onError={e => { e.target.style.display='none' }}/>
                   </div>

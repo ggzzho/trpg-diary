@@ -1,4 +1,4 @@
-// src/pages/PublicProfilePage.js
+﻿// src/pages/PublicProfilePage.js
 import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams, useSearchParams } from 'react-router-dom'
@@ -729,7 +729,7 @@ export default function PublicProfilePage() {
           <>
             <div style={{ width:18, height:18, borderRadius:'50%', overflow:'hidden', background:'rgba(255,255,255,0.3)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', fontWeight:700 }}>
               {myProfile?.avatar_url
-                ? <img src={myProfile.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                ? <img referrerpolicy="no-referrer" src={myProfile.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
                 : (myProfile?.display_name||user.email||'?')[0]
               }
             </div>
@@ -749,7 +749,7 @@ export default function PublicProfilePage() {
         {/* 헤더 이미지 */}
         <div style={{ height:235, background:'var(--color-nav-active-bg)', borderRadius:'var(--radius) var(--radius) 0 0', overflow:'hidden' }}>
           {profile.header_image_url
-            ? <img src={profile.header_image_url} alt="header"
+            ? <img referrerpolicy="no-referrer" src={profile.header_image_url} alt="header"
                 style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top' }}/>
             : <div style={{ width:'100%', height:'100%', background:`linear-gradient(135deg,var(--color-primary),var(--color-accent))`, opacity:0.3 }}/>
           }
@@ -765,7 +765,7 @@ export default function PublicProfilePage() {
               position:'relative', zIndex:2
             }}>
               {profile.avatar_url
-                ? <img src={profile.avatar_url} alt="avatar"/>
+                ? <img referrerpolicy="no-referrer" src={profile.avatar_url} alt="avatar"/>
                 : (profile.display_name||'?')[0]
               }
             </div>
@@ -902,7 +902,7 @@ export default function PublicProfilePage() {
                   <div style={{ position:'relative', paddingTop:'56.25%' }}>
                     <div style={{ position:'absolute', inset:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
                       {l.session_image_url
-                        ? <img src={l.session_image_url} alt={l.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                        ? <img referrerpolicy="no-referrer" src={l.session_image_url} alt={l.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
                         : <span style={{ fontSize:'2.5rem', opacity:0.2 }}><Mi size='lg' color='light'>auto_stories</Mi></span>
                       }
                     </div>
@@ -960,7 +960,7 @@ export default function PublicProfilePage() {
                           <div key={r.id} style={{display:'flex',gap:10,alignItems:'center',padding:'8px 10px',borderRadius:8,background:'var(--color-nav-active-bg)',cursor:'pointer'}} onClick={()=>setSelectedLog(r)}>
                             <div style={{width:44,height:44,borderRadius:6,overflow:'hidden',flexShrink:0,background:'var(--color-border)',display:'flex',alignItems:'center',justifyContent:'center'}}>
                               {r.session_image_url
-                                ?<img src={r.session_image_url} alt={r.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                                ?<img referrerpolicy="no-referrer" src={r.session_image_url} alt={r.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                                 :<Mi size="lg" color="light">auto_stories</Mi>
                               }
                             </div>
@@ -999,7 +999,7 @@ export default function PublicProfilePage() {
         const RbRow = ({r, isChild}) => (
           <div style={{ display:'flex', alignItems:'center', gap:14, padding: isChild ? '8px 14px 8px 52px' : '10px 14px', background: isChild ? 'var(--color-nav-active-bg)' : 'transparent', borderTop: isChild ? '1px solid var(--color-border)' : 'none' }}>
             <div style={{ width:40, height:40, borderRadius:7, overflow:'hidden', flexShrink:0, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              {r.cover_image_url ? <img src={r.cover_image_url} alt={r.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.2rem', opacity:0.35 }}><Mi size='lg' color='light'>menu_book</Mi></span>}
+              {r.cover_image_url ? <img referrerpolicy="no-referrer" src={r.cover_image_url} alt={r.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'1.2rem', opacity:0.35 }}><Mi size='lg' color='light'>menu_book</Mi></span>}
             </div>
             <div style={{ flex:1 }}>
               <div style={{ fontWeight: isChild ? 500 : 700, fontSize:'0.9rem', marginBottom:3, display:'flex', alignItems:'center', gap:6 }}>
@@ -1059,7 +1059,7 @@ export default function PublicProfilePage() {
                       background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center',
                       justifyContent:'center', border:'1px solid var(--color-border)' }}>
                       {item.cover_image_url
-                        ? <img src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                        ? <img referrerpolicy="no-referrer" src={item.cover_image_url} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
                         : <span style={{ fontSize:'1.1rem', opacity:0.35 }}><Mi size='lg' color='light'>description</Mi></span>}
                     </div>
                     <div style={{ flex:1 }}>
@@ -1118,7 +1118,7 @@ export default function PublicProfilePage() {
             : dotoriPagination.paged.map(d => (
               <div key={d.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:14 }}>
                 {d.thumbnail_url
-                  ? <img src={d.thumbnail_url} alt={d.title} style={{ width:48, height:48, borderRadius:8, objectFit:'cover', flexShrink:0 }}/>
+                  ? <img referrerpolicy="no-referrer" src={d.thumbnail_url} alt={d.title} style={{ width:48, height:48, borderRadius:8, objectFit:'cover', flexShrink:0 }}/>
                   : <div style={{ width:48, height:48, borderRadius:8, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                       <Mi color="light">forest</Mi>
                     </div>
@@ -1160,7 +1160,7 @@ export default function PublicProfilePage() {
                 return (
                   <div key={p.id} className="card" style={{ padding:0, overflow:'hidden' }}>
                     <div style={{ height:160, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', position:'relative' }}>
-                      {p.pair_image_url ? <img src={p.pair_image_url} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'4rem', opacity:0.25 }}>👤</span>}
+                      {p.pair_image_url ? <img referrerpolicy="no-referrer" src={p.pair_image_url} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <span style={{ fontSize:'4rem', opacity:0.25 }}>👤</span>}
                       {dday !== null && (
                         <div style={{ position:'absolute', top:10, right:10, background:'var(--color-primary)', color:'white', borderRadius:8, padding:'4px 10px', textAlign:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.2)' }}>
                           <div style={{ fontSize:'1.1rem', fontWeight:700, lineHeight:1.2 }}>D+{dday}</div>
@@ -1205,7 +1205,7 @@ export default function PublicProfilePage() {
                     <div style={{ position:'relative', width:'100%', paddingTop:'100%', background:'var(--color-nav-active-bg)', overflow:'hidden', cursor:'pointer' }}
                       onClick={()=>setPubDetailChar(c)}>
                       {c.image_url
-                        ? <img src={c.image_url} alt={c.name} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}/>
+                        ? <img referrerpolicy="no-referrer" src={c.image_url} alt={c.name} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}/>
                         : <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:'4rem', opacity:0.25 }}>🧑</span></div>
                       }
                     </div>
@@ -1279,7 +1279,7 @@ export default function PublicProfilePage() {
             : bookmarksPagination.paged.map(b => (
               <div key={b.id} className="card card-sm" style={{ display:'flex', alignItems:'center', gap:14 }}>
                 {b.thumbnail_url
-                  ? <img src={b.thumbnail_url} alt={b.title} style={{ width:48, height:48, borderRadius:8, objectFit:'cover', flexShrink:0 }}/>
+                  ? <img referrerpolicy="no-referrer" src={b.thumbnail_url} alt={b.title} style={{ width:48, height:48, borderRadius:8, objectFit:'cover', flexShrink:0 }}/>
                   : <div style={{ width:48, height:48, borderRadius:8, background:'var(--color-nav-active-bg)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                       <Mi color="light">bookmark</Mi>
                     </div>
@@ -1350,7 +1350,7 @@ export default function PublicProfilePage() {
                   {/* 썸네일 */}
                   <div style={{width:56,height:56,borderRadius:7,overflow:'hidden',flexShrink:0,background:'var(--color-bg)',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid var(--color-border)'}}>
                     {h.session_image_url
-                      ?<img src={h.session_image_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                      ?<img referrerpolicy="no-referrer" src={h.session_image_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                       :<Mi size="lg" color="light">auto_stories</Mi>
                     }
                   </div>
@@ -1401,7 +1401,7 @@ export default function PublicProfilePage() {
           {/* 이미지 */}
           {pubDetailChar.image_url&&(
             <div style={{width:'100%',aspectRatio:'1/1',maxHeight:260,overflow:'hidden',borderRadius:12,marginBottom:16,background:'var(--color-nav-active-bg)'}}>
-              <img src={pubDetailChar.image_url} alt={pubDetailChar.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              <img referrerpolicy="no-referrer" src={pubDetailChar.image_url} alt={pubDetailChar.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
             </div>
           )}
           {/* 기본 정보 그리드 */}
@@ -1463,7 +1463,7 @@ export default function PublicProfilePage() {
                 <div key={h.history_id} style={{display:'flex',gap:10,alignItems:'center',padding:'10px',borderRadius:10,border:'1px solid var(--color-border)',background:'var(--color-surface)'}}>
                   <div style={{width:56,height:56,borderRadius:7,overflow:'hidden',flexShrink:0,background:'var(--color-bg)',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid var(--color-border)'}}>
                     {h.session_image_url
-                      ?<img src={h.session_image_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                      ?<img referrerpolicy="no-referrer" src={h.session_image_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                       :<Mi size="lg" color="light">auto_stories</Mi>
                     }
                   </div>
